@@ -256,29 +256,49 @@ See `docs/module_development.md` for detailed guide.
 
 ## ⚙️ Configuration
 
-Configuration file: `~/.clipilot/config.yaml`
+CLIPilot creates a configuration file at `~/.clipilot/config.yaml` on first run with sensible defaults.
+
+**Why `~/.clipilot/`?**
+- Standard Linux convention for user-specific app data
+- Keeps your home directory clean
+- Easy to find and backup
+- Follows XDG Base Directory spirit
+
+**Default configuration:**
 
 ```yaml
 # Enable/disable online LLM fallback
 online_mode: false
 
-# Online API configuration (optional)
-api_key: ""
-api_endpoint: "https://api.example.com/v1/chat"
-
-# Confidence thresholds
-thresholds:
-  keyword_search: 0.6
-  local_llm: 0.6
-
-# Auto-confirm for safe commands (use with caution)
+# Auto-confirm commands (use with caution!)
 auto_confirm: false
 
-# Database location
-db_path: "~/.clipilot/clipilot.db"
+# Online API configuration (optional, only used if online_mode is true)
+api_key: ""
+api_endpoint: ""
 
-# Telemetry (opt-in, anonymous)
+# Confidence thresholds for intent detection
+thresholds:
+  keyword_search: 0.6  # Minimum confidence for keyword matches
+  local_llm: 0.6       # Minimum confidence for local LLM classification
+
+# Database location
+db_path: ~/.clipilot/clipilot.db
+
+# Anonymous telemetry (opt-in only)
 telemetry_enabled: false
+
+# Colored terminal output
+color_output: false
+```
+
+**To customize:**
+```bash
+# Edit the config file
+nano ~/.clipilot/config.yaml
+
+# Or use a different config file
+clipilot --config=/path/to/config.yaml
 ```
 
 ## 🔒 Security & Privacy
@@ -331,28 +351,6 @@ go test -coverprofile=coverage.out ./...
 go tool cover -html=coverage.out
 ```
 
-### Project Structure
-
-```
-clipilot/
-├── cmd/
-│   └── clipilot/          # Main application entry point
-│       └── main.go
-├── internal/              # Private application code
-│   ├── db/               # Database layer and migrations
-│   ├── engine/           # Flow execution engine
-│   ├── intent/           # Intent detection pipeline
-│   ├── modules/          # Module loader and manager
-│   └── ui/               # REPL and user interface
-├── pkg/                   # Public libraries
-│   └── models/           # Data structures and models
-├── modules/               # Built-in module definitions
-│   ├── detect_os.yaml
-│   ├── git_setup.yaml
-│   └── docker_install.yaml
-├── docs/                  # Documentation
-└── go.mod
-```
 
 ## 🤝 Contributing
 
