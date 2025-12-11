@@ -304,7 +304,7 @@ func (r *Runner) runValidations(ctx *models.ExecutionContext, step *models.Step)
 func (r *Runner) confirm(prompt string) bool {
 	reader := bufio.NewReader(os.Stdin)
 	fmt.Printf("%s [y/N]: ", prompt)
-	
+
 	response, err := reader.ReadString('\n')
 	if err != nil {
 		return false

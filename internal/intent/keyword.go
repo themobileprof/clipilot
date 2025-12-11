@@ -10,19 +10,19 @@ import (
 
 // Detector handles intent detection using multiple strategies
 type Detector struct {
-	db              *sql.DB
-	keywordThresh   float64
-	llmThresh       float64
-	onlineEnabled   bool
+	db            *sql.DB
+	keywordThresh float64
+	llmThresh     float64
+	onlineEnabled bool
 }
 
 // NewDetector creates a new intent detector
 func NewDetector(db *sql.DB) *Detector {
 	return &Detector{
-		db:              db,
-		keywordThresh:   0.6,
-		llmThresh:       0.6,
-		onlineEnabled:   false,
+		db:            db,
+		keywordThresh: 0.6,
+		llmThresh:     0.6,
+		onlineEnabled: false,
 	}
 }
 

@@ -2,16 +2,16 @@ package models
 
 // Module represents a complete module definition
 type Module struct {
-	ID          string            `yaml:"id" json:"id"`
-	Name        string            `yaml:"name" json:"name"`
-	Version     string            `yaml:"version" json:"version"`
-	Description string            `yaml:"description" json:"description"`
-	Tags        []string          `yaml:"tags" json:"tags"`
-	Provides    []string          `yaml:"provides" json:"provides"`
-	Requires    []string          `yaml:"requires" json:"requires"`
-	SizeKB      int               `yaml:"size_kb" json:"size_kb"`
-	Flows       map[string]*Flow  `yaml:"flows" json:"flows"`
-	Metadata    ModuleMetadata    `yaml:"metadata" json:"metadata"`
+	ID          string           `yaml:"id" json:"id"`
+	Name        string           `yaml:"name" json:"name"`
+	Version     string           `yaml:"version" json:"version"`
+	Description string           `yaml:"description" json:"description"`
+	Tags        []string         `yaml:"tags" json:"tags"`
+	Provides    []string         `yaml:"provides" json:"provides"`
+	Requires    []string         `yaml:"requires" json:"requires"`
+	SizeKB      int              `yaml:"size_kb" json:"size_kb"`
+	Flows       map[string]*Flow `yaml:"flows" json:"flows"`
+	Metadata    ModuleMetadata   `yaml:"metadata" json:"metadata"`
 }
 
 // ModuleMetadata contains module authorship and licensing info
@@ -29,16 +29,16 @@ type Flow struct {
 
 // Step represents a single step in a flow
 type Step struct {
-	Key        string                 `yaml:"-" json:"key"` // Populated from map key
-	Type       string                 `yaml:"type" json:"type"` // action, instruction, branch, terminal
-	Message    string                 `yaml:"message,omitempty" json:"message,omitempty"`
-	Command    string                 `yaml:"command,omitempty" json:"command,omitempty"`
-	RunModule  string                 `yaml:"run_module,omitempty" json:"run_module,omitempty"`
-	BasedOn    string                 `yaml:"based_on,omitempty" json:"based_on,omitempty"` // For branch type
-	Map        map[string]string      `yaml:"map,omitempty" json:"map,omitempty"` // For branch type
-	Next       string                 `yaml:"next,omitempty" json:"next,omitempty"`
-	Validate   []Validation           `yaml:"validate,omitempty" json:"validate,omitempty"`
-	Condition  *Condition             `yaml:"condition,omitempty" json:"condition,omitempty"`
+	Key       string            `yaml:"-" json:"key"`     // Populated from map key
+	Type      string            `yaml:"type" json:"type"` // action, instruction, branch, terminal
+	Message   string            `yaml:"message,omitempty" json:"message,omitempty"`
+	Command   string            `yaml:"command,omitempty" json:"command,omitempty"`
+	RunModule string            `yaml:"run_module,omitempty" json:"run_module,omitempty"`
+	BasedOn   string            `yaml:"based_on,omitempty" json:"based_on,omitempty"` // For branch type
+	Map       map[string]string `yaml:"map,omitempty" json:"map,omitempty"`           // For branch type
+	Next      string            `yaml:"next,omitempty" json:"next,omitempty"`
+	Validate  []Validation      `yaml:"validate,omitempty" json:"validate,omitempty"`
+	Condition *Condition        `yaml:"condition,omitempty" json:"condition,omitempty"`
 }
 
 // Validation represents a step validation rule

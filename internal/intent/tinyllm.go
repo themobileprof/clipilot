@@ -22,7 +22,7 @@ func (llm *TinyLLM) Load() error {
 	// - github.com/go-skynet/go-llama.cpp
 	// - Or direct CGO bindings to llama.cpp
 	// - Or execute external binary
-	
+
 	// For now, return not implemented
 	return nil
 }
@@ -33,7 +33,7 @@ func (llm *TinyLLM) Classify(input string, candidates []string) (label string, c
 	// 1. Prepare prompt with input and candidate labels
 	// 2. Run inference (timeout: 500ms)
 	// 3. Parse output for label and confidence
-	
+
 	// Placeholder: not implemented
 	return "", 0.0, nil
 }

@@ -266,9 +266,9 @@ func tokenize(text string) []string {
 	// Replace common separators with spaces
 	text = strings.ReplaceAll(text, "_", " ")
 	text = strings.ReplaceAll(text, "-", " ")
-	
+
 	tokens := strings.Fields(text)
-	
+
 	// Filter short tokens
 	filtered := []string{}
 	for _, token := range tokens {
@@ -276,6 +276,6 @@ func tokenize(text string) []string {
 			filtered = append(filtered, token)
 		}
 	}
-	
+
 	return filtered
 }
