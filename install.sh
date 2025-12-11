@@ -72,44 +72,53 @@ else
     exit 1
 fi
 
-# Check if release exists
-if [ -z "$RELEASE_DATA" ] || echo "$RELEASE_DATA" | grep -q "Not Found"; then
-    echo -e "${YELLOW}⚠️  No release found. Building from source instead...${NC}"
+# Check if release exists and has binaries
+DOWNLOAD_URL=""
+if [ -n "$RELEASE_DATA" ] && ! echo "$RELEASE_DATA" | grep -q "Not Found"; then
+    # Extract download URL for the binary
+    DOWNLOAD_URL=$(echo "$RELEASE_DATA" | grep "browser_download_url.*${BINARY_NAME}.tar.gz\"" | cut -d '"' -f 4)
+fi
+
+if [ -z "$DOWNLOAD_URL" ]; then
+    echo -e "${YELLOW}⚠️  No pre-built binary found for ${OS}-${ARCH}${NC}"
+    echo "Building from source instead..."
     echo ""
     
     # Check if Go is installed
     if ! command -v go &> /dev/null; then
         echo -e "${RED}Error: Go is required to build from source${NC}"
-        echo "Please install Go from https://golang.org/dl/"
-        echo "Or wait for a release to be published at:"
-        echo "https://github.com/${REPO_OWNER}/${REPO_NAME}/releases"
+        echo ""
+        echo "Option 1: Install Go"
+        echo "  https://golang.org/dl/"
+        echo ""
+        echo "Option 2: Wait for binaries to be published"
+        echo "  https://github.com/${REPO_OWNER}/${REPO_NAME}/releases"
+        echo ""
+        echo "Option 3: Build manually in the repo directory:"
+        echo "  git clone https://github.com/${REPO_OWNER}/${REPO_NAME}.git"
+        echo "  cd ${REPO_NAME}"
+        echo "  go build -o clipilot ./cmd/clipilot"
+        echo "  sudo mv clipilot /usr/local/bin/"
         exit 1
     fi
     
     # Clone and build
     TMP_DIR=$(mktemp -d)
     echo "Cloning repository..."
-    git clone --depth 1 "https://github.com/${REPO_OWNER}/${REPO_NAME}.git" "$TMP_DIR"
+    git clone --depth 1 "https://github.com/${REPO_OWNER}/${REPO_NAME}.git" "$TMP_DIR" 2>&1
     cd "$TMP_DIR"
+    echo "Downloading dependencies..."
+    go mod download
     echo "Building binary..."
     go build -ldflags="-s -w" -o clipilot ./cmd/clipilot
     mv clipilot "${INSTALL_DIR}/clipilot"
-    cd -
-    rm -rf "$TMP_DIR"
-    echo -e "${GREEN}✓ Binary built and installed${NC}"
     
-    MODULES_DIR="${TMP_DIR}/modules"
+    # Copy modules from cloned repo
+    CLONED_MODULES_DIR="$TMP_DIR/modules"
+    cd - > /dev/null
+    
+    echo -e "${GREEN}✓ Binary built and installed${NC}"
 else
-    # Extract download URL for the binary
-    DOWNLOAD_URL=$(echo "$RELEASE_DATA" | grep "browser_download_url.*${BINARY_NAME}.tar.gz\"" | cut -d '"' -f 4)
-
-    if [ -z "$DOWNLOAD_URL" ]; then
-        echo -e "${RED}Error: Could not find binary for ${OS}-${ARCH}${NC}"
-        echo "Available releases:"
-        echo "$RELEASE_DATA" | grep "browser_download_url" | cut -d '"' -f 4
-        exit 1
-    fi
-
     echo "Downloading from: $DOWNLOAD_URL"
 
     # Download and extract binary
@@ -122,7 +131,7 @@ else
 
     tar -xzf "${TMP_DIR}/clipilot.tar.gz" -C "$TMP_DIR"
     mv "${TMP_DIR}/${BINARY_NAME}" "${INSTALL_DIR}/clipilot"
-    rm -rf "$TMP_DIR"
+    echo -e "${GREEN}✓ Binary installed${NC}"
 fi
 
 # Make executable
@@ -139,14 +148,23 @@ echo ""
 echo "📦 Downloading default modules..."
 MODULES=("detect_os.yaml" "git_setup.yaml" "docker_install.yaml")
 
-for module in "${MODULES[@]}"; do
-    echo "  - $module"
-    if command -v curl &> /dev/null; then
-        curl -fsSL "${MODULES_BASE_URL}/${module}" -o "${CONFIG_DIR}/modules/${module}"
-    else
-        wget -q "${MODULES_BASE_URL}/${module}" -O "${CONFIG_DIR}/modules/${module}"
-    fi
-done
+# Check if we have a cloned repo with modules
+if [ -n "$CLONED_MODULES_DIR" ] && [ -d "$CLONED_MODULES_DIR" ]; then
+    echo "Using modules from cloned repository..."
+    cp "$CLONED_MODULES_DIR"/*.yaml "${CONFIG_DIR}/modules/"
+    rm -rf "$TMP_DIR"
+else
+    # Download from GitHub
+    for module in "${MODULES[@]}"; do
+        echo "  - $module"
+        if command -v curl &> /dev/null; then
+            curl -fsSL "${MODULES_BASE_URL}/${module}" -o "${CONFIG_DIR}/modules/${module}" 2>/dev/null || echo "    (skipped)"
+        else
+            wget -q "${MODULES_BASE_URL}/${module}" -O "${CONFIG_DIR}/modules/${module}" 2>/dev/null || echo "    (skipped)"
+        fi
+    done
+    rm -rf "$TMP_DIR"
+fi
 echo -e "${GREEN}✓ Modules downloaded${NC}"
 
 # Initialize database
