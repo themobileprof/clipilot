@@ -5,7 +5,11 @@
 *.so
 *.dylib
 clipilot
+clipilot-*
 cmd/clipilot/clipilot
+bin/
+*.tar.gz
+*.zip
 
 # Test binary, built with `go test -c`
 *.test

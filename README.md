@@ -64,33 +64,52 @@ curl -fsSL https://raw.githubusercontent.com/themobileprof/clipilot/main/install
 ```
 
 This script will:
-- Download the CLIPilot binary
+- Detect your platform (Linux/macOS, amd64/arm64/armv7)
+- Download the appropriate binary from latest GitHub Release
 - Install it to `/usr/local/bin` (or `$HOME/.local/bin` if no sudo)
 - Download default modules (detect_os, git_setup, docker_install)
 - Initialize the database
 - Set up configuration directory at `~/.clipilot`
 
+**Supported Platforms:**
+- Linux: amd64 (x86_64), arm64 (aarch64), armv7
+- macOS: amd64 (Intel), arm64 (Apple Silicon)
+
 #### Manual Installation
 ```bash
-# Download binary
-curl -fsSL https://raw.githubusercontent.com/themobileprof/clipilot/main/bin/clipilot -o clipilot
-chmod +x clipilot
-sudo mv clipilot /usr/local/bin/
+# Download from GitHub Releases
+# Visit: https://github.com/themobileprof/clipilot/releases/latest
+# Download the appropriate binary for your platform
+
+# Example for Linux amd64:
+curl -LO https://github.com/themobileprof/clipilot/releases/latest/download/clipilot-linux-amd64.tar.gz
+tar -xzf clipilot-linux-amd64.tar.gz
+chmod +x clipilot-linux-amd64
+sudo mv clipilot-linux-amd64 /usr/local/bin/clipilot
 
 # Or for Termux (no sudo needed)
-mv clipilot $PREFIX/bin/
+mv clipilot-linux-arm64 $PREFIX/bin/clipilot
 
 # Initialize with default modules
-clipilot --init --load=modules
+mkdir -p ~/.clipilot/modules
+cd ~/.clipilot/modules
+curl -LO https://github.com/themobileprof/clipilot/releases/latest/download/clipilot-modules.tar.gz
+tar -xzf clipilot-modules.tar.gz
+clipilot --init --load=~/.clipilot/modules
 ```
 
 #### From Source (For Developers)
 ```bash
 git clone https://github.com/themobileprof/clipilot.git
 cd clipilot
+go mod download
 go build -o clipilot ./cmd/clipilot
 sudo mv clipilot /usr/local/bin/
-clipilot --init --load=modules
+
+# Download modules and initialize
+mkdir -p ~/.clipilot/modules
+cp modules/*.yaml ~/.clipilot/modules/
+clipilot --init --load=~/.clipilot/modules
 ```
 
 ### First Run
@@ -100,7 +119,7 @@ clipilot --init --load=modules
 clipilot
 
 # Or run directly
-clipilot "install mysql"
+clipilot "setup git"
 
 # Show available commands
 clipilot help

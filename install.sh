@@ -6,7 +6,7 @@ set -e  # Exit on error
 
 REPO_OWNER="themobileprof"
 REPO_NAME="clipilot"
-BINARY_URL="https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}/main/bin/clipilot"
+GITHUB_API="https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/releases/latest"
 MODULES_BASE_URL="https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}/main/modules"
 
 # Colors for output
@@ -36,16 +36,64 @@ fi
 echo -e "${YELLOW}Installing to: ${INSTALL_DIR}${NC}"
 echo ""
 
-# Download binary
-echo "📥 Downloading CLIPilot binary..."
+# Detect architecture
+ARCH=$(uname -m)
+case $ARCH in
+    x86_64)
+        ARCH="amd64"
+        ;;
+    aarch64|arm64)
+        ARCH="arm64"
+        ;;
+    armv7l)
+        ARCH="armv7"
+        ;;
+    *)
+        echo -e "${RED}Unsupported architecture: $ARCH${NC}"
+        exit 1
+        ;;
+esac
+
+OS=$(uname -s | tr '[:upper:]' '[:lower:]')
+BINARY_NAME="clipilot-${OS}-${ARCH}"
+
+echo "Detected platform: ${OS}-${ARCH}"
+echo ""
+
+# Get latest release info
+echo "📥 Fetching latest release..."
 if command -v curl &> /dev/null; then
-    curl -fsSL "$BINARY_URL" -o "${INSTALL_DIR}/clipilot"
+    RELEASE_DATA=$(curl -fsSL "$GITHUB_API")
 elif command -v wget &> /dev/null; then
-    wget -q "$BINARY_URL" -O "${INSTALL_DIR}/clipilot"
+    RELEASE_DATA=$(wget -qO- "$GITHUB_API")
 else
     echo -e "${RED}Error: curl or wget is required for installation${NC}"
     exit 1
 fi
+
+# Extract download URL for the binary
+DOWNLOAD_URL=$(echo "$RELEASE_DATA" | grep "browser_download_url.*${BINARY_NAME}.tar.gz\"" | cut -d '"' -f 4)
+
+if [ -z "$DOWNLOAD_URL" ]; then
+    echo -e "${RED}Error: Could not find binary for ${OS}-${ARCH}${NC}"
+    echo "Available releases:"
+    echo "$RELEASE_DATA" | grep "browser_download_url" | cut -d '"' -f 4
+    exit 1
+fi
+
+echo "Downloading from: $DOWNLOAD_URL"
+
+# Download and extract binary
+TMP_DIR=$(mktemp -d)
+if command -v curl &> /dev/null; then
+    curl -fsSL "$DOWNLOAD_URL" -o "${TMP_DIR}/clipilot.tar.gz"
+elif command -v wget &> /dev/null; then
+    wget -q "$DOWNLOAD_URL" -O "${TMP_DIR}/clipilot.tar.gz"
+fi
+
+tar -xzf "${TMP_DIR}/clipilot.tar.gz" -C "$TMP_DIR"
+mv "${TMP_DIR}/${BINARY_NAME}" "${INSTALL_DIR}/clipilot"
+rm -rf "$TMP_DIR"
 
 # Make executable
 chmod +x "${INSTALL_DIR}/clipilot"

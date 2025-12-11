@@ -1,0 +1,145 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build Binaries
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - goos: linux
+            goarch: amd64
+            name: clipilot-linux-amd64
+          - goos: linux
+            goarch: arm64
+            name: clipilot-linux-arm64
+          - goos: linux
+            goarch: arm
+            goarm: 7
+            name: clipilot-linux-armv7
+          - goos: darwin
+            goarch: amd64
+            name: clipilot-darwin-amd64
+          - goos: darwin
+            goarch: arm64
+            name: clipilot-darwin-arm64
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+
+      - name: Get dependencies
+        run: go mod download
+
+      - name: Build binary
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          GOARM: ${{ matrix.goarm }}
+          CGO_ENABLED: 1
+        run: |
+          if [ "$GOOS" = "linux" ]; then
+            # Install cross-compilation tools for Linux
+            if [ "$GOARCH" = "arm64" ]; then
+              sudo apt-get update
+              sudo apt-get install -y gcc-aarch64-linux-gnu
+              export CC=aarch64-linux-gnu-gcc
+            elif [ "$GOARCH" = "arm" ]; then
+              sudo apt-get update
+              sudo apt-get install -y gcc-arm-linux-gnueabihf
+              export CC=arm-linux-gnueabihf-gcc
+            fi
+          elif [ "$GOOS" = "darwin" ]; then
+            # For macOS, we need to disable CGO for cross-compilation
+            export CGO_ENABLED=0
+          fi
+          
+          go build -ldflags="-s -w" -o ${{ matrix.name }} ./cmd/clipilot
+          chmod +x ${{ matrix.name }}
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.name }}
+          path: ${{ matrix.name }}
+
+  release:
+    name: Create Release
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: ./artifacts
+
+      - name: Prepare release assets
+        run: |
+          mkdir -p release
+          find ./artifacts -type f -exec cp {} ./release/ \;
+          cd release
+          for file in *; do
+            tar czf "${file}.tar.gz" "$file"
+            sha256sum "${file}.tar.gz" > "${file}.tar.gz.sha256"
+          done
+          ls -lh
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: release/*
+          generate_release_notes: true
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  build-modules:
+    name: Package Modules
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Create modules archive
+        run: |
+          cd modules
+          tar czf ../clipilot-modules.tar.gz *.yaml
+          cd ..
+          sha256sum clipilot-modules.tar.gz > clipilot-modules.tar.gz.sha256
+
+      - name: Upload modules artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: modules
+          path: |
+            clipilot-modules.tar.gz
+            clipilot-modules.tar.gz.sha256
+
+      - name: Add modules to release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            clipilot-modules.tar.gz
+            clipilot-modules.tar.gz.sha256
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
