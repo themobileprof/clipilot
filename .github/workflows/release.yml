@@ -50,7 +50,6 @@ jobs:
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
           GOARM: ${{ matrix.goarm }}
-          CGO_ENABLED: 1
         run: |
           if [ "$GOOS" = "linux" ]; then
             # Install cross-compilation tools for Linux
@@ -58,13 +57,17 @@ jobs:
               sudo apt-get update
               sudo apt-get install -y gcc-aarch64-linux-gnu
               export CC=aarch64-linux-gnu-gcc
+              export CGO_ENABLED=1
             elif [ "$GOARCH" = "arm" ]; then
               sudo apt-get update
               sudo apt-get install -y gcc-arm-linux-gnueabihf
               export CC=arm-linux-gnueabihf-gcc
+              export CGO_ENABLED=1
+            else
+              export CGO_ENABLED=1
             fi
           elif [ "$GOOS" = "darwin" ]; then
-            # For macOS, we need to disable CGO for cross-compilation
+            # For macOS, disable CGO for cross-compilation
             export CGO_ENABLED=0
           fi
           
