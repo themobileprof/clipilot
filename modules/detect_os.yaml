@@ -1,0 +1,42 @@
+name: detect_os
+id: org.themobileprof.detect_os
+version: 1.0.0
+description: Detect operating system and distribution
+tags: [os, detection, system, utility]
+provides:
+  - os_type
+  - os_version
+requires: []
+size_kb: 5
+flows:
+  main:
+    start: detect
+    steps:
+      detect:
+        type: instruction
+        message: "Detecting operating system..."
+        command: "uname -s"
+        next: check_distro
+      check_distro:
+        type: instruction
+        message: "Checking Linux distribution..."
+        command: |
+          if [ -f /etc/os-release ]; then
+            . /etc/os-release
+            echo "Distribution: $NAME"
+            echo "Version: $VERSION"
+          elif [ -f /data/data/com.termux ]; then
+            echo "Distribution: Termux"
+            echo "Version: Android"
+          else
+            echo "Distribution: Unknown"
+          fi
+        next: done
+      done:
+        type: terminal
+        message: "OS detection complete!"
+
+metadata:
+  author: TheMobileProf
+  license: MIT
+  url: https://github.com/themobileprof/clipilot

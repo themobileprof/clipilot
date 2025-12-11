@@ -1,0 +1,83 @@
+name: git_setup
+id: org.themobileprof.git_setup
+version: 1.0.0
+description: Configure Git with best practices and user information
+tags: [git, setup, configuration, vcs]
+provides:
+  - git_configured
+requires: []
+size_kb: 8
+flows:
+  main:
+    start: check_git
+    steps:
+      check_git:
+        type: instruction
+        message: "Checking if Git is installed..."
+        command: "git --version"
+        validate:
+          - check_command: "which git"
+            error_message: "Git is not installed. Please install git first."
+        next: configure_user
+      configure_user:
+        type: instruction
+        message: |
+          Configure your Git identity.
+          This will set your name and email for commits.
+        command: |
+          read -p "Enter your name: " name
+          read -p "Enter your email: " email
+          git config --global user.name "$name"
+          git config --global user.email "$email"
+          echo "Git user configured:"
+          git config --global user.name
+          git config --global user.email
+        next: configure_defaults
+      configure_defaults:
+        type: instruction
+        message: "Setting recommended Git defaults..."
+        command: |
+          git config --global init.defaultBranch main
+          git config --global pull.rebase false
+          git config --global core.autocrlf input
+          git config --global color.ui auto
+          echo "✓ Default branch: main"
+          echo "✓ Pull strategy: merge"
+          echo "✓ Line endings: input"
+          echo "✓ Color output: enabled"
+        next: configure_aliases
+      configure_aliases:
+        type: instruction
+        message: "Adding helpful Git aliases..."
+        command: |
+          git config --global alias.st status
+          git config --global alias.co checkout
+          git config --global alias.br branch
+          git config --global alias.ci commit
+          git config --global alias.last 'log -1 HEAD'
+          git config --global alias.unstage 'reset HEAD --'
+          echo "✓ Aliases configured: st, co, br, ci, last, unstage"
+        next: show_config
+      show_config:
+        type: instruction
+        message: "Your Git configuration:"
+        command: |
+          echo ""
+          echo "User Configuration:"
+          echo "  Name:  $(git config --global user.name)"
+          echo "  Email: $(git config --global user.email)"
+          echo ""
+          echo "Global Settings:"
+          git config --global --list | grep -E "(init.defaultBranch|pull.rebase|color.ui)" | sed 's/^/  /'
+          echo ""
+          echo "Aliases:"
+          git config --global --list | grep "^alias\." | sed 's/^alias\./  /' | sed 's/=/ = /'
+        next: done
+      done:
+        type: terminal
+        message: "Git configuration complete! You're ready to start using Git."
+
+metadata:
+  author: TheMobileProf
+  license: MIT
+  url: https://github.com/themobileprof/clipilot

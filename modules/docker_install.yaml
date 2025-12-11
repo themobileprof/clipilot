@@ -1,0 +1,135 @@
+name: docker_install
+id: org.themobileprof.docker_install
+version: 1.0.0
+description: Install Docker and Docker Compose on Linux systems
+tags: [docker, container, install, devops]
+provides:
+  - docker_installed
+requires:
+  - detect_os
+size_kb: 15
+flows:
+  main:
+    start: check_existing
+    steps:
+      check_existing:
+        type: instruction
+        message: "Checking if Docker is already installed..."
+        command: |
+          if command -v docker &> /dev/null; then
+            echo "Docker is already installed:"
+            docker --version
+            exit 0
+          else
+            echo "Docker not found. Proceeding with installation..."
+            exit 1
+          fi
+        next: detect_system
+      detect_system:
+        type: instruction
+        message: "Detecting system type..."
+        command: |
+          if [ -f /etc/os-release ]; then
+            . /etc/os-release
+            echo "Detected: $ID"
+            echo "$ID" > /tmp/clipilot_os_id
+          else
+            echo "unknown" > /tmp/clipilot_os_id
+          fi
+        next: install_ubuntu
+      install_ubuntu:
+        type: instruction
+        message: |
+          Installing Docker on Ubuntu/Debian...
+          This will:
+          1. Update package index
+          2. Install prerequisites
+          3. Add Docker's official GPG key
+          4. Set up Docker repository
+          5. Install Docker Engine
+        command: |
+          # Update package index
+          sudo apt-get update
+          
+          # Install prerequisites
+          sudo apt-get install -y \
+              ca-certificates \
+              curl \
+              gnupg \
+              lsb-release
+          
+          # Add Docker's official GPG key
+          sudo mkdir -p /etc/apt/keyrings
+          curl -fsSL https://download.docker.com/linux/ubuntu/gpg | \
+              sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+          
+          # Set up repository
+          echo \
+            "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] \
+            https://download.docker.com/linux/ubuntu \
+            $(lsb_release -cs) stable" | \
+            sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+          
+          # Install Docker Engine
+          sudo apt-get update
+          sudo apt-get install -y docker-ce docker-ce-cli containerd.io \
+              docker-buildx-plugin docker-compose-plugin
+          
+          echo "✓ Docker installed successfully"
+        validate:
+          - check_command: "docker --version"
+            error_message: "Docker installation failed"
+        next: configure_user
+      configure_user:
+        type: instruction
+        message: |
+          Adding current user to docker group...
+          This allows running Docker without sudo.
+          You'll need to log out and back in for this to take effect.
+        command: |
+          sudo usermod -aG docker $USER
+          echo "✓ User $USER added to docker group"
+          echo ""
+          echo "IMPORTANT: Log out and log back in for group changes to take effect"
+          echo "Or run: newgrp docker"
+        next: verify_install
+      verify_install:
+        type: instruction
+        message: "Verifying Docker installation..."
+        command: |
+          echo "Docker version:"
+          docker --version
+          echo ""
+          echo "Docker Compose version:"
+          docker compose version
+          echo ""
+          echo "Docker service status:"
+          sudo systemctl status docker --no-pager | head -n 5
+        next: test_docker
+      test_docker:
+        type: instruction
+        message: "Running Docker hello-world test..."
+        command: |
+          echo "Pulling and running hello-world container..."
+          sudo docker run hello-world
+        next: done
+      done:
+        type: terminal
+        message: |
+          Docker installation complete!
+          
+          Next steps:
+          1. Log out and back in (or run 'newgrp docker')
+          2. Test without sudo: docker run hello-world
+          3. Start building containers!
+          
+          Useful commands:
+            docker ps              - List running containers
+            docker images          - List downloaded images
+            docker compose up      - Start services from docker-compose.yml
+            docker system prune    - Clean up unused resources
+
+metadata:
+  author: TheMobileProf
+  license: MIT
+  url: https://github.com/themobileprof/clipilot
