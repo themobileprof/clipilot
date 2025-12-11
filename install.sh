@@ -62,38 +62,68 @@ echo ""
 
 # Get latest release info
 echo "📥 Fetching latest release..."
+RELEASE_DATA=""
 if command -v curl &> /dev/null; then
-    RELEASE_DATA=$(curl -fsSL "$GITHUB_API")
+    RELEASE_DATA=$(curl -fsSL "$GITHUB_API" 2>/dev/null || echo "")
 elif command -v wget &> /dev/null; then
-    RELEASE_DATA=$(wget -qO- "$GITHUB_API")
+    RELEASE_DATA=$(wget -qO- "$GITHUB_API" 2>/dev/null || echo "")
 else
     echo -e "${RED}Error: curl or wget is required for installation${NC}"
     exit 1
 fi
 
-# Extract download URL for the binary
-DOWNLOAD_URL=$(echo "$RELEASE_DATA" | grep "browser_download_url.*${BINARY_NAME}.tar.gz\"" | cut -d '"' -f 4)
+# Check if release exists
+if [ -z "$RELEASE_DATA" ] || echo "$RELEASE_DATA" | grep -q "Not Found"; then
+    echo -e "${YELLOW}⚠️  No release found. Building from source instead...${NC}"
+    echo ""
+    
+    # Check if Go is installed
+    if ! command -v go &> /dev/null; then
+        echo -e "${RED}Error: Go is required to build from source${NC}"
+        echo "Please install Go from https://golang.org/dl/"
+        echo "Or wait for a release to be published at:"
+        echo "https://github.com/${REPO_OWNER}/${REPO_NAME}/releases"
+        exit 1
+    fi
+    
+    # Clone and build
+    TMP_DIR=$(mktemp -d)
+    echo "Cloning repository..."
+    git clone --depth 1 "https://github.com/${REPO_OWNER}/${REPO_NAME}.git" "$TMP_DIR"
+    cd "$TMP_DIR"
+    echo "Building binary..."
+    go build -ldflags="-s -w" -o clipilot ./cmd/clipilot
+    mv clipilot "${INSTALL_DIR}/clipilot"
+    cd -
+    rm -rf "$TMP_DIR"
+    echo -e "${GREEN}✓ Binary built and installed${NC}"
+    
+    MODULES_DIR="${TMP_DIR}/modules"
+else
+    # Extract download URL for the binary
+    DOWNLOAD_URL=$(echo "$RELEASE_DATA" | grep "browser_download_url.*${BINARY_NAME}.tar.gz\"" | cut -d '"' -f 4)
 
-if [ -z "$DOWNLOAD_URL" ]; then
-    echo -e "${RED}Error: Could not find binary for ${OS}-${ARCH}${NC}"
-    echo "Available releases:"
-    echo "$RELEASE_DATA" | grep "browser_download_url" | cut -d '"' -f 4
-    exit 1
+    if [ -z "$DOWNLOAD_URL" ]; then
+        echo -e "${RED}Error: Could not find binary for ${OS}-${ARCH}${NC}"
+        echo "Available releases:"
+        echo "$RELEASE_DATA" | grep "browser_download_url" | cut -d '"' -f 4
+        exit 1
+    fi
+
+    echo "Downloading from: $DOWNLOAD_URL"
+
+    # Download and extract binary
+    TMP_DIR=$(mktemp -d)
+    if command -v curl &> /dev/null; then
+        curl -fsSL "$DOWNLOAD_URL" -o "${TMP_DIR}/clipilot.tar.gz"
+    elif command -v wget &> /dev/null; then
+        wget -q "$DOWNLOAD_URL" -O "${TMP_DIR}/clipilot.tar.gz"
+    fi
+
+    tar -xzf "${TMP_DIR}/clipilot.tar.gz" -C "$TMP_DIR"
+    mv "${TMP_DIR}/${BINARY_NAME}" "${INSTALL_DIR}/clipilot"
+    rm -rf "$TMP_DIR"
 fi
-
-echo "Downloading from: $DOWNLOAD_URL"
-
-# Download and extract binary
-TMP_DIR=$(mktemp -d)
-if command -v curl &> /dev/null; then
-    curl -fsSL "$DOWNLOAD_URL" -o "${TMP_DIR}/clipilot.tar.gz"
-elif command -v wget &> /dev/null; then
-    wget -q "$DOWNLOAD_URL" -O "${TMP_DIR}/clipilot.tar.gz"
-fi
-
-tar -xzf "${TMP_DIR}/clipilot.tar.gz" -C "$TMP_DIR"
-mv "${TMP_DIR}/${BINARY_NAME}" "${INSTALL_DIR}/clipilot"
-rm -rf "$TMP_DIR"
 
 # Make executable
 chmod +x "${INSTALL_DIR}/clipilot"
