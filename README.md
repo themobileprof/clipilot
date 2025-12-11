@@ -58,34 +58,52 @@ CLIPilot is an intelligent command-line assistant designed for developers and op
 
 ### Installation
 
-#### From Source
+#### One-Line Install (Linux/macOS/Termux)
+```bash
+curl -fsSL https://raw.githubusercontent.com/themobileprof/clipilot/main/install.sh | bash
+```
+
+This script will:
+- Download the CLIPilot binary
+- Install it to `/usr/local/bin` (or `$HOME/.local/bin` if no sudo)
+- Download default modules (detect_os, git_setup, docker_install)
+- Initialize the database
+- Set up configuration directory at `~/.clipilot`
+
+#### Manual Installation
+```bash
+# Download binary
+curl -fsSL https://raw.githubusercontent.com/themobileprof/clipilot/main/bin/clipilot -o clipilot
+chmod +x clipilot
+sudo mv clipilot /usr/local/bin/
+
+# Or for Termux (no sudo needed)
+mv clipilot $PREFIX/bin/
+
+# Initialize with default modules
+clipilot --init --load=modules
+```
+
+#### From Source (For Developers)
 ```bash
 git clone https://github.com/themobileprof/clipilot.git
 cd clipilot
 go build -o clipilot ./cmd/clipilot
 sudo mv clipilot /usr/local/bin/
-```
-
-#### For Termux (Android)
-```bash
-pkg install golang git
-git clone https://github.com/themobileprof/clipilot.git
-cd clipilot
-go build -o clipilot ./cmd/clipilot
-mv clipilot $PREFIX/bin/
+clipilot --init --load=modules
 ```
 
 ### First Run
 
 ```bash
-# Initialize database and download core modules
-clipilot init
-
 # Start interactive mode
 clipilot
 
 # Or run directly
 clipilot "install mysql"
+
+# Show available commands
+clipilot help
 ```
 
 ## 📖 Usage
@@ -271,13 +289,11 @@ cd clipilot
 # Install dependencies
 go mod download
 
-# Run tests
-go test ./...
-
 # Build binary
 go build -o clipilot ./cmd/clipilot
 
-# Run
+# Run locally
+./clipilot --init --load=modules
 ./clipilot
 ```
 
