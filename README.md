@@ -14,8 +14,9 @@ CLIPilot is an intelligent command-line assistant designed for developers and op
 - **📦 Modular Architecture**: Download and install task modules on demand
 - **🔒 Safety-First**: All commands require explicit user confirmation before execution
 - **💾 Lightweight**: Core binary <20MB, optimized for 2-4GB RAM devices
-- **🗃️ SQLite Backend**: Fast local caching and state persistence
+- **🗃️ SQLite Backend**: Fast local caching and state persistence (embedded, no installation needed)
 - **🔄 Flow Engine**: Deterministic multi-step workflows with branching and validation
+- **📱 Zero Dependencies**: SQLite is compiled into the binary - just download and run!
 
 ## 🏗️ Architecture
 

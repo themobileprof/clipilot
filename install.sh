@@ -176,13 +176,33 @@ echo -e "${GREEN}✓ Database initialized${NC}"
 # Check if install dir is in PATH
 echo ""
 if [[ ":$PATH:" != *":${INSTALL_DIR}:"* ]]; then
-    echo -e "${YELLOW}⚠️  ${INSTALL_DIR} is not in your PATH${NC}"
-    echo ""
-    echo "Add it to your PATH by adding this line to your ~/.bashrc or ~/.zshrc:"
-    echo ""
-    echo "  export PATH=\"\$PATH:${INSTALL_DIR}\""
-    echo ""
-    echo "Then reload your shell with: source ~/.bashrc"
+    echo -e "${YELLOW}⚠️  Adding ${INSTALL_DIR} to PATH...${NC}"
+    
+    # Detect shell and add to appropriate RC file
+    SHELL_RC=""
+    if [ -n "$BASH_VERSION" ]; then
+        SHELL_RC="$HOME/.bashrc"
+    elif [ -n "$ZSH_VERSION" ]; then
+        SHELL_RC="$HOME/.zshrc"
+    elif [ -f "$HOME/.profile" ]; then
+        SHELL_RC="$HOME/.profile"
+    fi
+    
+    if [ -n "$SHELL_RC" ]; then
+        # Check if already in RC file
+        if ! grep -q "export PATH.*${INSTALL_DIR}" "$SHELL_RC" 2>/dev/null; then
+            echo "" >> "$SHELL_RC"
+            echo "# Added by CLIPilot installer" >> "$SHELL_RC"
+            echo "export PATH=\"\$PATH:${INSTALL_DIR}\"" >> "$SHELL_RC"
+            echo -e "${GREEN}✓ Added to $SHELL_RC${NC}"
+            echo "  Run: source $SHELL_RC"
+        fi
+        # Add to current session
+        export PATH="$PATH:${INSTALL_DIR}"
+    else
+        echo "Please add this to your shell config:"
+        echo "  export PATH=\"\$PATH:${INSTALL_DIR}\""
+    fi
 else
     echo -e "${GREEN}✓ Installation directory is in PATH${NC}"
 fi
@@ -201,3 +221,14 @@ echo ""
 echo "For more information, visit:"
 echo "  https://github.com/${REPO_OWNER}/${REPO_NAME}"
 echo ""
+
+# Offer to start CLIPilot interactively
+echo -e "${YELLOW}Would you like to start CLIPilot now? [Y/n]:${NC} "
+read -r response
+response=${response,,}  # Convert to lowercase
+if [ -z "$response" ] || [ "$response" = "y" ] || [ "$response" = "yes" ]; then
+    echo ""
+    echo "Starting CLIPilot..."
+    echo ""
+    "${INSTALL_DIR}/clipilot"
+fi

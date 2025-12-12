@@ -28,9 +28,10 @@ func New(dbPath string) (*DB, error) {
 	}
 
 	// Open database connection
+	// Note: SQLite is embedded in the binary via CGO, no system installation needed
 	conn, err := sql.Open("sqlite3", dbPath)
 	if err != nil {
-		return nil, fmt.Errorf("failed to open database: %w", err)
+		return nil, fmt.Errorf("failed to open database: %w\nNote: SQLite is embedded in CLIPilot, but the database file may be corrupted or inaccessible", err)
 	}
 
 	// Set connection pool settings for better performance
