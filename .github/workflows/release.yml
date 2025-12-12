@@ -42,6 +42,17 @@ jobs:
         with:
           go-version: '1.21'
 
+      - name: Verify project structure
+        run: |
+          echo "Current directory:"
+          pwd
+          echo "Directory contents:"
+          ls -la
+          echo "cmd directory:"
+          ls -la cmd/
+          echo "cmd/clipilot directory:"
+          ls -la cmd/clipilot/
+
       - name: Get dependencies
         run: go mod download
 
