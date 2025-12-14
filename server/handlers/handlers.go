@@ -302,6 +302,9 @@ func (h *Handlers) APIUpload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Check for overwrite flag
+	overwrite := r.FormValue("overwrite") == "true"
+
 	file, header, err := r.FormFile("module")
 	if err != nil {
 		http.Error(w, "Missing module file", http.StatusBadRequest)
@@ -349,13 +352,17 @@ func (h *Handlers) APIUpload(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check for duplicates
-	var exists int
-	err = h.db.QueryRow("SELECT COUNT(*) FROM modules WHERE name = ? AND version = ?",
-		module.Name, module.Version).Scan(&exists)
-	if err == nil && exists > 0 {
+	var existingID int
+	var existingFilePath string
+	err = h.db.QueryRow("SELECT id, file_path FROM modules WHERE name = ? AND version = ?",
+		module.Name, module.Version).Scan(&existingID, &existingFilePath)
+
+	moduleExists := err == nil
+
+	if moduleExists && !overwrite {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusConflict)
-		fmt.Fprintf(w, `{"success": false, "error": "Module '%s' version %s already exists"}`,
+		fmt.Fprintf(w, `{"success": false, "error": "Module '%s' version %s already exists. Use overwrite=true to update."}`,
 			module.Name, module.Version)
 		return
 	}
@@ -382,28 +389,71 @@ func (h *Handlers) APIUpload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Insert into database
+	// Insert or update database
 	username := h.auth.GetUsername(r)
-	_, err = h.db.Exec(`
-		INSERT INTO modules (name, version, description, author, uploaded_by, file_path, original_filename)
-		VALUES (?, ?, ?, ?, ?, ?, ?)
-	`, module.Name, module.Version, module.Description,
-		module.Metadata.Author, username, savePath, header.Filename)
 
-	if err != nil {
-		log.Printf("Database insert error: %v", err)
-		os.Remove(savePath) // Clean up file on DB error
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprintf(w, `{"success": false, "error": "Failed to save module metadata"}`)
-		return
+	// Marshal tags to JSON
+	tagsJSON := "[]"
+	if len(module.Tags) > 0 {
+		tagsList := make([]string, len(module.Tags))
+		for i, tag := range module.Tags {
+			tagsList[i] = fmt.Sprintf("%q", tag)
+		}
+		tagsJSON = "[" + strings.Join(tagsList, ",") + "]"
 	}
 
-	log.Printf("Module uploaded successfully: %s v%s by %s", module.Name, module.Version, username)
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-	fmt.Fprintf(w, `{"success": true, "message": "Module '%s' v%s uploaded successfully"}`,
-		module.Name, module.Version)
+	if moduleExists {
+		// Update existing module
+		_, err = h.db.Exec(`
+			UPDATE modules 
+			SET description = ?, author = ?, tags = ?, uploaded_by = ?, file_path = ?, original_filename = ?, uploaded_at = CURRENT_TIMESTAMP
+			WHERE id = ?
+		`, module.Description, module.Metadata.Author, tagsJSON, username, savePath, header.Filename, existingID)
+
+		if err != nil {
+			log.Printf("Database update error: %v", err)
+			os.Remove(savePath) // Clean up new file on DB error
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprintf(w, `{"success": false, "error": "Failed to update module metadata"}`)
+			return
+		}
+
+		// Delete old file after successful DB update
+		if existingFilePath != "" && existingFilePath != savePath {
+			if err := os.Remove(existingFilePath); err != nil {
+				log.Printf("Warning: Failed to remove old file %s: %v", existingFilePath, err)
+			}
+		}
+
+		log.Printf("Module updated successfully: %s v%s by %s", module.Name, module.Version, username)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		fmt.Fprintf(w, `{"success": true, "message": "Module '%s' v%s updated successfully"}`,
+			module.Name, module.Version)
+	} else {
+		// Insert new module
+		_, err = h.db.Exec(`
+			INSERT INTO modules (name, version, description, author, tags, uploaded_by, file_path, original_filename)
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+		`, module.Name, module.Version, module.Description,
+			module.Metadata.Author, tagsJSON, username, savePath, header.Filename)
+
+		if err != nil {
+			log.Printf("Database insert error: %v", err)
+			os.Remove(savePath) // Clean up file on DB error
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprintf(w, `{"success": false, "error": "Failed to save module metadata"}`)
+			return
+		}
+
+		log.Printf("Module uploaded successfully: %s v%s by %s", module.Name, module.Version, username)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusCreated)
+		fmt.Fprintf(w, `{"success": true, "message": "Module '%s' v%s uploaded successfully"}`,
+			module.Name, module.Version)
+	}
 }
 
 // MyModules shows modules uploaded by the current user
@@ -518,7 +568,7 @@ func (h *Handlers) RequireAuth(next http.HandlerFunc) http.HandlerFunc {
 // API endpoints for CLI access
 func (h *Handlers) APIListModules(w http.ResponseWriter, r *http.Request) {
 	rows, err := h.db.Query(`
-		SELECT id, name, version, description, author, downloads
+		SELECT id, name, version, description, author, COALESCE(tags, '[]'), downloads
 		FROM modules
 		ORDER BY uploaded_at DESC
 	`)
@@ -535,7 +585,8 @@ func (h *Handlers) APIListModules(w http.ResponseWriter, r *http.Request) {
 	first := true
 	for rows.Next() {
 		var m ModuleRecord
-		if err := rows.Scan(&m.ID, &m.Name, &m.Version, &m.Description, &m.Author, &m.Downloads); err != nil {
+		var tagsJSON string
+		if err := rows.Scan(&m.ID, &m.Name, &m.Version, &m.Description, &m.Author, &tagsJSON, &m.Downloads); err != nil {
 			continue
 		}
 
@@ -544,8 +595,8 @@ func (h *Handlers) APIListModules(w http.ResponseWriter, r *http.Request) {
 		}
 		first = false
 
-		fmt.Fprintf(w, `{"id":%d,"name":"%s","version":"%s","description":"%s","author":"%s","downloads":%d}`,
-			m.ID, m.Name, m.Version, m.Description, m.Author, m.Downloads)
+		fmt.Fprintf(w, `{"id":%d,"name":"%s","version":"%s","description":"%s","author":"%s","tags":%s,"downloads":%d}`,
+			m.ID, m.Name, m.Version, m.Description, m.Author, tagsJSON, m.Downloads)
 	}
 
 	w.Write([]byte("]"))

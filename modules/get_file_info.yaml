@@ -1,8 +1,8 @@
 name: get_file_info
 id: org.themobileprof.get_file_info
 version: 1.0.0
-description: Get detailed information about a file (size, permissions, timestamps)
-tags: [filesystem, utility, file, info, metadata]
+description: Display detailed information about a file (size, permissions, timestamps, type)
+tags: [file-ops, atomic, filesystem, metadata]
 provides:
   - file_info_retrieved
 requires:

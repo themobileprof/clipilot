@@ -1,8 +1,8 @@
 name: get_directory_size
 id: org.themobileprof.get_directory_size
 version: 1.0.0
-description: Calculate and display the size of a directory and its contents
-tags: [filesystem, utility, directory, size, disk]
+description: Calculate and display the total size of a directory and its contents
+tags: [file-ops, atomic, filesystem, disk]
 provides:
   - size_calculated
 requires:

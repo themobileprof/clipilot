@@ -2,7 +2,7 @@ name: sort_lines
 id: org.themobileprof.sort_lines
 version: 1.0.0
 description: Sort lines in a file with various sorting options
-tags: [text, sort, utility, processing, filter]
+tags: [text-ops, atomic, sort, processing]
 provides:
   - lines_sorted
 requires:

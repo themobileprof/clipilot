@@ -2,7 +2,7 @@ name: list_directory
 id: org.themobileprof.list_directory
 version: 1.0.0
 description: List contents of a directory with optional details and hidden files
-tags: [filesystem, utility, directory, list, ls]
+tags: [file-ops, atomic, filesystem, list]
 provides:
   - directory_listed
 requires:

@@ -2,7 +2,7 @@ name: nginx_setup
 id: org.themobileprof.nginx_setup
 version: 1.0.0
 description: Install and configure Nginx web server with basic setup
-tags: [nginx, install, setup, webserver, devops, composite]
+tags: [installer, composite, web, nginx, setup]
 provides:
   - nginx_installed
   - nginx_configured

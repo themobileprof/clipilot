@@ -2,7 +2,7 @@ name: create_symlink
 id: org.themobileprof.create_symlink
 version: 1.0.0
 description: Create symbolic link from source to destination
-tags: [filesystem, symlink, link, ln, shortcut]
+tags: [file-ops, atomic, filesystem, symlink]
 provides:
   - symlink_created
 requires:

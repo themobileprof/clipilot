@@ -2,7 +2,7 @@ name: git_setup
 id: org.themobileprof.git_setup
 version: 1.0.0
 description: Configure Git with best practices and user information
-tags: [git, setup, configuration, vcs]
+tags: [installer, composite, git, setup, development]
 provides:
   - git_configured
 requires: []

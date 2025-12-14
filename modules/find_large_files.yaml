@@ -2,7 +2,7 @@ name: find_large_files
 id: org.themobileprof.find_large_files
 version: 1.0.0
 description: Find and list the largest files in a directory tree
-tags: [files, composite, search, disk, utility]
+tags: [file-ops, composite, search, disk, cleanup]
 provides:
   - large_files_found
 requires:

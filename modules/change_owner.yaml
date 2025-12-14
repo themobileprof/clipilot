@@ -2,7 +2,7 @@ name: change_owner
 id: org.themobileprof.change_owner
 version: 1.0.0
 description: Change file or directory ownership using chown
-tags: [filesystem, permissions, chown, owner, admin]
+tags: [file-ops, atomic, permissions, security, admin]
 provides:
   - ownership_changed
 requires:

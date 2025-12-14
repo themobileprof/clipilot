@@ -2,7 +2,7 @@ name: copy_directory
 id: org.themobileprof.copy_directory
 version: 1.0.0
 description: Interactive directory copying with path validation and helpful guidance
-tags: [copy, directory, files, move, backup, termux]
+tags: [file-ops, composite, copy, directory, backup]
 provides:
   - copy_directory
 requires: []

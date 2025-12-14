@@ -2,7 +2,7 @@ name: compare_files
 id: org.themobileprof.compare_files
 version: 1.0.0
 description: Compare two files and show differences using diff
-tags: [text, compare, diff, analysis, version]
+tags: [text-ops, atomic, compare, diff]
 provides:
   - files_compared
 requires:

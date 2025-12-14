@@ -2,7 +2,7 @@ name: service_control
 id: org.themobileprof.service_control
 version: 1.0.0
 description: Manage systemd/init services (start, stop, restart, status)
-tags: [service, systemd, daemon, control, devops, sre]
+tags: [devops-ops, composite, service, systemd]
 provides:
   - service_controlled
 requires:

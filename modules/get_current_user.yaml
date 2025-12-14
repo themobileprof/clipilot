@@ -2,7 +2,7 @@ name: get_current_user
 id: org.themobileprof.get_current_user
 version: 1.0.0
 description: Display current user information and group memberships
-tags: [system, user, whoami, identity, diagnostics]
+tags: [system-ops, atomic, user, identity]
 provides:
   - user_info_shown
 requires: []

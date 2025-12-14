@@ -2,7 +2,7 @@ name: deduplicate_lines
 id: org.themobileprof.deduplicate_lines
 version: 1.0.0
 description: Remove duplicate lines from a file using uniq
-tags: [text, uniq, utility, processing, filter]
+tags: [text-ops, atomic, dedup, processing]
 provides:
   - lines_deduplicated
 requires:

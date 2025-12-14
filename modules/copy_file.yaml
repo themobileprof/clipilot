@@ -2,7 +2,7 @@ name: copy_file
 id: org.themobileprof.copy_file
 version: 1.0.0
 description: Copy a file from source to destination with validation
-tags: [filesystem, file, copy, backup, cp]
+tags: [file-ops, atomic, filesystem, copy]
 provides:
   - file_copied
 requires:

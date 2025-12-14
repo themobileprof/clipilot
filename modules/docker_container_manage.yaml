@@ -2,7 +2,7 @@ name: docker_container_manage
 id: org.themobileprof.docker_container_manage
 version: 1.0.0
 description: Manage Docker containers (list, start, stop, logs, inspect)
-tags: [docker, containers, devops, orchestration]
+tags: [devops-ops, composite, docker, containers]
 provides:
   - docker_managed
 requires:

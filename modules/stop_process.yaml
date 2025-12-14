@@ -2,7 +2,7 @@ name: stop_process
 id: org.themobileprof.stop_process
 version: 1.0.0
 description: Stop a running process by PID or name with signal options
-tags: [system, process, kill, stop, terminate]
+tags: [system-ops, atomic, process, kill]
 provides:
   - process_stopped
 requires:

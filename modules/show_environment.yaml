@@ -2,7 +2,7 @@ name: show_environment
 id: org.themobileprof.show_environment
 version: 1.0.0
 description: Display environment variables with optional filtering
-tags: [system, environment, env, variables, config]
+tags: [system-ops, atomic, environment, config]
 provides:
   - environment_shown
 requires: []

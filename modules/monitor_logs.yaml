@@ -2,7 +2,7 @@ name: monitor_logs
 id: org.themobileprof.monitor_logs
 version: 1.0.0
 description: Tail and monitor log files with filtering options
-tags: [logs, monitoring, tail, grep, devops, sre]
+tags: [devops-ops, composite, logs, monitoring]
 provides:
   - logs_monitored
 requires:

@@ -2,7 +2,7 @@ name: backup_directory
 id: org.themobileprof.backup_directory
 version: 1.0.0
 description: Create a compressed backup of a directory with timestamp
-tags: [backup, composite, archive, directory, utility]
+tags: [file-ops, composite, backup, archive]
 provides:
   - directory_backed_up
 requires:

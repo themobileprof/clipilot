@@ -2,7 +2,7 @@ name: search_in_file
 id: org.themobileprof.search_in_file
 version: 1.0.0
 description: Search for text pattern in file using grep
-tags: [search, text, grep, find, pattern]
+tags: [text-ops, atomic, search, grep, pattern]
 provides:
   - text_searched
 requires:

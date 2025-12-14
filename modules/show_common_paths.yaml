@@ -2,7 +2,7 @@ name: show_common_paths
 id: org.themobileprof.show_common_paths
 version: 1.0.0
 description: Display common filesystem locations and helpful navigation commands
-tags: [utility, filesystem, help, navigation, termux]
+tags: [file-ops, atomic, utility, navigation]
 provides:
   - path_help_shown
 requires: []

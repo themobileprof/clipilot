@@ -2,7 +2,7 @@ name: list_processes
 id: org.themobileprof.list_processes
 version: 1.0.0
 description: List running processes with filtering and sorting options
-tags: [system, process, ps, monitor, diagnostics]
+tags: [system-ops, atomic, process, monitoring]
 provides:
   - processes_listed
 requires: []

@@ -2,7 +2,7 @@ name: vim_dev_setup
 id: org.themobileprof.vim_dev_setup
 version: 1.0.0
 description: Install and configure Vim with essential plugins for development
-tags: [vim, editor, ide, install, setup, development, composite]
+tags: [installer, composite, vim, editor, development, setup]
 provides:
   - vim_installed
   - vim_configured

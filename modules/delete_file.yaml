@@ -2,7 +2,7 @@ name: delete_file
 id: org.themobileprof.delete_file
 version: 1.0.0
 description: Safely delete a file with confirmation and validation
-tags: [filesystem, file, delete, remove, rm]
+tags: [file-ops, atomic, filesystem, delete]
 provides:
   - file_deleted
 requires:

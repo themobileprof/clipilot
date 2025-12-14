@@ -2,7 +2,7 @@ name: git_status_check
 id: org.themobileprof.git_status_check
 version: 1.0.0
 description: Check Git repository status, branch, and pending changes
-tags: [git, vcs, devops, development]
+tags: [devops-ops, composite, git, vcs]
 provides:
   - git_checked
 requires:

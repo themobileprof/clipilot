@@ -2,7 +2,7 @@ name: nodejs_setup
 id: org.themobileprof.nodejs_setup
 version: 1.0.0
 description: Install Node.js and npm with version selection
-tags: [nodejs, npm, install, setup, development, composite]
+tags: [installer, composite, nodejs, development, setup]
 provides:
   - nodejs_installed
   - npm_installed

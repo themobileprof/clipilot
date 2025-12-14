@@ -2,7 +2,7 @@ name: check_is_directory
 id: org.themobileprof.check_is_directory
 version: 1.0.0
 description: Check if a path is a directory (not a file or other type)
-tags: [validation, filesystem, utility, directory, check]
+tags: [file-ops, atomic, validation, filesystem]
 provides:
   - directory_validated
 requires:

@@ -2,7 +2,7 @@ name: ssl_cert_check
 id: org.themobileprof.ssl_cert_check
 version: 1.0.0
 description: Check SSL/TLS certificate expiry and details for a domain
-tags: [ssl, tls, security, certificate, devops, sre]
+tags: [devops-ops, composite, ssl, security, monitoring]
 provides:
   - ssl_checked
 requires:

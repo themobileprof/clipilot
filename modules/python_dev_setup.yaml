@@ -2,7 +2,7 @@ name: python_dev_setup
 id: org.themobileprof.python_dev_setup
 version: 1.0.0
 description: Install Python, pip, and virtualenv for development
-tags: [python, pip, install, setup, development, composite]
+tags: [installer, composite, python, development, setup]
 provides:
   - python_installed
   - pip_installed

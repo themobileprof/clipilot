@@ -2,7 +2,7 @@ name: check_permissions
 id: org.themobileprof.check_permissions
 version: 1.0.0
 description: Check if user has read, write, or execute permissions on a path
-tags: [validation, filesystem, permissions, security, access]
+tags: [file-ops, atomic, validation, permissions, security]
 provides:
   - permissions_checked
 requires: []

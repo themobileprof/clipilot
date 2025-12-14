@@ -2,7 +2,7 @@ name: get_current_directory
 id: org.themobileprof.get_current_directory
 version: 1.0.0
 description: Display the current working directory path
-tags: [filesystem, utility, directory, pwd, navigation]
+tags: [file-ops, atomic, filesystem, navigation]
 provides:
   - current_directory_shown
 requires: []

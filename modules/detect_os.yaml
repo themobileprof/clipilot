@@ -2,7 +2,7 @@ name: detect_os
 id: org.themobileprof.detect_os
 version: 1.0.0
 description: Detect operating system and distribution
-tags: [os, detection, system, utility]
+tags: [system-ops, atomic, os, detection, utility]
 provides:
   - os_type
   - os_version

@@ -2,7 +2,7 @@ name: check_disk_space
 id: org.themobileprof.check_disk_space
 version: 1.0.0
 description: Check available disk space on filesystem or specific path
-tags: [filesystem, utility, disk, space, storage]
+tags: [system-ops, atomic, filesystem, disk]
 provides:
   - disk_space_checked
 requires: []

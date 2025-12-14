@@ -2,7 +2,7 @@ name: change_permissions
 id: org.themobileprof.change_permissions
 version: 1.0.0
 description: Change file or directory permissions using chmod
-tags: [filesystem, permissions, chmod, security, access]
+tags: [file-ops, atomic, permissions, security]
 provides:
   - permissions_changed
 requires:

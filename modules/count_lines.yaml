@@ -2,7 +2,7 @@ name: count_lines
 id: org.themobileprof.count_lines
 version: 1.0.0
 description: Count lines, words, characters, or bytes in a file using wc
-tags: [text, utility, count, wc, analysis]
+tags: [text-ops, atomic, count, analysis]
 provides:
   - lines_counted
 requires:

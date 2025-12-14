@@ -2,7 +2,7 @@ name: extract_archive
 id: org.themobileprof.extract_archive
 version: 1.0.0
 description: Extract tar, tar.gz, tar.bz2, tar.xz, or zip archives
-tags: [archive, extract, untar, unzip, decompress]
+tags: [file-ops, atomic, archive, extract]
 provides:
   - archive_extracted
 requires:

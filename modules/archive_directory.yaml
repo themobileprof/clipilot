@@ -2,7 +2,7 @@ name: archive_directory
 id: org.themobileprof.archive_directory
 version: 1.0.0
 description: Create tar archive of directory with optional compression
-tags: [archive, compress, tar, backup, zip]
+tags: [file-ops, atomic, archive, compress]
 provides:
   - directory_archived
 requires:

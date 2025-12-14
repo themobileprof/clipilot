@@ -2,7 +2,7 @@ name: read_file
 id: org.themobileprof.read_file
 version: 1.0.0
 description: Display file contents with optional line limits
-tags: [filesystem, file, read, view, cat, text]
+tags: [file-ops, atomic, filesystem, read, text]
 provides:
   - file_read
 requires:

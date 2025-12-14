@@ -1,8 +1,8 @@
 name: check_file_exists
 id: org.themobileprof.check_file_exists
 version: 1.0.0
-description: Check if a file (not directory) exists on the filesystem
-tags: [validation, filesystem, utility, file, check]
+description: Check if a specific file exists on the filesystem
+tags: [file-ops, atomic, validation, filesystem]
 provides:
   - file_validated
 requires: []

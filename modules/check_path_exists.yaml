@@ -2,7 +2,7 @@ name: check_path_exists
 id: org.themobileprof.check_path_exists
 version: 1.0.0
 description: Check if a file or directory path exists on the filesystem
-tags: [validation, filesystem, utility, path, check]
+tags: [file-ops, atomic, validation, filesystem]
 provides:
   - path_validated
 requires: []

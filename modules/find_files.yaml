@@ -2,7 +2,7 @@ name: find_files
 id: org.themobileprof.find_files
 version: 1.0.0
 description: Search for files by name, extension, or pattern in directory tree
-tags: [search, filesystem, utility, find, locate]
+tags: [file-ops, atomic, search, filesystem]
 provides:
   - files_found
 requires: []

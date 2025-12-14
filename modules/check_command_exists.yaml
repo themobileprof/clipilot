@@ -2,7 +2,7 @@ name: check_command_exists
 id: org.themobileprof.check_command_exists
 version: 1.0.0
 description: Check if a command or program is available on the system
-tags: [validation, utility, command, program, check]
+tags: [system-ops, atomic, validation, utility]
 provides:
   - command_checked
 requires: []

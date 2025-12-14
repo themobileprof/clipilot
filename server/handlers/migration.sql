@@ -6,6 +6,7 @@ CREATE TABLE IF NOT EXISTS modules (
     version TEXT NOT NULL,
     description TEXT,
     author TEXT,
+    tags TEXT, -- JSON array of tags
     uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     uploaded_by TEXT NOT NULL,
     file_path TEXT NOT NULL,

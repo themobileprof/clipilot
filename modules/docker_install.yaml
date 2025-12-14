@@ -2,7 +2,7 @@ name: docker_install
 id: org.themobileprof.docker_install
 version: 1.0.0
 description: Install Docker and Docker Compose on Linux systems
-tags: [docker, container, install, devops]
+tags: [installer, composite, docker, setup, devops]
 provides:
   - docker_installed
 requires:

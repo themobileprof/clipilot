@@ -2,7 +2,7 @@ name: move_file
 id: org.themobileprof.move_file
 version: 1.0.0
 description: Move or rename a file from source to destination
-tags: [filesystem, file, move, rename, mv]
+tags: [file-ops, atomic, filesystem, move]
 provides:
   - file_moved
 requires:

@@ -2,7 +2,7 @@ name: organize_downloads
 id: org.themobileprof.organize_downloads
 version: 1.0.0
 description: Organize files in Downloads folder by type into categorized subdirectories
-tags: [files, composite, organize, cleanup, utility]
+tags: [file-ops, composite, organize, cleanup]
 provides:
   - downloads_organized
 requires:

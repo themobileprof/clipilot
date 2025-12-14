@@ -2,7 +2,7 @@ name: cron_job_manager
 id: org.themobileprof.cron_job_manager
 version: 1.0.0
 description: List, add, or remove cron jobs for automated tasks
-tags: [cron, scheduler, automation, devops, sre]
+tags: [devops-ops, composite, cron, scheduler, automation]
 provides:
   - cron_managed
 requires:

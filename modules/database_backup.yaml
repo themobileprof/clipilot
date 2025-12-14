@@ -2,7 +2,7 @@ name: database_backup
 id: org.themobileprof.database_backup
 version: 1.0.0
 description: Backup MySQL/PostgreSQL databases with compression
-tags: [database, backup, mysql, postgresql, devops, dba]
+tags: [devops-ops, composite, database, backup]
 provides:
   - database_backed_up
 requires:

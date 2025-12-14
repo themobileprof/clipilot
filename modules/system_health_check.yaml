@@ -2,7 +2,7 @@ name: system_health_check
 id: org.themobileprof.system_health_check
 version: 1.0.0
 description: Comprehensive system health report with disk, network, and process info
-tags: [system, composite, diagnostics, health, monitoring]
+tags: [system-ops, composite, monitoring, diagnostics, health]
 provides:
   - system_checked
 requires:

@@ -2,7 +2,7 @@ name: package_install
 id: org.themobileprof.package_install
 version: 1.0.0
 description: Generic package installer with auto-detection of package manager
-tags: [install, package, generic, utility, setup, composite]
+tags: [installer, composite, package, generic, setup]
 provides:
   - package_installed
 requires:

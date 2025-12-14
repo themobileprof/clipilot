@@ -2,7 +2,7 @@ name: check_network_connectivity
 id: org.themobileprof.check_network_connectivity
 version: 1.0.0
 description: Check internet and network connectivity with ping tests
-tags: [network, utility, connectivity, internet, diagnostics]
+tags: [network-ops, atomic, connectivity, diagnostics]
 provides:
   - network_checked
 requires: []

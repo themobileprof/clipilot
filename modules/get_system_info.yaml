@@ -2,7 +2,7 @@ name: get_system_info
 id: org.themobileprof.get_system_info
 version: 1.0.0
 description: Display system information (OS, kernel, architecture, hostname)
-tags: [system, utility, info, platform, diagnostics]
+tags: [system-ops, atomic, info, diagnostics]
 provides:
   - system_info_shown
 requires: []

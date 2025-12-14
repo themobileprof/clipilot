@@ -2,7 +2,7 @@ name: cleanup_old_files
 id: org.themobileprof.cleanup_old_files
 version: 1.0.0
 description: Find and optionally delete files older than specified days
-tags: [cleanup, composite, maintenance, files, utility]
+tags: [file-ops, composite, cleanup, maintenance]
 provides:
   - old_files_cleaned
 requires:

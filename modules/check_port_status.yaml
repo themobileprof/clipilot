@@ -2,7 +2,7 @@ name: check_port_status
 id: org.themobileprof.check_port_status
 version: 1.0.0
 description: Check if a port is open/listening and show process using it
-tags: [network, diagnostics, port, netstat, lsof, devops]
+tags: [devops-ops, atomic, network, diagnostics, monitoring]
 provides:
   - port_checked
 requires:

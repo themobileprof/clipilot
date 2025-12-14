@@ -2,7 +2,7 @@ name: download_file
 id: org.themobileprof.download_file
 version: 1.0.0
 description: Download file from URL using curl or wget
-tags: [network, download, curl, wget, http]
+tags: [network-ops, atomic, download, http]
 provides:
   - file_downloaded
 requires:

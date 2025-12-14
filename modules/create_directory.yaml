@@ -1,8 +1,8 @@
 name: create_directory
 id: org.themobileprof.create_directory
 version: 1.0.0
-description: Create a new directory with optional parent directory creation
-tags: [filesystem, utility, directory, create, mkdir]
+description: Create a new directory with optional parent directories
+tags: [file-ops, atomic, filesystem, create]
 provides:
   - directory_created
 requires:
