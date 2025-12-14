@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 
@@ -190,6 +191,104 @@ func (h *Handlers) UploadPage(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// validateModule performs comprehensive validation on a module
+func validateModule(module *models.Module) error {
+	// Validate required top-level fields
+	if module.Name == "" {
+		return fmt.Errorf("name is required")
+	}
+	if module.Version == "" {
+		return fmt.Errorf("version is required")
+	}
+	if module.Description == "" {
+		return fmt.Errorf("description is required")
+	}
+
+	// Validate name format (lowercase, alphanumeric, underscores only)
+	nameRegex := regexp.MustCompile(`^[a-z0-9_]+$`)
+	if !nameRegex.MatchString(module.Name) {
+		return fmt.Errorf("name must be lowercase alphanumeric with underscores only (got: %s)", module.Name)
+	}
+
+	// Validate version format (semantic versioning)
+	versionRegex := regexp.MustCompile(`^\d+\.\d+\.\d+$`)
+	if !versionRegex.MatchString(module.Version) {
+		return fmt.Errorf("version must follow semantic versioning (e.g., 1.0.0, got: %s)", module.Version)
+	}
+
+	// Validate tags (at least one required for search/discovery)
+	if len(module.Tags) == 0 {
+		return fmt.Errorf("tags are required (at least one tag for module discovery)")
+	}
+
+	// Validate flows
+	if len(module.Flows) == 0 {
+		return fmt.Errorf("flows section is required")
+	}
+
+	// Check if at least one flow exists (doesn't have to be named "main" in this structure)
+	hasValidFlow := false
+	for flowName, flow := range module.Flows {
+		if flow != nil && len(flow.Steps) > 0 {
+			hasValidFlow = true
+			// Validate flow has a start step
+			if flow.Start == "" {
+				return fmt.Errorf("flow '%s': start field is required", flowName)
+			}
+			// Validate start step exists
+			if _, exists := flow.Steps[flow.Start]; !exists {
+				return fmt.Errorf("flow '%s': start step '%s' not found in steps", flowName, flow.Start)
+			}
+		}
+	}
+	if !hasValidFlow {
+		return fmt.Errorf("at least one flow with steps is required")
+	}
+
+	// Validate each step in each flow
+	validTypes := map[string]bool{
+		"instruction": true,
+		"action":      true,
+		"branch":      true,
+		"terminal":    true,
+	}
+
+	for flowName, flow := range module.Flows {
+		for stepKey, step := range flow.Steps {
+			if step.Type == "" {
+				return fmt.Errorf("flow '%s', step '%s': type is required", flowName, stepKey)
+			}
+			if !validTypes[step.Type] {
+				return fmt.Errorf("flow '%s', step '%s': invalid type '%s' (must be: instruction, action, branch, or terminal)", flowName, stepKey, step.Type)
+			}
+			if step.Type == "action" && step.Command == "" {
+				return fmt.Errorf("flow '%s', step '%s': command is required for action steps", flowName, stepKey)
+			}
+			if step.Type == "branch" && step.BasedOn == "" {
+				return fmt.Errorf("flow '%s', step '%s': based_on is required for branch steps", flowName, stepKey)
+			}
+		}
+	}
+
+	// Validate file size constraints
+	if len(module.Description) > 500 {
+		return fmt.Errorf("description too long (max 500 characters)")
+	}
+	if len(module.Tags) > 20 {
+		return fmt.Errorf("too many tags (max 20)")
+	}
+	for i, tag := range module.Tags {
+		if len(tag) > 50 {
+			return fmt.Errorf("tag %d too long (max 50 characters)", i)
+		}
+	}
+	if module.Metadata.Author != "" && len(module.Metadata.Author) > 100 {
+		return fmt.Errorf("author name too long (max 100 characters)")
+	}
+
+	return nil
+}
+
 // APIUpload handles module file uploads
 func (h *Handlers) APIUpload(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
@@ -199,7 +298,7 @@ func (h *Handlers) APIUpload(w http.ResponseWriter, r *http.Request) {
 
 	// Parse multipart form (10MB max)
 	if err := r.ParseMultipartForm(10 << 20); err != nil {
-		http.Error(w, "File too large", http.StatusBadRequest)
+		http.Error(w, "File too large (max 10MB)", http.StatusBadRequest)
 		return
 	}
 
@@ -210,22 +309,42 @@ func (h *Handlers) APIUpload(w http.ResponseWriter, r *http.Request) {
 	}
 	defer file.Close()
 
-	// Validate YAML
+	// Validate file extension
+	if !strings.HasSuffix(strings.ToLower(header.Filename), ".yaml") &&
+		!strings.HasSuffix(strings.ToLower(header.Filename), ".yml") {
+		http.Error(w, "File must be a YAML file (.yaml or .yml)", http.StatusBadRequest)
+		return
+	}
+
+	// Read and validate YAML
 	data, err := io.ReadAll(file)
 	if err != nil {
 		http.Error(w, "Failed to read file", http.StatusInternalServerError)
 		return
 	}
 
-	var module models.Module
-	if err := yaml.Unmarshal(data, &module); err != nil {
-		http.Error(w, fmt.Sprintf("Invalid YAML: %v", err), http.StatusBadRequest)
+	// Check file size
+	if len(data) > 1024*1024 { // 1MB
+		http.Error(w, "YAML file too large (max 1MB)", http.StatusBadRequest)
 		return
 	}
 
-	// Basic validation
-	if module.Name == "" || module.Version == "" {
-		http.Error(w, "Module must have name and version", http.StatusBadRequest)
+	// Parse YAML
+	var module models.Module
+	if err := yaml.Unmarshal(data, &module); err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, `{"success": false, "error": "Invalid YAML syntax: %s"}`,
+			strings.ReplaceAll(err.Error(), `"`, `\"`))
+		return
+	}
+
+	// Comprehensive validation
+	if err := validateModule(&module); err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, `{"success": false, "error": "Validation failed: %s"}`,
+			strings.ReplaceAll(err.Error(), `"`, `\"`))
 		return
 	}
 
@@ -234,23 +353,32 @@ func (h *Handlers) APIUpload(w http.ResponseWriter, r *http.Request) {
 	err = h.db.QueryRow("SELECT COUNT(*) FROM modules WHERE name = ? AND version = ?",
 		module.Name, module.Version).Scan(&exists)
 	if err == nil && exists > 0 {
-		http.Error(w, "Module with this name and version already exists", http.StatusConflict)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusConflict)
+		fmt.Fprintf(w, `{"success": false, "error": "Module '%s' version %s already exists"}`,
+			module.Name, module.Version)
 		return
 	}
 
 	// Save file
 	filename := fmt.Sprintf("%s-%s-%d.yaml", module.Name, module.Version, time.Now().Unix())
-	filepath := filepath.Join(h.config.UploadsDir, filename)
+	savePath := filepath.Join(h.config.UploadsDir, filename)
 
-	outFile, err := os.Create(filepath)
+	outFile, err := os.Create(savePath)
 	if err != nil {
-		http.Error(w, "Failed to save file", http.StatusInternalServerError)
+		log.Printf("Failed to create file: %v", err)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, `{"success": false, "error": "Failed to save file"}`)
 		return
 	}
 	defer outFile.Close()
 
 	if _, err := outFile.Write(data); err != nil {
-		http.Error(w, "Failed to write file", http.StatusInternalServerError)
+		log.Printf("Failed to write file: %v", err)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, `{"success": false, "error": "Failed to write file"}`)
 		return
 	}
 
@@ -260,17 +388,22 @@ func (h *Handlers) APIUpload(w http.ResponseWriter, r *http.Request) {
 		INSERT INTO modules (name, version, description, author, uploaded_by, file_path, original_filename)
 		VALUES (?, ?, ?, ?, ?, ?, ?)
 	`, module.Name, module.Version, module.Description,
-		module.Metadata.Author, username, filepath, header.Filename)
+		module.Metadata.Author, username, savePath, header.Filename)
 
 	if err != nil {
 		log.Printf("Database insert error: %v", err)
-		http.Error(w, "Failed to save module", http.StatusInternalServerError)
+		os.Remove(savePath) // Clean up file on DB error
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, `{"success": false, "error": "Failed to save module metadata"}`)
 		return
 	}
 
+	log.Printf("Module uploaded successfully: %s v%s by %s", module.Name, module.Version, username)
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	fmt.Fprintf(w, `{"success": true, "message": "Module uploaded successfully"}`)
+	fmt.Fprintf(w, `{"success": true, "message": "Module '%s' v%s uploaded successfully"}`,
+		module.Name, module.Version)
 }
 
 // MyModules shows modules uploaded by the current user

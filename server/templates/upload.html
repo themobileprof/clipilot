@@ -46,88 +46,118 @@
         <h3>📋 Module Specification</h3>
         <p>Your YAML file must follow this structure:</p>
         
-        <pre><code>metadata:
-  name: your_module_name          # Required: lowercase, underscore-separated
-  version: "1.0.0"                # Required: semantic version
-  description: Brief description  # Required: what does this module do?
-  author: Your Name               # Optional but recommended
-  keywords:                       # Required: for intent detection
-    - keyword1
-    - keyword2
+        <pre><code>name: your_module_name          # Required: lowercase with underscores only
+version: "1.0.0"                # Required: semantic versioning (X.Y.Z)
+description: Brief description  # Required: what does this module do? (max 500 chars)
+tags:                           # Required: at least one tag for discovery
+  - keyword1
+  - keyword2
+
+metadata:                       # Optional module info
+  author: Your Name
+  license: MIT
 
 flows:
-  main:                           # Required: default flow name
+  main:                         # At least one flow required
+    start: step1                # Required: first step name
     steps:
-      - type: instruction         # instruction, action, branch, or terminal
-        name: step_name
-        message: "Message to user"
-        command: "bash command"   # For action steps
-        validation:               # Optional validation
-          - command: "check command"
-            error: "Error message if fails"</code></pre>
+      step1:                    # Step names as map keys
+        type: instruction       # Required: instruction, action, branch, terminal
+        message: "Message"      # Required for most steps
+        command: "bash cmd"     # Required for action steps
+        next: step2             # Optional: next step name</code></pre>
         
         <h4>Step Types</h4>
         <ul>
-            <li><strong>instruction</strong>: Display message to user (no command execution)</li>
-            <li><strong>action</strong>: Execute a command with optional user confirmation</li>
-            <li><strong>branch</strong>: Conditional flow control based on command exit code</li>
-            <li><strong>terminal</strong>: End the flow with success/failure message</li>
+            <li><strong>instruction</strong>: Display message to user, optionally execute command</li>
+            <li><strong>action</strong>: Execute a bash command (requires <code>command</code> field)</li>
+            <li><strong>branch</strong>: Conditional flow control (requires <code>based_on</code> field with step output)</li>
+            <li><strong>terminal</strong>: End the flow with a message (success or failure state)</li>
         </ul>
         
-        <h4>Example: Docker Installation</h4>
-        <pre><code>metadata:
-  name: docker_install
-  version: "1.0.0"
-  description: Install Docker on Ubuntu/Debian systems
+        <h4>Validation Rules</h4>
+        <ul>
+            <li>✓ Name: lowercase, alphanumeric, underscores only (no dashes)</li>
+            <li>✓ Version: semantic versioning format (e.g., 1.0.0)</li>
+            <li>✓ Description: required, max 500 characters</li>
+            <li>✓ Tags: at least 1 tag, max 20 tags, 50 chars each</li>
+            <li>✓ Flows: at least one flow with <code>start</code> field</li>
+            <li>✓ Steps: defined as map (key: step_name), not array</li>
+            <li>✓ Action steps must have <code>command</code> field</li>
+            <li>✓ Branch steps must have <code>based_on</code> field</li>
+        </ul>
+        
+        <h4>Example: Simple Git Setup</h4>
+        <pre><code>name: git_setup
+version: "1.0.0"
+description: Configure Git with user name and email
+tags:
+  - git
+  - setup
+  - configuration
+
+metadata:
   author: CLIPilot Team
-  keywords:
-    - docker
-    - install docker
-    - setup docker
+  license: MIT
 
 flows:
   main:
+    start: check_git
     steps:
-      - type: action
-        name: check_existing
-        message: "Checking if Docker is already installed..."
-        command: "which docker"
-        validation:
-          - command: "exit 0"
+      check_git:
+        type: instruction
+        message: "Checking if Git is installed..."
+        command: "which git"
+        next: set_name
       
-      - type: action
-        name: update_apt
-        message: "Updating package lists..."
-        command: "sudo apt-get update"
+      set_name:
+        type: action
+        message: "Setting Git user name..."
+        command: "git config --global user.name 'Your Name'"
+        next: set_email
       
-      - type: action
-        name: install_docker
-        message: "Installing Docker..."
-        command: "sudo apt-get install -y docker.io"
+      set_email:
+        type: action
+        message: "Setting Git email..."
+        command: "git config --global user.email 'you@example.com'"
+        next: done
       
-      - type: terminal
-        name: success
-        message: "✓ Docker installed successfully! Run 'docker --version' to verify."</code></pre>
+      done:
+        type: terminal
+        message: "✓ Git configured successfully!"</code></pre>
     </div>
     
-    <div class="chatgpt-section">
-        <h3>🤖 Generate with ChatGPT</h3>
-        <p>Use this prompt to generate a valid module YAML:</p>
-        
         <div class="prompt-box">
             <p><strong>Copy this prompt:</strong></p>
             <pre><code>Create a CLIPilot module YAML file for [DESCRIBE YOUR TASK].
 
-The YAML must follow this structure:
-- metadata: name (lowercase_underscore), version (semver), description, author, keywords (array)
-- flows: main flow with steps array
-- step types: instruction (message only), action (command + message), branch (conditional), terminal (end)
-- each action step can have optional validation array with command and error message
+Required structure:
+- Top level: name (lowercase_with_underscores), version ("X.Y.Z"), description (max 500 chars)
+- tags: array with at least one tag for discovery
+- metadata: optional author and license
+- flows: at least one flow with "start" field and "steps" map
+- Each flow must have "start" pointing to first step name
+- Steps are defined as a map with step names as keys (not an array)
+
+Step types:
+- instruction: message only, no command execution
+- action: requires "command" field, executes bash commands
+- branch: conditional flow based on "based_on" field
+- terminal: end state with success/failure message
+
+Each step should have:
+- type: (required) one of the above types
+- message: (optional but recommended) shown to user
+- command: (required for action steps) bash command to execute
+- next: (optional) name of next step to execute
 
 Requirements:
-1. Use clear, descriptive step names
-2. Include helpful messages for users
-3. Add validation where commands might fail
+1. Step names must be valid YAML map keys
+2. Use "next" field to chain steps together
+3. Terminal steps don't need "next" field
+4. Choose descriptive tags for intent matching
+
+Output ONLY valid YAML, no explanations or markdown.</code></pre>
 4. Use terminal steps for success/failure endings
 5. Choose relevant keywords for intent detection
 
