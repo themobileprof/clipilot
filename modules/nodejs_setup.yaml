@@ -1,0 +1,320 @@
+name: nodejs_setup
+id: org.themobileprof.nodejs_setup
+version: 1.0.0
+description: Install Node.js and npm with version selection
+tags: [nodejs, npm, install, setup, development, composite]
+provides:
+  - nodejs_installed
+  - npm_installed
+requires:
+  - check_command_exists
+  - detect_os
+size_kb: 3
+
+flows:
+  main:
+    start: check_nodejs
+    steps:
+      check_nodejs:
+        type: action
+        message: "Checking Node.js installation..."
+        command: |
+          echo "📦 Node.js Setup"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo ""
+          
+          if command -v node >/dev/null 2>&1; then
+            NODE_VERSION=$(node --version)
+            echo "✅ Node.js is already installed"
+            echo "   Node: $NODE_VERSION"
+            
+            if command -v npm >/dev/null 2>&1; then
+              NPM_VERSION=$(npm --version)
+              echo "   npm:  v$NPM_VERSION"
+            fi
+            
+            echo "INSTALLED"
+          else
+            echo "❌ Node.js is not installed"
+            echo "NOT_INSTALLED"
+          fi
+        next: branch_installed
+      
+      branch_installed:
+        type: branch
+        message: "Checking installation status..."
+        based_on: last_output
+        branches:
+          NOT_INSTALLED:
+            next: select_version
+          INSTALLED:
+            next: show_summary
+          default:
+            next: end
+      
+      select_version:
+        type: action
+        message: "Selecting Node.js version..."
+        command: |
+          NODE_VERSION="{{.version}}"
+          
+          echo ""
+          echo "Node.js Version Selection"
+          echo ""
+          
+          if [ -z "$NODE_VERSION" ]; then
+            echo "Available versions:"
+            echo "  • lts    - Latest LTS (recommended)"
+            echo "  • latest - Latest stable"
+            echo "  • 18     - Node.js 18.x LTS"
+            echo "  • 20     - Node.js 20.x LTS"
+            echo ""
+            echo "💡 Specify with: version=lts"
+            echo ""
+            NODE_VERSION="lts"
+          fi
+          
+          echo "Selected: $NODE_VERSION"
+          echo "$NODE_VERSION" > /tmp/clipilot_node_version.txt
+        next: detect_package_manager
+      
+      detect_package_manager:
+        type: action
+        message: "Detecting package manager..."
+        command: |
+          if command -v apt-get >/dev/null 2>&1; then
+            echo "APT"
+          elif command -v dnf >/dev/null 2>&1; then
+            echo "DNF"
+          elif command -v yum >/dev/null 2>&1; then
+            echo "YUM"
+          elif command -v pacman >/dev/null 2>&1; then
+            echo "PACMAN"
+          elif command -v brew >/dev/null 2>&1; then
+            echo "BREW"
+          else
+            echo "UNKNOWN"
+          fi
+        next: branch_package_manager
+      
+      branch_package_manager:
+        type: branch
+        message: "Selecting installation method..."
+        based_on: last_output
+        branches:
+          APT:
+            next: install_apt
+          DNF:
+            next: install_dnf
+          YUM:
+            next: install_yum
+          BREW:
+            next: install_brew
+          PACMAN:
+            next: install_pacman
+          default:
+            next: install_nvm
+      
+      install_apt:
+        type: action
+        message: "Installing Node.js via APT..."
+        command: |
+          NODE_VERSION=$(cat /tmp/clipilot_node_version.txt)
+          
+          echo "Installing Node.js with APT (Debian/Ubuntu)..."
+          echo ""
+          
+          # Install using NodeSource repository
+          echo "Adding NodeSource repository..."
+          
+          if [ "$NODE_VERSION" = "lts" ] || [ "$NODE_VERSION" = "20" ]; then
+            curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+          elif [ "$NODE_VERSION" = "18" ]; then
+            curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+          elif [ "$NODE_VERSION" = "latest" ]; then
+            curl -fsSL https://deb.nodesource.com/setup_current.x | sudo -E bash -
+          else
+            curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash -
+          fi
+          
+          echo ""
+          echo "Installing Node.js..."
+          sudo apt-get install -y nodejs
+          
+          if [ $? -eq 0 ]; then
+            echo ""
+            echo "✅ Node.js installed successfully"
+            node --version
+            npm --version
+          else
+            echo "❌ Installation failed"
+            exit 1
+          fi
+          
+          rm -f /tmp/clipilot_node_version.txt
+        next: show_summary
+      
+      install_dnf:
+        type: action
+        message: "Installing Node.js via DNF..."
+        command: |
+          NODE_VERSION=$(cat /tmp/clipilot_node_version.txt)
+          
+          echo "Installing Node.js with DNF (Fedora/RHEL)..."
+          echo ""
+          
+          # Install using NodeSource repository
+          if [ "$NODE_VERSION" = "lts" ] || [ "$NODE_VERSION" = "20" ]; then
+            curl -fsSL https://rpm.nodesource.com/setup_20.x | sudo bash -
+          elif [ "$NODE_VERSION" = "18" ]; then
+            curl -fsSL https://rpm.nodesource.com/setup_18.x | sudo bash -
+          else
+            curl -fsSL https://rpm.nodesource.com/setup_lts.x | sudo bash -
+          fi
+          
+          sudo dnf install -y nodejs
+          
+          if [ $? -eq 0 ]; then
+            echo ""
+            echo "✅ Node.js installed successfully"
+            node --version
+            npm --version
+          else
+            echo "❌ Installation failed"
+            exit 1
+          fi
+          
+          rm -f /tmp/clipilot_node_version.txt
+        next: show_summary
+      
+      install_yum:
+        type: action
+        message: "Installing Node.js via YUM..."
+        command: |
+          NODE_VERSION=$(cat /tmp/clipilot_node_version.txt)
+          
+          echo "Installing Node.js with YUM (RHEL/CentOS)..."
+          echo ""
+          
+          if [ "$NODE_VERSION" = "lts" ] || [ "$NODE_VERSION" = "20" ]; then
+            curl -fsSL https://rpm.nodesource.com/setup_20.x | sudo bash -
+          elif [ "$NODE_VERSION" = "18" ]; then
+            curl -fsSL https://rpm.nodesource.com/setup_18.x | sudo bash -
+          else
+            curl -fsSL https://rpm.nodesource.com/setup_lts.x | sudo bash -
+          fi
+          
+          sudo yum install -y nodejs
+          
+          if [ $? -eq 0 ]; then
+            echo ""
+            echo "✅ Node.js installed successfully"
+            node --version
+            npm --version
+          else
+            echo "❌ Installation failed"
+            exit 1
+          fi
+          
+          rm -f /tmp/clipilot_node_version.txt
+        next: show_summary
+      
+      install_brew:
+        type: action
+        message: "Installing Node.js via Homebrew..."
+        command: |
+          NODE_VERSION=$(cat /tmp/clipilot_node_version.txt)
+          
+          echo "Installing Node.js with Homebrew (macOS)..."
+          echo ""
+          
+          if [ "$NODE_VERSION" = "lts" ]; then
+            brew install node@20
+          elif [ "$NODE_VERSION" = "18" ]; then
+            brew install node@18
+          else
+            brew install node
+          fi
+          
+          if [ $? -eq 0 ]; then
+            echo ""
+            echo "✅ Node.js installed successfully"
+            node --version
+            npm --version
+          else
+            echo "❌ Installation failed"
+            exit 1
+          fi
+          
+          rm -f /tmp/clipilot_node_version.txt
+        next: show_summary
+      
+      install_pacman:
+        type: action
+        message: "Installing Node.js via Pacman..."
+        command: |
+          echo "Installing Node.js with Pacman (Arch Linux)..."
+          echo ""
+          
+          sudo pacman -Sy --noconfirm nodejs npm
+          
+          if [ $? -eq 0 ]; then
+            echo ""
+            echo "✅ Node.js installed successfully"
+            node --version
+            npm --version
+          else
+            echo "❌ Installation failed"
+            exit 1
+          fi
+          
+          rm -f /tmp/clipilot_node_version.txt
+        next: show_summary
+      
+      install_nvm:
+        type: instruction
+        message: "Install using NVM (Node Version Manager)"
+        command: |
+          echo "Install Node.js using NVM (recommended for multiple versions):"
+          echo ""
+          echo "1. Install NVM:"
+          echo "   curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash"
+          echo ""
+          echo "2. Reload shell:"
+          echo "   source ~/.bashrc  # or ~/.zshrc"
+          echo ""
+          echo "3. Install Node.js:"
+          echo "   nvm install --lts"
+          echo ""
+          echo "Or visit: https://nodejs.org/en/download/"
+          
+          rm -f /tmp/clipilot_node_version.txt
+        next: end
+      
+      show_summary:
+        type: action
+        message: "Setup complete"
+        command: |
+          echo ""
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "✅ Node.js Setup Complete"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo ""
+          echo "Installed versions:"
+          node --version
+          npm --version
+          echo ""
+          echo "Common commands:"
+          echo "  • node script.js         - Run JavaScript"
+          echo "  • npm init               - Create package.json"
+          echo "  • npm install <package>  - Install package"
+          echo "  • npm start              - Start application"
+          echo "  • npx <command>          - Run package binary"
+          echo ""
+          echo "Global packages location:"
+          npm config get prefix
+        next: end
+      
+      end:
+        type: terminal
+        message: "Node.js setup complete"

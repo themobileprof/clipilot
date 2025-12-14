@@ -1,0 +1,430 @@
+name: package_install
+id: org.themobileprof.package_install
+version: 1.0.0
+description: Generic package installer with auto-detection of package manager
+tags: [install, package, generic, utility, setup, composite]
+provides:
+  - package_installed
+requires:
+  - check_command_exists
+  - detect_os
+size_kb: 3
+
+flows:
+  main:
+    start: validate_package
+    steps:
+      validate_package:
+        type: action
+        message: "Validating package name..."
+        command: |
+          PACKAGE="{{.package}}"
+          
+          if [ -z "$PACKAGE" ]; then
+            echo "❌ Must specify package name"
+            echo ""
+            echo "💡 Example: package=htop"
+            exit 1
+          fi
+          
+          echo "📦 Package Installer"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "Package: $PACKAGE"
+          echo ""
+          
+          echo "$PACKAGE" > /tmp/clipilot_package.txt
+        next: check_installed
+      
+      check_installed:
+        type: action
+        message: "Checking if package is already installed..."
+        command: |
+          PACKAGE=$(cat /tmp/clipilot_package.txt)
+          
+          if command -v "$PACKAGE" >/dev/null 2>&1; then
+            VERSION=$("$PACKAGE" --version 2>&1 | head -1 || echo "installed")
+            echo "✅ $PACKAGE is already installed"
+            echo "   $VERSION"
+            echo "INSTALLED"
+          else
+            echo "Package not found, proceeding with installation..."
+            echo "NOT_INSTALLED"
+          fi
+        next: branch_installed
+      
+      branch_installed:
+        type: branch
+        message: "Checking installation status..."
+        based_on: last_output
+        branches:
+          INSTALLED:
+            next: cleanup
+          NOT_INSTALLED:
+            next: detect_package_manager
+          default:
+            next: end
+      
+      detect_package_manager:
+        type: action
+        message: "Detecting package manager..."
+        command: |
+          echo ""
+          echo "Detecting system package manager..."
+          
+          if command -v apt-get >/dev/null 2>&1; then
+            echo "APT"
+          elif command -v dnf >/dev/null 2>&1; then
+            echo "DNF"
+          elif command -v yum >/dev/null 2>&1; then
+            echo "YUM"
+          elif command -v pacman >/dev/null 2>&1; then
+            echo "PACMAN"
+          elif command -v zypper >/dev/null 2>&1; then
+            echo "ZYPPER"
+          elif command -v apk >/dev/null 2>&1; then
+            echo "APK"
+          elif command -v brew >/dev/null 2>&1; then
+            echo "BREW"
+          elif command -v pkg >/dev/null 2>&1 && [ -n "$TERMUX_VERSION" ]; then
+            echo "TERMUX"
+          elif command -v pkg >/dev/null 2>&1; then
+            echo "PKG"
+          elif command -v emerge >/dev/null 2>&1; then
+            echo "PORTAGE"
+          else
+            echo "UNKNOWN"
+          fi
+        next: branch_package_manager
+      
+      branch_package_manager:
+        type: branch
+        message: "Selecting installation method..."
+        based_on: last_output
+        branches:
+          APT:
+            next: install_apt
+          DNF:
+            next: install_dnf
+          YUM:
+            next: install_yum
+          PACMAN:
+            next: install_pacman
+          ZYPPER:
+            next: install_zypper
+          APK:
+            next: install_apk
+          BREW:
+            next: install_brew
+          TERMUX:
+            next: install_termux
+          PKG:
+            next: install_pkg
+          PORTAGE:
+            next: install_portage
+          default:
+            next: install_fallback
+      
+      install_apt:
+        type: action
+        message: "Installing via APT..."
+        command: |
+          PACKAGE=$(cat /tmp/clipilot_package.txt)
+          
+          echo "Installing $PACKAGE with APT (Debian/Ubuntu)..."
+          echo ""
+          
+          sudo apt-get update
+          sudo apt-get install -y "$PACKAGE"
+          
+          if [ $? -eq 0 ]; then
+            echo ""
+            echo "✅ $PACKAGE installed successfully"
+          else
+            echo ""
+            echo "❌ Installation failed"
+            echo ""
+            echo "💡 Try searching for the package:"
+            echo "   apt-cache search $PACKAGE"
+            exit 1
+          fi
+        next: verify_installation
+      
+      install_dnf:
+        type: action
+        message: "Installing via DNF..."
+        command: |
+          PACKAGE=$(cat /tmp/clipilot_package.txt)
+          
+          echo "Installing $PACKAGE with DNF (Fedora/RHEL 8+)..."
+          echo ""
+          
+          sudo dnf install -y "$PACKAGE"
+          
+          if [ $? -eq 0 ]; then
+            echo ""
+            echo "✅ $PACKAGE installed successfully"
+          else
+            echo ""
+            echo "❌ Installation failed"
+            echo ""
+            echo "💡 Try searching for the package:"
+            echo "   dnf search $PACKAGE"
+            exit 1
+          fi
+        next: verify_installation
+      
+      install_yum:
+        type: action
+        message: "Installing via YUM..."
+        command: |
+          PACKAGE=$(cat /tmp/clipilot_package.txt)
+          
+          echo "Installing $PACKAGE with YUM (RHEL/CentOS)..."
+          echo ""
+          
+          sudo yum install -y "$PACKAGE"
+          
+          if [ $? -eq 0 ]; then
+            echo ""
+            echo "✅ $PACKAGE installed successfully"
+          else
+            echo ""
+            echo "❌ Installation failed"
+            echo ""
+            echo "💡 Try searching for the package:"
+            echo "   yum search $PACKAGE"
+            exit 1
+          fi
+        next: verify_installation
+      
+      install_pacman:
+        type: action
+        message: "Installing via Pacman..."
+        command: |
+          PACKAGE=$(cat /tmp/clipilot_package.txt)
+          
+          echo "Installing $PACKAGE with Pacman (Arch Linux)..."
+          echo ""
+          
+          sudo pacman -Sy --noconfirm "$PACKAGE"
+          
+          if [ $? -eq 0 ]; then
+            echo ""
+            echo "✅ $PACKAGE installed successfully"
+          else
+            echo ""
+            echo "❌ Installation failed"
+            echo ""
+            echo "💡 Try searching for the package:"
+            echo "   pacman -Ss $PACKAGE"
+            exit 1
+          fi
+        next: verify_installation
+      
+      install_zypper:
+        type: action
+        message: "Installing via Zypper..."
+        command: |
+          PACKAGE=$(cat /tmp/clipilot_package.txt)
+          
+          echo "Installing $PACKAGE with Zypper (openSUSE)..."
+          echo ""
+          
+          sudo zypper install -y "$PACKAGE"
+          
+          if [ $? -eq 0 ]; then
+            echo ""
+            echo "✅ $PACKAGE installed successfully"
+          else
+            echo ""
+            echo "❌ Installation failed"
+            echo ""
+            echo "💡 Try searching for the package:"
+            echo "   zypper search $PACKAGE"
+            exit 1
+          fi
+        next: verify_installation
+      
+      install_apk:
+        type: action
+        message: "Installing via APK..."
+        command: |
+          PACKAGE=$(cat /tmp/clipilot_package.txt)
+          
+          echo "Installing $PACKAGE with APK (Alpine Linux)..."
+          echo ""
+          
+          sudo apk add "$PACKAGE"
+          
+          if [ $? -eq 0 ]; then
+            echo ""
+            echo "✅ $PACKAGE installed successfully"
+          else
+            echo ""
+            echo "❌ Installation failed"
+            echo ""
+            echo "💡 Try searching for the package:"
+            echo "   apk search $PACKAGE"
+            exit 1
+          fi
+        next: verify_installation
+      
+      install_brew:
+        type: action
+        message: "Installing via Homebrew..."
+        command: |
+          PACKAGE=$(cat /tmp/clipilot_package.txt)
+          
+          echo "Installing $PACKAGE with Homebrew (macOS/Linux)..."
+          echo ""
+          
+          brew install "$PACKAGE"
+          
+          if [ $? -eq 0 ]; then
+            echo ""
+            echo "✅ $PACKAGE installed successfully"
+          else
+            echo ""
+            echo "❌ Installation failed"
+            echo ""
+            echo "💡 Try searching for the package:"
+            echo "   brew search $PACKAGE"
+            exit 1
+          fi
+        next: verify_installation
+      
+      install_termux:
+        type: action
+        message: "Installing via Termux..."
+        command: |
+          PACKAGE=$(cat /tmp/clipilot_package.txt)
+          
+          echo "Installing $PACKAGE with Termux (Android)..."
+          echo ""
+          
+          pkg install -y "$PACKAGE"
+          
+          if [ $? -eq 0 ]; then
+            echo ""
+            echo "✅ $PACKAGE installed successfully"
+          else
+            echo ""
+            echo "❌ Installation failed"
+            echo ""
+            echo "💡 Try searching for the package:"
+            echo "   pkg search $PACKAGE"
+            exit 1
+          fi
+        next: verify_installation
+      
+      install_pkg:
+        type: action
+        message: "Installing via PKG..."
+        command: |
+          PACKAGE=$(cat /tmp/clipilot_package.txt)
+          
+          echo "Installing $PACKAGE with PKG (FreeBSD)..."
+          echo ""
+          
+          sudo pkg install -y "$PACKAGE"
+          
+          if [ $? -eq 0 ]; then
+            echo ""
+            echo "✅ $PACKAGE installed successfully"
+          else
+            echo ""
+            echo "❌ Installation failed"
+            echo ""
+            echo "💡 Try searching for the package:"
+            echo "   pkg search $PACKAGE"
+            exit 1
+          fi
+        next: verify_installation
+      
+      install_portage:
+        type: action
+        message: "Installing via Portage..."
+        command: |
+          PACKAGE=$(cat /tmp/clipilot_package.txt)
+          
+          echo "Installing $PACKAGE with Portage (Gentoo)..."
+          echo ""
+          
+          sudo emerge "$PACKAGE"
+          
+          if [ $? -eq 0 ]; then
+            echo ""
+            echo "✅ $PACKAGE installed successfully"
+          else
+            echo ""
+            echo "❌ Installation failed"
+            echo ""
+            echo "💡 Try searching for the package:"
+            echo "   emerge --search $PACKAGE"
+            exit 1
+          fi
+        next: verify_installation
+      
+      install_fallback:
+        type: instruction
+        message: "Manual installation required"
+        command: |
+          PACKAGE=$(cat /tmp/clipilot_package.txt)
+          
+          echo "❌ No supported package manager detected"
+          echo ""
+          echo "Please install $PACKAGE manually:"
+          echo ""
+          echo "Common methods:"
+          echo "  • Download from official website"
+          echo "  • Build from source"
+          echo "  • Use language-specific package managers:"
+          echo "    - Python: pip install $PACKAGE"
+          echo "    - Node.js: npm install -g $PACKAGE"
+          echo "    - Ruby: gem install $PACKAGE"
+          echo "    - Rust: cargo install $PACKAGE"
+          echo "    - Go: go install $PACKAGE"
+          
+          rm -f /tmp/clipilot_package.txt
+          exit 1
+        next: end
+      
+      verify_installation:
+        type: action
+        message: "Verifying installation..."
+        command: |
+          PACKAGE=$(cat /tmp/clipilot_package.txt)
+          
+          echo ""
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "Verification"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo ""
+          
+          if command -v "$PACKAGE" >/dev/null 2>&1; then
+            echo "✅ $PACKAGE is now available"
+            
+            VERSION=$("$PACKAGE" --version 2>&1 | head -1 || "$PACKAGE" -v 2>&1 | head -1 || echo "Version info not available")
+            echo ""
+            echo "$VERSION"
+          else
+            echo "⚠️  $PACKAGE command not found in PATH"
+            echo ""
+            echo "The package may have been installed but:"
+            echo "  • Binary name might be different"
+            echo "  • May need to reload shell or PATH"
+            echo "  • May be a library without executable"
+          fi
+        next: cleanup
+      
+      cleanup:
+        type: action
+        message: "Cleaning up..."
+        command: |
+          rm -f /tmp/clipilot_package.txt
+          echo ""
+        next: end
+      
+      end:
+        type: terminal
+        message: "Package installation complete"

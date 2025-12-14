@@ -1,0 +1,309 @@
+name: python_dev_setup
+id: org.themobileprof.python_dev_setup
+version: 1.0.0
+description: Install Python, pip, and virtualenv for development
+tags: [python, pip, install, setup, development, composite]
+provides:
+  - python_installed
+  - pip_installed
+  - virtualenv_installed
+requires:
+  - check_command_exists
+  - detect_os
+size_kb: 3
+
+flows:
+  main:
+    start: check_python
+    steps:
+      check_python:
+        type: action
+        message: "Checking Python installation..."
+        command: |
+          echo "🐍 Python Development Setup"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo ""
+          
+          if command -v python3 >/dev/null 2>&1; then
+            PYTHON_VERSION=$(python3 --version)
+            echo "✅ Python is already installed"
+            echo "   $PYTHON_VERSION"
+            
+            if command -v pip3 >/dev/null 2>&1; then
+              PIP_VERSION=$(pip3 --version | cut -d' ' -f2)
+              echo "   pip: $PIP_VERSION"
+            fi
+            
+            echo "INSTALLED"
+          else
+            echo "❌ Python 3 is not installed"
+            echo "NOT_INSTALLED"
+          fi
+        next: branch_installed
+      
+      branch_installed:
+        type: branch
+        message: "Checking installation status..."
+        based_on: last_output
+        branches:
+          NOT_INSTALLED:
+            next: detect_package_manager
+          INSTALLED:
+            next: check_pip
+          default:
+            next: end
+      
+      detect_package_manager:
+        type: action
+        message: "Detecting package manager..."
+        command: |
+          if command -v apt-get >/dev/null 2>&1; then
+            echo "APT"
+          elif command -v dnf >/dev/null 2>&1; then
+            echo "DNF"
+          elif command -v yum >/dev/null 2>&1; then
+            echo "YUM"
+          elif command -v pacman >/dev/null 2>&1; then
+            echo "PACMAN"
+          elif command -v brew >/dev/null 2>&1; then
+            echo "BREW"
+          elif command -v pkg >/dev/null 2>&1 && [ -n "$TERMUX_VERSION" ]; then
+            echo "TERMUX"
+          else
+            echo "UNKNOWN"
+          fi
+        next: branch_package_manager
+      
+      branch_package_manager:
+        type: branch
+        message: "Selecting installation method..."
+        based_on: last_output
+        branches:
+          APT:
+            next: install_apt
+          DNF:
+            next: install_dnf
+          YUM:
+            next: install_yum
+          PACMAN:
+            next: install_pacman
+          BREW:
+            next: install_brew
+          TERMUX:
+            next: install_termux
+          default:
+            next: install_manual
+      
+      install_apt:
+        type: action
+        message: "Installing Python via APT..."
+        command: |
+          echo "Installing Python with APT (Debian/Ubuntu)..."
+          echo ""
+          
+          sudo apt-get update
+          sudo apt-get install -y python3 python3-pip python3-venv python3-dev build-essential
+          
+          if [ $? -eq 0 ]; then
+            echo ""
+            echo "✅ Python installed successfully"
+            python3 --version
+            pip3 --version
+          else
+            echo "❌ Installation failed"
+            exit 1
+          fi
+        next: install_virtualenv
+      
+      install_dnf:
+        type: action
+        message: "Installing Python via DNF..."
+        command: |
+          echo "Installing Python with DNF (Fedora/RHEL)..."
+          echo ""
+          
+          sudo dnf install -y python3 python3-pip python3-virtualenv python3-devel gcc
+          
+          if [ $? -eq 0 ]; then
+            echo ""
+            echo "✅ Python installed successfully"
+            python3 --version
+            pip3 --version
+          else
+            echo "❌ Installation failed"
+            exit 1
+          fi
+        next: install_virtualenv
+      
+      install_yum:
+        type: action
+        message: "Installing Python via YUM..."
+        command: |
+          echo "Installing Python with YUM (RHEL/CentOS)..."
+          echo ""
+          
+          sudo yum install -y python3 python3-pip python3-devel gcc
+          
+          if [ $? -eq 0 ]; then
+            echo ""
+            echo "✅ Python installed successfully"
+            python3 --version
+            pip3 --version
+          else
+            echo "❌ Installation failed"
+            exit 1
+          fi
+        next: install_virtualenv
+      
+      install_pacman:
+        type: action
+        message: "Installing Python via Pacman..."
+        command: |
+          echo "Installing Python with Pacman (Arch Linux)..."
+          echo ""
+          
+          sudo pacman -Sy --noconfirm python python-pip
+          
+          if [ $? -eq 0 ]; then
+            echo ""
+            echo "✅ Python installed successfully"
+            python --version
+            pip --version
+          else
+            echo "❌ Installation failed"
+            exit 1
+          fi
+        next: install_virtualenv
+      
+      install_brew:
+        type: action
+        message: "Installing Python via Homebrew..."
+        command: |
+          echo "Installing Python with Homebrew (macOS)..."
+          echo ""
+          
+          brew install python3
+          
+          if [ $? -eq 0 ]; then
+            echo ""
+            echo "✅ Python installed successfully"
+            python3 --version
+            pip3 --version
+          else
+            echo "❌ Installation failed"
+            exit 1
+          fi
+        next: install_virtualenv
+      
+      install_termux:
+        type: action
+        message: "Installing Python via Termux..."
+        command: |
+          echo "Installing Python with Termux (Android)..."
+          echo ""
+          
+          pkg install -y python
+          
+          if [ $? -eq 0 ]; then
+            echo ""
+            echo "✅ Python installed successfully"
+            python --version
+            pip --version
+          else
+            echo "❌ Installation failed"
+            exit 1
+          fi
+        next: install_virtualenv
+      
+      install_manual:
+        type: instruction
+        message: "Manual installation required"
+        command: |
+          echo "❌ Automatic installation not available"
+          echo ""
+          echo "Install Python manually:"
+          echo "  • Visit: https://www.python.org/downloads/"
+          exit 1
+        next: end
+      
+      check_pip:
+        type: action
+        message: "Checking pip..."
+        command: |
+          echo ""
+          
+          if command -v pip3 >/dev/null 2>&1; then
+            echo "✅ pip is installed"
+          else
+            echo "⚠️  pip not found, installing..."
+            
+            # Try to install pip
+            if command -v apt-get >/dev/null 2>&1; then
+              sudo apt-get install -y python3-pip
+            elif command -v dnf >/dev/null 2>&1; then
+              sudo dnf install -y python3-pip
+            else
+              echo "Please install pip manually"
+            fi
+          fi
+        next: install_virtualenv
+      
+      install_virtualenv:
+        type: action
+        message: "Setting up virtualenv..."
+        command: |
+          echo ""
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "Installing Development Tools"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo ""
+          
+          # Upgrade pip
+          echo "Upgrading pip..."
+          python3 -m pip install --upgrade pip 2>/dev/null || pip3 install --upgrade pip
+          
+          # Install virtualenv
+          echo "Installing virtualenv..."
+          python3 -m pip install virtualenv 2>/dev/null || pip3 install virtualenv
+          
+          if [ $? -eq 0 ]; then
+            echo "✅ virtualenv installed"
+          else
+            echo "⚠️  virtualenv installation failed"
+          fi
+        next: show_summary
+      
+      show_summary:
+        type: action
+        message: "Setup complete"
+        command: |
+          echo ""
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "✅ Python Development Setup Complete"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo ""
+          echo "Installed versions:"
+          python3 --version 2>/dev/null || python --version
+          pip3 --version 2>/dev/null || pip --version
+          echo ""
+          echo "Common commands:"
+          echo "  • python3 script.py           - Run Python script"
+          echo "  • pip3 install <package>      - Install package"
+          echo "  • python3 -m venv myenv       - Create virtual environment"
+          echo "  • source myenv/bin/activate   - Activate venv"
+          echo "  • deactivate                  - Deactivate venv"
+          echo ""
+          echo "Create a virtual environment:"
+          echo "  python3 -m venv ~/.venvs/myproject"
+          echo "  source ~/.venvs/myproject/bin/activate"
+          echo ""
+          echo "Popular development packages:"
+          echo "  • pip3 install ipython         - Enhanced Python shell"
+          echo "  • pip3 install pytest          - Testing framework"
+          echo "  • pip3 install black           - Code formatter"
+          echo "  • pip3 install pylint          - Linter"
+        next: end
+      
+      end:
+        type: terminal
+        message: "Python setup complete"

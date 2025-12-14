@@ -1,0 +1,318 @@
+name: nginx_setup
+id: org.themobileprof.nginx_setup
+version: 1.0.0
+description: Install and configure Nginx web server with basic setup
+tags: [nginx, install, setup, webserver, devops, composite]
+provides:
+  - nginx_installed
+  - nginx_configured
+requires:
+  - check_command_exists
+  - service_control
+  - detect_os
+size_kb: 3
+
+flows:
+  main:
+    start: check_nginx
+    steps:
+      check_nginx:
+        type: action
+        message: "Checking Nginx installation..."
+        command: |
+          echo "🌐 Nginx Setup"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo ""
+          
+          if command -v nginx >/dev/null 2>&1; then
+            NGINX_VERSION=$(nginx -v 2>&1)
+            echo "✅ Nginx is already installed"
+            echo "   $NGINX_VERSION"
+            echo "INSTALLED"
+          else
+            echo "❌ Nginx is not installed"
+            echo "NOT_INSTALLED"
+          fi
+        next: branch_installed
+      
+      branch_installed:
+        type: branch
+        message: "Checking installation status..."
+        based_on: last_output
+        branches:
+          NOT_INSTALLED:
+            next: detect_package_manager
+          INSTALLED:
+            next: check_nginx_running
+          default:
+            next: end
+      
+      detect_package_manager:
+        type: action
+        message: "Detecting package manager..."
+        command: |
+          if command -v apt-get >/dev/null 2>&1; then
+            echo "APT"
+          elif command -v dnf >/dev/null 2>&1; then
+            echo "DNF"
+          elif command -v yum >/dev/null 2>&1; then
+            echo "YUM"
+          elif command -v pacman >/dev/null 2>&1; then
+            echo "PACMAN"
+          elif command -v brew >/dev/null 2>&1; then
+            echo "BREW"
+          else
+            echo "UNKNOWN"
+          fi
+        next: branch_package_manager
+      
+      branch_package_manager:
+        type: branch
+        message: "Selecting installation method..."
+        based_on: last_output
+        branches:
+          APT:
+            next: install_apt
+          DNF:
+            next: install_dnf
+          YUM:
+            next: install_yum
+          PACMAN:
+            next: install_pacman
+          BREW:
+            next: install_brew
+          default:
+            next: install_manual
+      
+      install_apt:
+        type: action
+        message: "Installing Nginx via APT..."
+        command: |
+          echo "Installing Nginx with APT (Debian/Ubuntu)..."
+          echo ""
+          
+          sudo apt-get update
+          sudo apt-get install -y nginx
+          
+          if [ $? -eq 0 ]; then
+            echo ""
+            echo "✅ Nginx installed successfully"
+            nginx -v
+          else
+            echo "❌ Installation failed"
+            exit 1
+          fi
+        next: configure_nginx
+      
+      install_dnf:
+        type: action
+        message: "Installing Nginx via DNF..."
+        command: |
+          echo "Installing Nginx with DNF (Fedora/RHEL)..."
+          echo ""
+          
+          sudo dnf install -y nginx
+          
+          if [ $? -eq 0 ]; then
+            echo ""
+            echo "✅ Nginx installed successfully"
+            nginx -v
+          else
+            echo "❌ Installation failed"
+            exit 1
+          fi
+        next: configure_nginx
+      
+      install_yum:
+        type: action
+        message: "Installing Nginx via YUM..."
+        command: |
+          echo "Installing Nginx with YUM (RHEL/CentOS)..."
+          echo ""
+          
+          sudo yum install -y nginx
+          
+          if [ $? -eq 0 ]; then
+            echo ""
+            echo "✅ Nginx installed successfully"
+            nginx -v
+          else
+            echo "❌ Installation failed"
+            exit 1
+          fi
+        next: configure_nginx
+      
+      install_pacman:
+        type: action
+        message: "Installing Nginx via Pacman..."
+        command: |
+          echo "Installing Nginx with Pacman (Arch Linux)..."
+          echo ""
+          
+          sudo pacman -Sy --noconfirm nginx
+          
+          if [ $? -eq 0 ]; then
+            echo ""
+            echo "✅ Nginx installed successfully"
+            nginx -v
+          else
+            echo "❌ Installation failed"
+            exit 1
+          fi
+        next: configure_nginx
+      
+      install_brew:
+        type: action
+        message: "Installing Nginx via Homebrew..."
+        command: |
+          echo "Installing Nginx with Homebrew (macOS)..."
+          echo ""
+          
+          brew install nginx
+          
+          if [ $? -eq 0 ]; then
+            echo ""
+            echo "✅ Nginx installed successfully"
+            nginx -v
+          else
+            echo "❌ Installation failed"
+            exit 1
+          fi
+        next: configure_nginx
+      
+      install_manual:
+        type: instruction
+        message: "Manual installation required"
+        command: |
+          echo "❌ Automatic installation not available"
+          echo ""
+          echo "Install Nginx manually:"
+          echo "  • Visit: https://nginx.org/en/download.html"
+          exit 1
+        next: end
+      
+      configure_nginx:
+        type: action
+        message: "Configuring Nginx..."
+        command: |
+          echo ""
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "Configuration"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo ""
+          
+          # Find Nginx config locations
+          if [ -d /etc/nginx ]; then
+            CONFIG_DIR="/etc/nginx"
+          elif [ -d /usr/local/etc/nginx ]; then
+            CONFIG_DIR="/usr/local/etc/nginx"
+          else
+            echo "⚠️  Config directory not found"
+            CONFIG_DIR=""
+          fi
+          
+          if [ -n "$CONFIG_DIR" ]; then
+            echo "Config directory: $CONFIG_DIR"
+            echo "Main config:      $CONFIG_DIR/nginx.conf"
+            
+            # Find web root
+            if [ -d /var/www/html ]; then
+              WEB_ROOT="/var/www/html"
+            elif [ -d /usr/share/nginx/html ]; then
+              WEB_ROOT="/usr/share/nginx/html"
+            elif [ -d /usr/local/var/www ]; then
+              WEB_ROOT="/usr/local/var/www"
+            else
+              WEB_ROOT="unknown"
+            fi
+            
+            echo "Web root:         $WEB_ROOT"
+          fi
+          
+          # Start and enable Nginx
+          echo ""
+          echo "Starting Nginx service..."
+          
+          if command -v systemctl >/dev/null 2>&1; then
+            sudo systemctl start nginx
+            sudo systemctl enable nginx
+            echo "✅ Nginx started and enabled"
+          elif command -v brew >/dev/null 2>&1; then
+            brew services start nginx
+            echo "✅ Nginx started via Homebrew"
+          else
+            sudo nginx
+            echo "✅ Nginx started manually"
+          fi
+        next: verify_nginx
+      
+      check_nginx_running:
+        type: action
+        message: "Checking Nginx status..."
+        command: |
+          echo ""
+          
+          if command -v systemctl >/dev/null 2>&1; then
+            sudo systemctl status nginx --no-pager -l | head -10
+          elif pgrep nginx >/dev/null 2>&1; then
+            echo "✅ Nginx is running"
+          else
+            echo "⚠️  Nginx is not running"
+            echo ""
+            echo "Start with: sudo systemctl start nginx"
+          fi
+        next: verify_nginx
+      
+      verify_nginx:
+        type: action
+        message: "Verifying Nginx installation..."
+        command: |
+          echo ""
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "Verification"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo ""
+          
+          # Test configuration
+          echo "Testing configuration..."
+          sudo nginx -t
+          
+          # Check if accessible
+          echo ""
+          echo "Testing HTTP..."
+          
+          if curl -I http://localhost 2>/dev/null | head -1; then
+            echo "✅ Nginx is responding on http://localhost"
+          else
+            echo "⚠️  Could not connect to http://localhost"
+          fi
+        next: show_summary
+      
+      show_summary:
+        type: action
+        message: "Setup complete"
+        command: |
+          echo ""
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "✅ Nginx Setup Complete"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo ""
+          echo "Access your server:"
+          echo "  • http://localhost"
+          echo "  • http://$(hostname -I | awk '{print $1}' 2>/dev/null || echo 'YOUR_IP')"
+          echo ""
+          echo "Common commands:"
+          echo "  • sudo systemctl status nginx    - Check status"
+          echo "  • sudo systemctl restart nginx   - Restart"
+          echo "  • sudo nginx -t                  - Test config"
+          echo "  • sudo systemctl reload nginx    - Reload config"
+          echo ""
+          echo "Configuration files:"
+          echo "  • /etc/nginx/nginx.conf          - Main config"
+          echo "  • /etc/nginx/sites-available/    - Site configs"
+          echo "  • /var/www/html/                 - Default web root"
+        next: end
+      
+      end:
+        type: terminal
+        message: "Nginx setup complete"

@@ -1,0 +1,411 @@
+name: vim_dev_setup
+id: org.themobileprof.vim_dev_setup
+version: 1.0.0
+description: Install and configure Vim with essential plugins for development
+tags: [vim, editor, ide, install, setup, development, composite]
+provides:
+  - vim_installed
+  - vim_configured
+requires:
+  - check_command_exists
+  - detect_os
+  - check_file_exists
+size_kb: 4
+
+flows:
+  main:
+    start: check_vim
+    steps:
+      check_vim:
+        type: action
+        message: "Checking Vim installation..."
+        command: |
+          echo "📝 Vim Development Setup"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo ""
+          
+          if command -v vim >/dev/null 2>&1; then
+            VIM_VERSION=$(vim --version | head -1)
+            echo "✅ Vim is already installed"
+            echo "   $VIM_VERSION"
+            echo "INSTALLED"
+          else
+            echo "❌ Vim is not installed"
+            echo "NOT_INSTALLED"
+          fi
+        next: branch_installed
+      
+      branch_installed:
+        type: branch
+        message: "Checking installation status..."
+        based_on: last_output
+        branches:
+          NOT_INSTALLED:
+            next: detect_package_manager
+          INSTALLED:
+            next: check_vimrc
+          default:
+            next: end
+      
+      detect_package_manager:
+        type: action
+        message: "Detecting package manager..."
+        command: |
+          if command -v apt-get >/dev/null 2>&1; then
+            echo "APT"
+          elif command -v dnf >/dev/null 2>&1; then
+            echo "DNF"
+          elif command -v yum >/dev/null 2>&1; then
+            echo "YUM"
+          elif command -v pacman >/dev/null 2>&1; then
+            echo "PACMAN"
+          elif command -v brew >/dev/null 2>&1; then
+            echo "BREW"
+          elif command -v pkg >/dev/null 2>&1 && [ -n "$TERMUX_VERSION" ]; then
+            echo "TERMUX"
+          else
+            echo "UNKNOWN"
+          fi
+        next: branch_package_manager
+      
+      branch_package_manager:
+        type: branch
+        message: "Selecting installation method..."
+        based_on: last_output
+        branches:
+          APT:
+            next: install_apt
+          DNF:
+            next: install_dnf
+          YUM:
+            next: install_yum
+          PACMAN:
+            next: install_pacman
+          BREW:
+            next: install_brew
+          TERMUX:
+            next: install_termux
+          default:
+            next: install_manual
+      
+      install_apt:
+        type: action
+        message: "Installing Vim via APT..."
+        command: |
+          echo "Installing Vim with APT (Debian/Ubuntu)..."
+          echo ""
+          
+          sudo apt-get update
+          sudo apt-get install -y vim vim-gtk3 git curl
+          
+          if [ $? -eq 0 ]; then
+            echo ""
+            echo "✅ Vim installed successfully"
+            vim --version | head -1
+          else
+            echo "❌ Installation failed"
+            exit 1
+          fi
+        next: check_vimrc
+      
+      install_dnf:
+        type: action
+        message: "Installing Vim via DNF..."
+        command: |
+          echo "Installing Vim with DNF (Fedora/RHEL)..."
+          echo ""
+          
+          sudo dnf install -y vim-enhanced git curl
+          
+          if [ $? -eq 0 ]; then
+            echo ""
+            echo "✅ Vim installed successfully"
+            vim --version | head -1
+          else
+            echo "❌ Installation failed"
+            exit 1
+          fi
+        next: check_vimrc
+      
+      install_yum:
+        type: action
+        message: "Installing Vim via YUM..."
+        command: |
+          echo "Installing Vim with YUM (RHEL/CentOS)..."
+          echo ""
+          
+          sudo yum install -y vim-enhanced git curl
+          
+          if [ $? -eq 0 ]; then
+            echo ""
+            echo "✅ Vim installed successfully"
+            vim --version | head -1
+          else
+            echo "❌ Installation failed"
+            exit 1
+          fi
+        next: check_vimrc
+      
+      install_pacman:
+        type: action
+        message: "Installing Vim via Pacman..."
+        command: |
+          echo "Installing Vim with Pacman (Arch Linux)..."
+          echo ""
+          
+          sudo pacman -Sy --noconfirm vim git curl
+          
+          if [ $? -eq 0 ]; then
+            echo ""
+            echo "✅ Vim installed successfully"
+            vim --version | head -1
+          else
+            echo "❌ Installation failed"
+            exit 1
+          fi
+        next: check_vimrc
+      
+      install_brew:
+        type: action
+        message: "Installing Vim via Homebrew..."
+        command: |
+          echo "Installing Vim with Homebrew (macOS)..."
+          echo ""
+          
+          brew install vim git
+          
+          if [ $? -eq 0 ]; then
+            echo ""
+            echo "✅ Vim installed successfully"
+            vim --version | head -1
+          else
+            echo "❌ Installation failed"
+            exit 1
+          fi
+        next: check_vimrc
+      
+      install_termux:
+        type: action
+        message: "Installing Vim via Termux..."
+        command: |
+          echo "Installing Vim with Termux (Android)..."
+          echo ""
+          
+          pkg install -y vim git
+          
+          if [ $? -eq 0 ]; then
+            echo ""
+            echo "✅ Vim installed successfully"
+            vim --version | head -1
+          else
+            echo "❌ Installation failed"
+            exit 1
+          fi
+        next: check_vimrc
+      
+      install_manual:
+        type: instruction
+        message: "Manual installation required"
+        command: |
+          echo "❌ Automatic installation not available"
+          echo ""
+          echo "Install Vim manually from https://www.vim.org/download.php"
+          exit 1
+        next: end
+      
+      check_vimrc:
+        type: action
+        message: "Checking Vim configuration..."
+        command: |
+          echo ""
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "Configuration Setup"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo ""
+          
+          if [ -f ~/.vimrc ]; then
+            echo "⚠️  Existing .vimrc found"
+            cp ~/.vimrc ~/.vimrc.backup.$(date +%Y%m%d_%H%M%S)
+            echo "✅ Backed up to ~/.vimrc.backup.*"
+          fi
+          
+          echo "CONFIGURE"
+        next: create_vim_directories
+      
+      create_vim_directories:
+        type: action
+        message: "Creating Vim directories..."
+        command: |
+          echo ""
+          echo "Creating Vim directories..."
+          
+          mkdir -p ~/.vim/backup
+          mkdir -p ~/.vim/swap
+          mkdir -p ~/.vim/undo
+          mkdir -p ~/.vim/autoload
+          
+          echo "✅ Directories created"
+        next: install_vim_plug
+      
+      install_vim_plug:
+        type: action
+        message: "Installing vim-plug plugin manager..."
+        command: |
+          echo ""
+          echo "Installing vim-plug plugin manager..."
+          
+          curl -fLo ~/.vim/autoload/plug.vim --create-dirs \
+            https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim
+          
+          if [ $? -eq 0 ]; then
+            echo "✅ vim-plug installed"
+          else
+            echo "❌ Failed to install vim-plug"
+            exit 1
+          fi
+        next: create_vimrc
+      
+      create_vimrc:
+        type: action
+        message: "Creating Vim configuration..."
+        command: |
+          echo ""
+          echo "Creating enhanced .vimrc configuration..."
+          
+          cat > ~/.vimrc <<'VIMEOF'
+          set nocompatible
+          syntax on
+          filetype plugin indent on
+          set number
+          set relativenumber
+          set ruler
+          set showcmd
+          set showmatch
+          set wildmenu
+          set laststatus=2
+          set cursorline
+          set colorcolumn=80
+          set ignorecase
+          set smartcase
+          set incsearch
+          set hlsearch
+          set autoindent
+          set smartindent
+          set expandtab
+          set tabstop=4
+          set shiftwidth=4
+          set softtabstop=4
+          set encoding=utf-8
+          set fileencoding=utf-8
+          set autoread
+          set hidden
+          set backup
+          set backupdir=~/.vim/backup//
+          set directory=~/.vim/swap//
+          set undofile
+          set undodir=~/.vim/undo//
+          set lazyredraw
+          set ttyfast
+          let mapleader = ","
+          nnoremap <leader>w :w<CR>
+          nnoremap <leader>q :q<CR>
+          nnoremap <leader>x :x<CR>
+          nnoremap <leader><space> :nohlsearch<CR>
+          nnoremap <C-h> <C-w>h
+          nnoremap <C-j> <C-w>j
+          nnoremap <C-k> <C-w>k
+          nnoremap <C-l> <C-w>l
+          nnoremap <leader>n :bnext<CR>
+          nnoremap <leader>p :bprevious<CR>
+          nnoremap <leader>d :bdelete<CR>
+          call plug#begin('~/.vim/plugged')
+          Plug 'preservim/nerdtree'
+          Plug 'ctrlpvim/ctrlp.vim'
+          Plug 'vim-airline/vim-airline'
+          Plug 'vim-airline/vim-airline-themes'
+          Plug 'tpope/vim-fugitive'
+          Plug 'airblade/vim-gitgutter'
+          Plug 'dense-analysis/ale'
+          Plug 'jiangmiao/auto-pairs'
+          Plug 'tpope/vim-commentary'
+          Plug 'sheerun/vim-polyglot'
+          Plug 'morhetz/gruvbox'
+          Plug 'dracula/vim', { 'as': 'dracula' }
+          call plug#end()
+          nnoremap <leader>t :NERDTreeToggle<CR>
+          nnoremap <leader>f :NERDTreeFind<CR>
+          let NERDTreeShowHidden=1
+          let g:ctrlp_map = '<c-p>'
+          let g:ctrlp_show_hidden = 1
+          let g:airline_powerline_fonts = 1
+          silent! colorscheme gruvbox
+          set background=dark
+          VIMEOF
+          
+          if [ $? -eq 0 ]; then
+            echo "✅ .vimrc created successfully"
+          else
+            echo "❌ Failed to create .vimrc"
+            exit 1
+          fi
+        next: install_plugins
+      
+      install_plugins:
+        type: action
+        message: "Installing Vim plugins..."
+        command: |
+          echo ""
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "Installing Plugins"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo ""
+          echo "This may take a moment..."
+          
+          vim +PlugInstall +qall
+          
+          echo ""
+          echo "✅ Plugins installed"
+          echo ""
+          echo "💡 Run ':PlugInstall' inside Vim if any plugins failed"
+        next: show_summary
+      
+      show_summary:
+        type: action
+        message: "Setup complete"
+        command: |
+          echo ""
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "✅ Vim Development Setup Complete"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo ""
+          echo "Installed Features:"
+          echo "  ✓ Enhanced .vimrc configuration"
+          echo "  ✓ vim-plug plugin manager"
+          echo "  ✓ NERDTree file explorer"
+          echo "  ✓ CtrlP fuzzy finder"
+          echo "  ✓ Airline status line"
+          echo "  ✓ Git integration"
+          echo "  ✓ ALE linter"
+          echo "  ✓ Syntax highlighting"
+          echo "  ✓ Color schemes (gruvbox, dracula)"
+          echo ""
+          echo "Key Mappings:"
+          echo "  • Leader key: ,"
+          echo "  • ,w - Save file"
+          echo "  • ,t - Toggle NERDTree"
+          echo "  • Ctrl+p - Fuzzy file search"
+          echo "  • ,<space> - Clear search"
+          echo "  • gcc - Comment/uncomment"
+          echo ""
+          echo "Plugin Commands:"
+          echo "  • :PlugInstall - Install plugins"
+          echo "  • :PlugUpdate - Update plugins"
+          echo "  • :PlugClean - Remove unused"
+          echo ""
+          echo "Config: ~/.vimrc"
+          echo "Plugins: ~/.vim/plugged/"
+        next: end
+      
+      end:
+        type: terminal
+        message: "Vim setup complete"
