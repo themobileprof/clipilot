@@ -1,0 +1,24 @@
+{{define "content"}}
+<section>
+    <h2>My Modules</h2>
+    <p>Welcome, {{.Username}}!</p>
+    
+    {{if .Modules}}
+    <div class="module-grid">
+        {{range .Modules}}
+        <div class="module-card">
+            <h3>{{.Name}}</h3>
+            <p class="version">v{{.Version}}</p>
+            <p class="description">{{.Description}}</p>
+            <div class="meta">
+                <span>📅 {{.UploadedAt.Format "Jan 2, 2006"}}</span>
+                <span>⬇️ {{.Downloads}} downloads</span>
+            </div>
+        </div>
+        {{end}}
+    </div>
+    {{else}}
+    <p class="empty">You haven't uploaded any modules yet. <a href="/upload">Upload your first module!</a></p>
+    {{end}}
+</section>
+{{end}}

@@ -353,17 +353,51 @@ go tool cover -html=coverage.out
 ```
 
 
+## 🌐 Community Module Registry
+
+CLIPilot includes a web-based module registry where users can share and discover community-created modules.
+
+### Using the Registry
+
+```bash
+# Install modules from registry
+clipilot modules install <module_id>
+
+# Browse modules
+# Visit the registry web interface at http://registry.example.com
+```
+
+### Running Your Own Registry
+
+```bash
+# Build the registry server
+go build -o registry ./cmd/registry
+
+# Run with admin credentials
+./registry --password=your_secure_password
+
+# Access at http://localhost:8080
+```
+
+See [docs/REGISTRY.md](docs/REGISTRY.md) for full documentation on:
+- Setting up the registry server
+- Uploading modules
+- Using ChatGPT to generate modules
+- API documentation
+- Deployment guides
+
 ## 🤝 Contributing
 
 Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 ### Areas for Contribution
 
-- **New Modules**: Add support for more tools and workflows
+- **New Modules**: Add support for more tools and workflows - share them on the registry!
 - **OS Support**: Expand compatibility (Alpine, Fedora, etc.)
 - **Performance**: Optimize for low-memory devices
 - **Tiny LLM**: Improve local classification accuracy
 - **Documentation**: Improve guides and examples
+- **Registry Features**: Enhance the module registry with search, ratings, categories
 
 ## 📝 License
 

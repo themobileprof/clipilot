@@ -1,0 +1,160 @@
+{{define "content"}}
+<section>
+    <h2>Upload Module</h2>
+    <p>Share your CLI automation module with the community.</p>
+    
+    <div class="upload-form">
+        <form id="uploadForm" enctype="multipart/form-data">
+            <div class="form-group">
+                <label for="module">YAML Module File</label>
+                <input type="file" id="module" name="module" accept=".yaml,.yml" required>
+                <small>Maximum file size: 10MB</small>
+            </div>
+            
+            <button type="submit" class="btn btn-primary">Upload Module</button>
+        </form>
+        
+        <div id="result" class="result"></div>
+    </div>
+    
+    <div class="spec">
+        <h3>📋 Module Specification</h3>
+        <p>Your YAML file must follow this structure:</p>
+        
+        <pre><code>metadata:
+  name: your_module_name          # Required: lowercase, underscore-separated
+  version: "1.0.0"                # Required: semantic version
+  description: Brief description  # Required: what does this module do?
+  author: Your Name               # Optional but recommended
+  keywords:                       # Required: for intent detection
+    - keyword1
+    - keyword2
+
+flows:
+  main:                           # Required: default flow name
+    steps:
+      - type: instruction         # instruction, action, branch, or terminal
+        name: step_name
+        message: "Message to user"
+        command: "bash command"   # For action steps
+        validation:               # Optional validation
+          - command: "check command"
+            error: "Error message if fails"</code></pre>
+        
+        <h4>Step Types</h4>
+        <ul>
+            <li><strong>instruction</strong>: Display message to user (no command execution)</li>
+            <li><strong>action</strong>: Execute a command with optional user confirmation</li>
+            <li><strong>branch</strong>: Conditional flow control based on command exit code</li>
+            <li><strong>terminal</strong>: End the flow with success/failure message</li>
+        </ul>
+        
+        <h4>Example: Docker Installation</h4>
+        <pre><code>metadata:
+  name: docker_install
+  version: "1.0.0"
+  description: Install Docker on Ubuntu/Debian systems
+  author: CLIPilot Team
+  keywords:
+    - docker
+    - install docker
+    - setup docker
+
+flows:
+  main:
+    steps:
+      - type: action
+        name: check_existing
+        message: "Checking if Docker is already installed..."
+        command: "which docker"
+        validation:
+          - command: "exit 0"
+      
+      - type: action
+        name: update_apt
+        message: "Updating package lists..."
+        command: "sudo apt-get update"
+      
+      - type: action
+        name: install_docker
+        message: "Installing Docker..."
+        command: "sudo apt-get install -y docker.io"
+      
+      - type: terminal
+        name: success
+        message: "✓ Docker installed successfully! Run 'docker --version' to verify."</code></pre>
+    </div>
+    
+    <div class="chatgpt-section">
+        <h3>🤖 Generate with ChatGPT</h3>
+        <p>Use this prompt to generate a valid module YAML:</p>
+        
+        <div class="prompt-box">
+            <p><strong>Copy this prompt:</strong></p>
+            <pre><code>Create a CLIPilot module YAML file for [DESCRIBE YOUR TASK].
+
+The YAML must follow this structure:
+- metadata: name (lowercase_underscore), version (semver), description, author, keywords (array)
+- flows: main flow with steps array
+- step types: instruction (message only), action (command + message), branch (conditional), terminal (end)
+- each action step can have optional validation array with command and error message
+
+Requirements:
+1. Use clear, descriptive step names
+2. Include helpful messages for users
+3. Add validation where commands might fail
+4. Use terminal steps for success/failure endings
+5. Choose relevant keywords for intent detection
+
+Output ONLY the YAML code, no explanations.</code></pre>
+            
+            <button onclick="copyPrompt()" class="btn btn-secondary">Copy Prompt</button>
+        </div>
+        
+        <p><strong>Example usage:</strong></p>
+        <blockquote>
+            "Create a CLIPilot module YAML file for setting up a Python virtual environment with pip and installing common data science packages."
+        </blockquote>
+    </div>
+</section>
+
+<script>
+document.getElementById('uploadForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const formData = new FormData(e.target);
+    const result = document.getElementById('result');
+    
+    result.className = 'result loading';
+    result.textContent = 'Uploading...';
+    
+    try {
+        const response = await fetch('/api/upload', {
+            method: 'POST',
+            body: formData
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            result.className = 'result success';
+            result.textContent = '✓ ' + data.message;
+            e.target.reset();
+        } else {
+            result.className = 'result error';
+            result.textContent = '✗ ' + (data.error || 'Upload failed');
+        }
+    } catch (err) {
+        result.className = 'result error';
+        result.textContent = '✗ Network error: ' + err.message;
+    }
+});
+
+function copyPrompt() {
+    const prompt = document.querySelector('.prompt-box pre code').textContent;
+    navigator.clipboard.writeText(prompt).then(() => {
+        alert('Prompt copied to clipboard!');
+    });
+}
+</script>
+{{end}}

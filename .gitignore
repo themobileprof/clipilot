@@ -28,6 +28,15 @@ vendor/
 .vscode/
 .idea/
 *.swp
+
+# Environment and secrets
+.env
+
+# Registry data
+data/
+*.db
+*.db-shm
+*.db-wal
 *.swo
 *~
 

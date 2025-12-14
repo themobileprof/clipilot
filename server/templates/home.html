@@ -1,0 +1,47 @@
+{{define "content"}}
+<section class="hero">
+    <h2>Welcome to CLIPilot Registry</h2>
+    <p>Discover and share CLI automation modules for the CLIPilot assistant.</p>
+    <div class="cta">
+        <a href="/modules" class="btn btn-primary">Browse Modules</a>
+        {{if not .LoggedIn}}
+        <a href="/login" class="btn btn-secondary">Upload Your Module</a>
+        {{else}}
+        <a href="/upload" class="btn btn-secondary">Upload Your Module</a>
+        {{end}}
+    </div>
+</section>
+
+<section class="features">
+    <h3>How It Works</h3>
+    <div class="feature-grid">
+        <div class="feature">
+            <h4>📦 Browse</h4>
+            <p>Explore community-created modules for various CLI tasks and workflows.</p>
+        </div>
+        <div class="feature">
+            <h4>⬇️ Install</h4>
+            <p>Use <code>clipilot modules install &lt;id&gt;</code> to add modules to your CLI.</p>
+        </div>
+        <div class="feature">
+            <h4>📤 Share</h4>
+            <p>Upload your own modules to help the community automate their workflows.</p>
+        </div>
+    </div>
+</section>
+
+<section class="quick-start">
+    <h3>Quick Start</h3>
+    <pre><code># Install CLIPilot
+curl -sSL https://raw.githubusercontent.com/themobileprof/clipilot/main/install.sh | bash
+
+# Browse available modules
+clipilot modules search
+
+# Install a module from registry
+clipilot modules install docker_install
+
+# Use the module
+clipilot "install docker"</code></pre>
+</section>
+{{end}}

@@ -4,6 +4,8 @@ import (
 	"bufio"
 	"database/sql"
 	"fmt"
+	"io"
+	"net/http"
 	"os"
 	"strings"
 
@@ -252,12 +254,61 @@ func (repl *REPL) listModules() error {
 	return nil
 }
 
-// installModule installs a module
+// installModule installs a module from the registry
 func (repl *REPL) installModule(moduleID string) error {
-	// TODO: Implement module download from registry
-	fmt.Printf("Installing module: %s\n", moduleID)
-	fmt.Println("Note: Module registry not yet implemented.")
-	fmt.Println("For now, place YAML files in the modules/ directory and restart.")
+	// Get registry URL from settings
+	var registryURL string
+	err := repl.db.QueryRow("SELECT value FROM settings WHERE key = 'registry_url'").Scan(&registryURL)
+	if err != nil {
+		registryURL = "http://localhost:8080" // Default registry URL
+	}
+
+	fmt.Printf("Downloading module %s from registry...\n", moduleID)
+
+	// Download module from registry
+	url := fmt.Sprintf("%s/modules/%s", registryURL, moduleID)
+	resp, err := http.Get(url)
+	if err != nil {
+		return fmt.Errorf("failed to download module: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusNotFound {
+		return fmt.Errorf("module not found in registry")
+	}
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("registry returned error: %s", resp.Status)
+	}
+
+	// Read module YAML
+	data, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("failed to read module data: %w", err)
+	}
+
+	// Save to temporary file
+	tmpFile, err := os.CreateTemp("", "clipilot-module-*.yaml")
+	if err != nil {
+		return fmt.Errorf("failed to create temp file: %w", err)
+	}
+	defer os.Remove(tmpFile.Name())
+
+	if _, err := tmpFile.Write(data); err != nil {
+		return fmt.Errorf("failed to write temp file: %w", err)
+	}
+	tmpFile.Close()
+
+	// Load and import module
+	module, err := repl.loader.LoadFromFile(tmpFile.Name())
+	if err != nil {
+		return fmt.Errorf("failed to load module: %w", err)
+	}
+
+	if err := repl.loader.ImportModule(module); err != nil {
+		return fmt.Errorf("failed to import module: %w", err)
+	}
+
+	fmt.Printf("✓ Module %s (v%s) installed successfully!\n", module.Name, module.Version)
 	return nil
 }
 

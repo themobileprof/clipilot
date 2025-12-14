@@ -1,0 +1,25 @@
+{{define "content"}}
+<section>
+    <h2>Browse Modules</h2>
+    <p>{{len .Modules}} modules available</p>
+    
+    {{if .Modules}}
+    <div class="module-grid">
+        {{range .Modules}}
+        <div class="module-card">
+            <h3>{{.Name}}</h3>
+            <p class="version">v{{.Version}}</p>
+            <p class="description">{{.Description}}</p>
+            <div class="meta">
+                <span>👤 {{.Author}}</span>
+                <span>⬇️ {{.Downloads}} downloads</span>
+            </div>
+            <a href="/modules/{{.ID}}" class="btn btn-primary" download>Download</a>
+        </div>
+        {{end}}
+    </div>
+    {{else}}
+    <p class="empty">No modules available yet. <a href="/upload">Be the first to upload!</a></p>
+    {{end}}
+</section>
+{{end}}
