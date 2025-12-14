@@ -6,6 +6,13 @@ CLIPilot is an intelligent command-line assistant designed for developers and op
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Go Version](https://img.shields.io/badge/Go-1.21+-00ADD8?logo=go)](https://golang.org/)
+[![Build Status](https://github.com/themobileprof/clipilot/workflows/Build%20and%20Test/badge.svg)](https://github.com/themobileprof/clipilot/actions)
+[![GitHub Stars](https://img.shields.io/github/stars/themobileprof/clipilot?style=social)](https://github.com/themobileprof/clipilot)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
+[![GitHub Issues](https://img.shields.io/github/issues/themobileprof/clipilot)](https://github.com/themobileprof/clipilot/issues)
+[![GitHub Pull Requests](https://img.shields.io/github/issues-pr/themobileprof/clipilot)](https://github.com/themobileprof/clipilot/pulls)
+
+> **🌟 Open Source Project**: CLIPilot is free and open source under the MIT License. Community contributions welcome!
 
 ## ✨ Features
 
@@ -399,9 +406,25 @@ Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) for gu
 - **Documentation**: Improve guides and examples
 - **Registry Features**: Enhance the module registry with search, ratings, categories
 
+## 🤝 Contributing
+
+We welcome contributions from the community! CLIPilot is open source and thrives on community involvement.
+
+**Ways to Contribute:**
+- 🐛 Report bugs and suggest features
+- 💻 Submit pull requests for improvements
+- 📝 Improve documentation
+- 📦 Create and share YAML modules
+- ⭐ Star the project on GitHub
+- 🗣️ Spread the word
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines on how to contribute.
+
 ## 📝 License
 
-This project is licensed under the MIT License - see [LICENSE](LICENSE) file for details.
+This project is licensed under the **MIT License** - see [LICENSE](LICENSE) file for details.
+
+**CLIPilot is free and open source software.** You are free to use, modify, and distribute it according to the terms of the MIT License.
 
 ## 🙏 Acknowledgments
 
