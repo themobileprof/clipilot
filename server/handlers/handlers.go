@@ -95,6 +95,7 @@ func (h *Handlers) Home(w http.ResponseWriter, r *http.Request) {
 		"LoggedIn":    h.auth.IsAuthenticated(r),
 	}
 
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	if err := h.templates.ExecuteTemplate(w, "home.html", data); err != nil {
 		log.Printf("Template error: %v", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
@@ -330,15 +331,29 @@ func (h *Handlers) Login(w http.ResponseWriter, r *http.Request) {
 		username := r.FormValue("username")
 		password := r.FormValue("password")
 
+		// Validate input
+		if username == "" || password == "" {
+			data := map[string]interface{}{
+				"Title": "Login",
+				"Error": "Username and password are required",
+			}
+			if err := h.templates.ExecuteTemplate(w, "login.html", data); err != nil {
+				log.Printf("Template error: %v", err)
+				http.Error(w, "Internal server error", http.StatusInternalServerError)
+			}
+			return
+		}
+
 		if h.auth.Authenticate(username, password) {
 			h.auth.SetSession(w, username)
 			http.Redirect(w, r, "/upload", http.StatusSeeOther)
 			return
 		}
 
+		log.Printf("Failed login attempt for user: %s", username)
 		data := map[string]interface{}{
 			"Title": "Login",
-			"Error": "Invalid credentials",
+			"Error": "Invalid username or password. Please try again.",
 		}
 		if err := h.templates.ExecuteTemplate(w, "login.html", data); err != nil {
 			log.Printf("Template error: %v", err)
