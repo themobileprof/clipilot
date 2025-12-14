@@ -1,0 +1,121 @@
+name: ssl_cert_check
+id: org.themobileprof.ssl_cert_check
+version: 1.0.0
+description: Check SSL/TLS certificate expiry and details for a domain
+tags: [ssl, tls, security, certificate, devops, sre]
+provides:
+  - ssl_checked
+requires:
+  - check_command_exists
+  - check_network_connectivity
+size_kb: 2
+
+flows:
+  main:
+    start: validate_domain
+    steps:
+      validate_domain:
+        type: action
+        message: "Validating domain..."
+        command: |
+          DOMAIN="{{.domain}}"
+          PORT="{{.port}}"
+          
+          if [ -z "$DOMAIN" ]; then
+            echo "❌ Must specify domain"
+            echo ""
+            echo "💡 Example: domain=example.com"
+            exit 1
+          fi
+          
+          # Default to port 443
+          if [ -z "$PORT" ]; then
+            PORT=443
+          fi
+          
+          # Check if openssl is available
+          if ! command -v openssl >/dev/null 2>&1; then
+            echo "❌ openssl not installed"
+            echo ""
+            echo "💡 Install: sudo apt install openssl"
+            exit 1
+          fi
+          
+          echo "🔒 SSL Certificate Check"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "Domain: $DOMAIN:$PORT"
+          echo ""
+          
+          echo "$DOMAIN" > /tmp/clipilot_ssl_domain.txt
+          echo "$PORT" > /tmp/clipilot_ssl_port.txt
+        next: check_certificate
+      
+      check_certificate:
+        type: action
+        message: "Fetching certificate..."
+        command: |
+          DOMAIN=$(cat /tmp/clipilot_ssl_domain.txt)
+          PORT=$(cat /tmp/clipilot_ssl_port.txt)
+          
+          # Fetch certificate
+          CERT_INFO=$(echo | openssl s_client -servername "$DOMAIN" -connect "$DOMAIN:$PORT" 2>/dev/null | openssl x509 -noout -dates -subject -issuer 2>/dev/null)
+          
+          if [ -z "$CERT_INFO" ]; then
+            echo "❌ Failed to retrieve certificate"
+            echo ""
+            echo "💡 Possible reasons:"
+            echo "  • Domain not accessible"
+            echo "  • No SSL certificate installed"
+            echo "  • Firewall blocking connection"
+            echo "  • Wrong port number"
+            rm -f /tmp/clipilot_ssl_*.txt
+            exit 1
+          fi
+          
+          # Parse certificate details
+          NOT_BEFORE=$(echo "$CERT_INFO" | grep "notBefore" | cut -d= -f2)
+          NOT_AFTER=$(echo "$CERT_INFO" | grep "notAfter" | cut -d= -f2)
+          SUBJECT=$(echo "$CERT_INFO" | grep "subject" | cut -d= -f2-)
+          ISSUER=$(echo "$CERT_INFO" | grep "issuer" | cut -d= -f2-)
+          
+          echo "Subject:    $SUBJECT"
+          echo "Issuer:     $ISSUER"
+          echo ""
+          echo "Valid From: $NOT_BEFORE"
+          echo "Valid To:   $NOT_AFTER"
+          echo ""
+          
+          # Calculate days until expiry
+          EXPIRY_DATE=$(date -d "$NOT_AFTER" +%s 2>/dev/null || date -j -f "%b %d %H:%M:%S %Y %Z" "$NOT_AFTER" +%s 2>/dev/null)
+          CURRENT_DATE=$(date +%s)
+          DAYS_LEFT=$(( ($EXPIRY_DATE - $CURRENT_DATE) / 86400 ))
+          
+          if [ "$DAYS_LEFT" -lt 0 ]; then
+            echo "Status:     🔴 EXPIRED ($((DAYS_LEFT * -1)) days ago)"
+          elif [ "$DAYS_LEFT" -lt 7 ]; then
+            echo "Status:     🔴 CRITICAL - Expires in $DAYS_LEFT days"
+          elif [ "$DAYS_LEFT" -lt 30 ]; then
+            echo "Status:     🟡 WARNING - Expires in $DAYS_LEFT days"
+          else
+            echo "Status:     🟢 VALID - Expires in $DAYS_LEFT days"
+          fi
+          
+          # Additional certificate info
+          echo ""
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "Additional Info:"
+          echo ""
+          
+          # Get SANs (Subject Alternative Names)
+          SANS=$(echo | openssl s_client -servername "$DOMAIN" -connect "$DOMAIN:$PORT" 2>/dev/null | openssl x509 -noout -text 2>/dev/null | grep -A1 "Subject Alternative Name" | tail -1 | sed 's/DNS://g')
+          
+          if [ -n "$SANS" ]; then
+            echo "SANs: $SANS"
+          fi
+          
+          rm -f /tmp/clipilot_ssl_*.txt
+        next: end
+      
+      end:
+        type: terminal
+        message: "SSL certificate check complete"

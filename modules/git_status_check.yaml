@@ -1,0 +1,92 @@
+name: git_status_check
+id: org.themobileprof.git_status_check
+version: 1.0.0
+description: Check Git repository status, branch, and pending changes
+tags: [git, vcs, devops, development]
+provides:
+  - git_checked
+requires:
+  - check_command_exists
+  - check_is_directory
+size_kb: 2
+
+flows:
+  main:
+    start: check_git
+    steps:
+      check_git:
+        type: action
+        message: "Checking Git repository..."
+        command: |
+          REPO_PATH="{{.path}}"
+          
+          if [ -z "$REPO_PATH" ]; then
+            REPO_PATH="."
+          fi
+          
+          # Expand tilde
+          if [[ "$REPO_PATH" == ~* ]]; then
+            REPO_PATH="${REPO_PATH/#\~/$HOME}"
+          fi
+          
+          if ! command -v git >/dev/null 2>&1; then
+            echo "❌ Git not installed"
+            exit 1
+          fi
+          
+          cd "$REPO_PATH" || exit 1
+          
+          if ! git rev-parse --git-dir >/dev/null 2>&1; then
+            echo "❌ Not a Git repository: $REPO_PATH"
+            exit 1
+          fi
+          
+          echo "📦 Git Repository Status"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo ""
+          
+          # Repository info
+          echo "Repository: $(basename "$(git rev-parse --show-toplevel)")"
+          echo "Branch:     $(git branch --show-current)"
+          
+          # Remote info
+          REMOTE=$(git remote -v | grep fetch | head -1 | awk '{print $2}')
+          if [ -n "$REMOTE" ]; then
+            echo "Remote:     $REMOTE"
+          fi
+          
+          # Latest commit
+          echo ""
+          echo "Latest commit:"
+          git log -1 --pretty=format:"  %h - %s (%cr by %an)" 2>/dev/null
+          echo ""
+          echo ""
+          
+          # Check for changes
+          if git diff-index --quiet HEAD -- 2>/dev/null; then
+            echo "Status:     🟢 Clean - No uncommitted changes"
+          else
+            echo "Status:     🟡 Modified - Uncommitted changes present"
+            echo ""
+            echo "Modified files:"
+            git status --short
+          fi
+          
+          # Check for unpushed commits
+          UNPUSHED=$(git log @{u}.. --oneline 2>/dev/null | wc -l)
+          if [ "$UNPUSHED" -gt 0 ]; then
+            echo ""
+            echo "⚠️  Warning: $UNPUSHED unpushed commit(s)"
+          fi
+          
+          # Check for untracked files
+          UNTRACKED=$(git ls-files --others --exclude-standard | wc -l)
+          if [ "$UNTRACKED" -gt 0 ]; then
+            echo ""
+            echo "ℹ️  $UNTRACKED untracked file(s)"
+          fi
+        next: end
+      
+      end:
+        type: terminal
+        message: "Git status check complete"

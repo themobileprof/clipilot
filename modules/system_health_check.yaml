@@ -1,0 +1,203 @@
+name: system_health_check
+id: org.themobileprof.system_health_check
+version: 1.0.0
+description: Comprehensive system health report with disk, network, and process info
+tags: [system, composite, diagnostics, health, monitoring]
+provides:
+  - system_checked
+requires:
+  - get_system_info
+  - check_disk_space
+  - check_network_connectivity
+  - list_processes
+  - get_current_user
+size_kb: 2
+
+flows:
+  main:
+    start: show_header
+    steps:
+      show_header:
+        type: action
+        message: "Running system health check..."
+        command: |
+          echo "╔══════════════════════════════════════════════════════════════════════╗"
+          echo "║              SYSTEM HEALTH CHECK - $(date '+%Y-%m-%d %H:%M:%S')              ║"
+          echo "╚══════════════════════════════════════════════════════════════════════╝"
+          echo ""
+        next: check_system
+      
+      check_system:
+        type: action
+        message: "1/5 System Information"
+        command: |
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "📊 SYSTEM INFORMATION"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          
+          echo "OS:       $(uname -s)"
+          echo "Kernel:   $(uname -r)"
+          echo "Arch:     $(uname -m)"
+          echo "Hostname: $(hostname)"
+          
+          # Uptime
+          if command -v uptime >/dev/null 2>&1; then
+            echo "Uptime:   $(uptime -p 2>/dev/null || uptime)"
+          fi
+          
+          echo ""
+        next: check_user
+      
+      check_user:
+        type: action
+        message: "2/5 User Information"
+        command: |
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "👤 USER INFORMATION"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          
+          CURRENT_USER=$(whoami)
+          USER_ID=$(id -u)
+          
+          echo "Username:  $CURRENT_USER"
+          echo "User ID:   $USER_ID"
+          
+          if [ "$USER_ID" -eq 0 ]; then
+            echo "Status:    🔴 ROOT USER (administrative access)"
+          elif groups | grep -qE 'sudo|wheel|admin'; then
+            echo "Status:    🟡 SUDO ACCESS (can elevate privileges)"
+          else
+            echo "Status:    🟢 STANDARD USER"
+          fi
+          
+          echo ""
+        next: check_disk
+      
+      check_disk:
+        type: action
+        message: "3/5 Disk Space"
+        command: |
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "💾 DISK SPACE STATUS"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          
+          df -h | head -1
+          df -h | grep -vE '^tmpfs|^devtmpfs|^Filesystem' | while read line; do
+            USAGE=$(echo "$line" | awk '{print $5}' | tr -d '%')
+            
+            if [ "$USAGE" -ge 90 ]; then
+              echo "🔴 $line"
+            elif [ "$USAGE" -ge 80 ]; then
+              echo "🟡 $line"
+            else
+              echo "🟢 $line"
+            fi
+          done
+          
+          echo ""
+        next: check_network
+      
+      check_network:
+        type: action
+        message: "4/5 Network Connectivity"
+        command: |
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "🌐 NETWORK STATUS"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          
+          # Test internet connectivity
+          if ping -c 1 -W 2 8.8.8.8 >/dev/null 2>&1; then
+            echo "Internet:  🟢 ONLINE"
+            
+            # Test DNS resolution
+            if ping -c 1 -W 2 google.com >/dev/null 2>&1; then
+              echo "DNS:       🟢 WORKING"
+            else
+              echo "DNS:       🔴 FAILED (can't resolve google.com)"
+            fi
+          else
+            echo "Internet:  🔴 OFFLINE"
+            echo "DNS:       ⚪ NOT TESTED"
+          fi
+          
+          # Show IP addresses
+          if command -v ip >/dev/null 2>&1; then
+            IP_ADDR=$(ip -4 addr show | grep -oP '(?<=inet\s)\d+(\.\d+){3}' | grep -v '127.0.0.1' | head -1)
+            if [ -n "$IP_ADDR" ]; then
+              echo "Local IP:  $IP_ADDR"
+            fi
+          elif command -v ifconfig >/dev/null 2>&1; then
+            IP_ADDR=$(ifconfig | grep -oE 'inet (addr:)?([0-9]*\.){3}[0-9]*' | grep -v '127.0.0.1' | awk '{print $2}' | head -1)
+            if [ -n "$IP_ADDR" ]; then
+              echo "Local IP:  $IP_ADDR"
+            fi
+          fi
+          
+          echo ""
+        next: check_processes
+      
+      check_processes:
+        type: action
+        message: "5/5 Top Processes"
+        command: |
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "⚙️  TOP PROCESSES (by CPU)"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          
+          if ps aux >/dev/null 2>&1; then
+            ps aux --sort=-%cpu | head -6
+          elif ps -ef >/dev/null 2>&1; then
+            ps -ef | head -6
+          fi
+          
+          echo ""
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "⚙️  TOP PROCESSES (by Memory)"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          
+          if ps aux >/dev/null 2>&1; then
+            ps aux --sort=-%mem | head -6
+          elif ps -ef >/dev/null 2>&1; then
+            ps -ef | head -6
+          fi
+          
+          echo ""
+        next: show_summary
+      
+      show_summary:
+        type: action
+        message: "Generating summary..."
+        command: |
+          echo "╔══════════════════════════════════════════════════════════════════════╗"
+          echo "║                        HEALTH CHECK COMPLETE                         ║"
+          echo "╚══════════════════════════════════════════════════════════════════════╝"
+          echo ""
+          
+          # Overall health status
+          ISSUES=0
+          
+          # Check disk space
+          if df -h | grep -vE '^tmpfs|^devtmpfs|^Filesystem' | awk '{print $5}' | tr -d '%' | grep -qE '^([8-9][0-9]|100)$'; then
+            ISSUES=$((ISSUES + 1))
+          fi
+          
+          # Check network
+          if ! ping -c 1 -W 2 8.8.8.8 >/dev/null 2>&1; then
+            ISSUES=$((ISSUES + 1))
+          fi
+          
+          if [ "$ISSUES" -eq 0 ]; then
+            echo "Overall Status: 🟢 HEALTHY - No issues detected"
+          elif [ "$ISSUES" -eq 1 ]; then
+            echo "Overall Status: 🟡 WARNING - 1 issue detected"
+          else
+            echo "Overall Status: 🔴 ATTENTION - $ISSUES issues detected"
+          fi
+          
+          echo ""
+          echo "Timestamp: $(date '+%Y-%m-%d %H:%M:%S')"
+        next: end
+      
+      end:
+        type: terminal
+        message: "System health check complete"

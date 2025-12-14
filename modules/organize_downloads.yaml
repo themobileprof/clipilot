@@ -1,0 +1,174 @@
+name: organize_downloads
+id: org.themobileprof.organize_downloads
+version: 1.0.0
+description: Organize files in Downloads folder by type into categorized subdirectories
+tags: [files, composite, organize, cleanup, utility]
+provides:
+  - downloads_organized
+requires:
+  - check_is_directory
+  - create_directory
+  - list_directory
+  - move_file
+  - get_file_info
+size_kb: 3
+
+flows:
+  main:
+    start: validate_downloads
+    steps:
+      validate_downloads:
+        type: action
+        message: "Locating Downloads folder..."
+        command: |
+          DOWNLOADS_DIR="{{.downloads_dir}}"
+          
+          # Try to find Downloads folder
+          if [ -z "$DOWNLOADS_DIR" ]; then
+            if [ -d "$HOME/Downloads" ]; then
+              DOWNLOADS_DIR="$HOME/Downloads"
+            elif [ -d "$HOME/downloads" ]; then
+              DOWNLOADS_DIR="$HOME/downloads"
+            else
+              echo "❌ Downloads folder not found"
+              echo ""
+              echo "💡 Specify with: downloads_dir=/path/to/downloads"
+              exit 1
+            fi
+          fi
+          
+          # Expand tilde
+          if [[ "$DOWNLOADS_DIR" == ~* ]]; then
+            DOWNLOADS_DIR="${DOWNLOADS_DIR/#\~/$HOME}"
+          fi
+          
+          if [ ! -d "$DOWNLOADS_DIR" ]; then
+            echo "❌ Not a directory: $DOWNLOADS_DIR"
+            exit 1
+          fi
+          
+          echo "📂 Organizing: $DOWNLOADS_DIR"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo ""
+          
+          echo "$DOWNLOADS_DIR" > /tmp/clipilot_downloads_dir.txt
+        next: create_categories
+      
+      create_categories:
+        type: action
+        message: "Creating category folders..."
+        command: |
+          DOWNLOADS_DIR=$(cat /tmp/clipilot_downloads_dir.txt)
+          
+          # Create category directories
+          mkdir -p "$DOWNLOADS_DIR/Images"
+          mkdir -p "$DOWNLOADS_DIR/Documents"
+          mkdir -p "$DOWNLOADS_DIR/Videos"
+          mkdir -p "$DOWNLOADS_DIR/Music"
+          mkdir -p "$DOWNLOADS_DIR/Archives"
+          mkdir -p "$DOWNLOADS_DIR/Code"
+          mkdir -p "$DOWNLOADS_DIR/Other"
+          
+          echo "✅ Category folders ready:"
+          echo "  • Images (jpg, png, gif, svg, etc.)"
+          echo "  • Documents (pdf, doc, txt, etc.)"
+          echo "  • Videos (mp4, avi, mkv, etc.)"
+          echo "  • Music (mp3, wav, flac, etc.)"
+          echo "  • Archives (zip, tar, gz, etc.)"
+          echo "  • Code (py, js, java, etc.)"
+          echo "  • Other (unrecognized files)"
+          echo ""
+        next: scan_files
+      
+      scan_files:
+        type: action
+        message: "Scanning and organizing files..."
+        command: |
+          DOWNLOADS_DIR=$(cat /tmp/clipilot_downloads_dir.txt)
+          
+          MOVED=0
+          SKIPPED=0
+          
+          # Process each file in Downloads
+          find "$DOWNLOADS_DIR" -maxdepth 1 -type f | while read FILE; do
+            FILENAME=$(basename "$FILE")
+            EXTENSION="${FILENAME##*.}"
+            EXTENSION=$(echo "$EXTENSION" | tr '[:upper:]' '[:lower:]')
+            
+            # Determine category
+            case "$EXTENSION" in
+              jpg|jpeg|png|gif|bmp|svg|webp|ico|tiff)
+                CATEGORY="Images"
+                ;;
+              pdf|doc|docx|txt|rtf|odt|xls|xlsx|ppt|pptx|csv)
+                CATEGORY="Documents"
+                ;;
+              mp4|avi|mkv|mov|wmv|flv|webm|m4v)
+                CATEGORY="Videos"
+                ;;
+              mp3|wav|flac|aac|ogg|m4a|wma)
+                CATEGORY="Music"
+                ;;
+              zip|tar|gz|bz2|xz|rar|7z|tgz)
+                CATEGORY="Archives"
+                ;;
+              py|js|java|c|cpp|h|hpp|go|rs|rb|php|html|css|json|xml|yaml|yml|sh|bash)
+                CATEGORY="Code"
+                ;;
+              *)
+                CATEGORY="Other"
+                ;;
+            esac
+            
+            # Move file
+            TARGET_DIR="$DOWNLOADS_DIR/$CATEGORY"
+            TARGET_PATH="$TARGET_DIR/$FILENAME"
+            
+            # Check if file already exists in target
+            if [ -f "$TARGET_PATH" ]; then
+              echo "⚠️  Skipped: $FILENAME (already exists in $CATEGORY)"
+              SKIPPED=$((SKIPPED + 1))
+            else
+              mv "$FILE" "$TARGET_PATH"
+              if [ $? -eq 0 ]; then
+                echo "✅ Moved: $FILENAME → $CATEGORY/"
+                MOVED=$((MOVED + 1))
+              fi
+            fi
+          done
+          
+          echo ""
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "Organization complete!"
+          echo ""
+          echo "Files moved:   $MOVED"
+          echo "Files skipped: $SKIPPED"
+        next: show_summary
+      
+      show_summary:
+        type: action
+        message: "Generating summary..."
+        command: |
+          DOWNLOADS_DIR=$(cat /tmp/clipilot_downloads_dir.txt)
+          
+          echo ""
+          echo "📊 Category Summary:"
+          echo ""
+          
+          for CATEGORY in Images Documents Videos Music Archives Code Other; do
+            COUNT=$(find "$DOWNLOADS_DIR/$CATEGORY" -type f 2>/dev/null | wc -l)
+            if [ "$COUNT" -gt 0 ]; then
+              SIZE=$(du -sh "$DOWNLOADS_DIR/$CATEGORY" 2>/dev/null | cut -f1)
+              printf "  %-12s %3d files (%s)\n" "$CATEGORY:" "$COUNT" "$SIZE"
+            fi
+          done
+          
+          echo ""
+          echo "💡 Downloads folder is now organized by file type!"
+          
+          rm -f /tmp/clipilot_downloads_dir.txt
+        next: end
+      
+      end:
+        type: terminal
+        message: "Downloads organization complete"

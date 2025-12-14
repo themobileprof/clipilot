@@ -1,0 +1,197 @@
+name: cron_job_manager
+id: org.themobileprof.cron_job_manager
+version: 1.0.0
+description: List, add, or remove cron jobs for automated tasks
+tags: [cron, scheduler, automation, devops, sre]
+provides:
+  - cron_managed
+requires:
+  - check_command_exists
+  - get_current_user
+size_kb: 3
+
+flows:
+  main:
+    start: validate_action
+    steps:
+      validate_action:
+        type: action
+        message: "Validating cron operation..."
+        command: |
+          ACTION="{{.action}}"
+          
+          if [ -z "$ACTION" ]; then
+            ACTION="list"
+          fi
+          
+          case "$ACTION" in
+            list|add|remove)
+              ;;
+            *)
+              echo "❌ Invalid action: $ACTION"
+              echo ""
+              echo "Valid actions: list, add, remove"
+              exit 1
+              ;;
+          esac
+          
+          # Check if cron is available
+          if ! command -v crontab >/dev/null 2>&1; then
+            echo "❌ crontab not available"
+            echo ""
+            echo "💡 Install cron:"
+            echo "  • Ubuntu/Debian: sudo apt install cron"
+            echo "  • RHEL/Fedora:   sudo dnf install cronie"
+            exit 1
+          fi
+          
+          echo "⏰ Cron Job Manager"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "Action: $ACTION"
+          echo ""
+          
+          echo "$ACTION" > /tmp/clipilot_cron_action.txt
+        next: branch_action
+      
+      branch_action:
+        type: branch
+        message: "Selecting action..."
+        based_on: last_output
+        branches:
+          list:
+            next: list_jobs
+          add:
+            next: add_job
+          remove:
+            next: remove_job
+          default:
+            next: list_jobs
+      
+      list_jobs:
+        type: action
+        message: "Listing cron jobs..."
+        command: |
+          CURRENT_USER=$(whoami)
+          
+          echo "Cron jobs for user: $CURRENT_USER"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo ""
+          
+          CRON_JOBS=$(crontab -l 2>/dev/null)
+          
+          if [ -z "$CRON_JOBS" ]; then
+            echo "No cron jobs configured"
+          else
+            echo "$CRON_JOBS" | nl -w2 -s'. '
+            echo ""
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            
+            JOB_COUNT=$(echo "$CRON_JOBS" | grep -v '^#' | grep -v '^$' | wc -l)
+            echo "Total active jobs: $JOB_COUNT"
+          fi
+          
+          echo ""
+          echo "💡 Cron format: minute hour day month weekday command"
+          echo "   Example: 0 2 * * * /path/to/backup.sh"
+          
+          rm -f /tmp/clipilot_cron_action.txt
+        next: end
+      
+      add_job:
+        type: action
+        message: "Adding cron job..."
+        command: |
+          SCHEDULE="{{.schedule}}"
+          COMMAND="{{.command}}"
+          
+          if [ -z "$SCHEDULE" ] || [ -z "$COMMAND" ]; then
+            echo "❌ Must specify schedule and command"
+            echo ""
+            echo "💡 Example:"
+            echo "   action=add schedule='0 2 * * *' command='/path/to/backup.sh'"
+            echo ""
+            echo "Common schedules:"
+            echo "   0 * * * *      - Every hour"
+            echo "   0 2 * * *      - Daily at 2 AM"
+            echo "   0 0 * * 0      - Weekly on Sunday"
+            echo "   0 0 1 * *      - Monthly on 1st"
+            echo "   */5 * * * *    - Every 5 minutes"
+            rm -f /tmp/clipilot_cron_action.txt
+            exit 1
+          fi
+          
+          # Backup current crontab
+          crontab -l > /tmp/clipilot_crontab_backup.txt 2>/dev/null || touch /tmp/clipilot_crontab_backup.txt
+          
+          # Add new job
+          echo "$SCHEDULE $COMMAND" >> /tmp/clipilot_crontab_backup.txt
+          
+          # Install updated crontab
+          crontab /tmp/clipilot_crontab_backup.txt
+          
+          if [ $? -eq 0 ]; then
+            echo "✅ Cron job added successfully"
+            echo ""
+            echo "Schedule: $SCHEDULE"
+            echo "Command:  $COMMAND"
+            echo ""
+            echo "Updated cron jobs:"
+            crontab -l | nl -w2 -s'. '
+          else
+            echo "❌ Failed to add cron job"
+            exit 1
+          fi
+          
+          rm -f /tmp/clipilot_cron_action.txt /tmp/clipilot_crontab_backup.txt
+        next: end
+      
+      remove_job:
+        type: action
+        message: "Removing cron job..."
+        command: |
+          JOB_NUMBER="{{.job_number}}"
+          PATTERN="{{.pattern}}"
+          
+          if [ -z "$JOB_NUMBER" ] && [ -z "$PATTERN" ]; then
+            echo "❌ Must specify job_number or pattern to remove"
+            echo ""
+            echo "💡 First list jobs with action=list, then:"
+            echo "   action=remove job_number=3"
+            echo "   OR"
+            echo "   action=remove pattern='backup.sh'"
+            rm -f /tmp/clipilot_cron_action.txt
+            exit 1
+          fi
+          
+          # Backup current crontab
+          crontab -l > /tmp/clipilot_crontab_backup.txt 2>/dev/null
+          
+          if [ ! -s /tmp/clipilot_crontab_backup.txt ]; then
+            echo "❌ No cron jobs to remove"
+            rm -f /tmp/clipilot_cron_action.txt /tmp/clipilot_crontab_backup.txt
+            exit 1
+          fi
+          
+          if [ -n "$JOB_NUMBER" ]; then
+            # Remove by line number
+            sed -i "${JOB_NUMBER}d" /tmp/clipilot_crontab_backup.txt
+            echo "✅ Removed job #$JOB_NUMBER"
+          else
+            # Remove by pattern
+            sed -i "/$PATTERN/d" /tmp/clipilot_crontab_backup.txt
+            echo "✅ Removed jobs matching: $PATTERN"
+          fi
+          
+          # Install updated crontab
+          crontab /tmp/clipilot_crontab_backup.txt
+          
+          echo ""
+          echo "Updated cron jobs:"
+          crontab -l | nl -w2 -s'. '
+          
+          rm -f /tmp/clipilot_cron_action.txt /tmp/clipilot_crontab_backup.txt
+        next: end
+      
+      end:
+        type: terminal
+        message: "Cron operation complete"

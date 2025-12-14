@@ -1,0 +1,116 @@
+name: find_large_files
+id: org.themobileprof.find_large_files
+version: 1.0.0
+description: Find and list the largest files in a directory tree
+tags: [files, composite, search, disk, utility]
+provides:
+  - large_files_found
+requires:
+  - check_is_directory
+  - find_files
+  - get_file_info
+size_kb: 2
+
+flows:
+  main:
+    start: validate_directory
+    steps:
+      validate_directory:
+        type: action
+        message: "Validating directory..."
+        command: |
+          TARGET_DIR="{{.directory}}"
+          MIN_SIZE="{{.min_size_mb}}"
+          TOP_N="{{.top_n}}"
+          
+          if [ -z "$TARGET_DIR" ]; then
+            TARGET_DIR="."
+          fi
+          
+          # Expand tilde
+          if [[ "$TARGET_DIR" == ~* ]]; then
+            TARGET_DIR="${TARGET_DIR/#\~/$HOME}"
+          fi
+          
+          if [ ! -d "$TARGET_DIR" ]; then
+            echo "❌ Not a directory: $TARGET_DIR"
+            exit 1
+          fi
+          
+          # Defaults
+          if [ -z "$MIN_SIZE" ]; then
+            MIN_SIZE=10
+          fi
+          
+          if [ -z "$TOP_N" ]; then
+            TOP_N=20
+          fi
+          
+          echo "🔍 Large Files Search"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "Directory:    $TARGET_DIR"
+          echo "Min size:     ${MIN_SIZE}MB"
+          echo "Show top:     $TOP_N files"
+          echo ""
+          
+          echo "$TARGET_DIR" > /tmp/clipilot_largefile_dir.txt
+          echo "$MIN_SIZE" > /tmp/clipilot_largefile_size.txt
+          echo "$TOP_N" > /tmp/clipilot_largefile_top.txt
+        next: search_files
+      
+      search_files:
+        type: action
+        message: "Scanning directory tree..."
+        command: |
+          TARGET_DIR=$(cat /tmp/clipilot_largefile_dir.txt)
+          MIN_SIZE=$(cat /tmp/clipilot_largefile_size.txt)
+          TOP_N=$(cat /tmp/clipilot_largefile_top.txt)
+          
+          echo "Searching for files larger than ${MIN_SIZE}MB..."
+          echo "(This may take a while for large directories)"
+          echo ""
+          
+          # Find large files
+          find "$TARGET_DIR" -type f -size +${MIN_SIZE}M 2>/dev/null -exec du -h {} \; | \
+            sort -rh | \
+            head -n "$TOP_N" > /tmp/clipilot_largefile_results.txt
+          
+          if [ ! -s /tmp/clipilot_largefile_results.txt ]; then
+            echo "✅ No files found larger than ${MIN_SIZE}MB"
+            rm -f /tmp/clipilot_largefile_*.txt
+            exit 0
+          fi
+          
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "📊 LARGEST FILES"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo ""
+          printf "%-10s  %s\n" "SIZE" "FILE"
+          echo "─────────────────────────────────────────────────"
+          
+          cat /tmp/clipilot_largefile_results.txt | while IFS=$'\t' read SIZE FILE; do
+            RELATIVE_PATH=$(echo "$FILE" | sed "s|$TARGET_DIR/||")
+            printf "%-10s  %s\n" "$SIZE" "$RELATIVE_PATH"
+          done
+          
+          echo ""
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          
+          # Calculate total size
+          TOTAL_SIZE=$(cat /tmp/clipilot_largefile_results.txt | awk '{total+=$1} END {print total}')
+          FILE_COUNT=$(wc -l < /tmp/clipilot_largefile_results.txt)
+          
+          echo "Files shown:  $FILE_COUNT"
+          echo ""
+          
+          echo "💡 Tips:"
+          echo "  • Use min_size_mb=50 to find files > 50MB"
+          echo "  • Use top_n=50 to show top 50 files"
+          echo "  • Consider deleting or archiving large files"
+          
+          rm -f /tmp/clipilot_largefile_*.txt
+        next: end
+      
+      end:
+        type: terminal
+        message: "Large files search complete"

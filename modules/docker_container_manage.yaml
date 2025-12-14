@@ -1,0 +1,239 @@
+name: docker_container_manage
+id: org.themobileprof.docker_container_manage
+version: 1.0.0
+description: Manage Docker containers (list, start, stop, logs, inspect)
+tags: [docker, containers, devops, orchestration]
+provides:
+  - docker_managed
+requires:
+  - check_command_exists
+size_kb: 3
+
+flows:
+  main:
+    start: check_docker
+    steps:
+      check_docker:
+        type: action
+        message: "Checking Docker availability..."
+        command: |
+          if ! command -v docker >/dev/null 2>&1; then
+            echo "❌ Docker not installed"
+            echo ""
+            echo "💡 Install Docker:"
+            echo "  • Ubuntu/Debian: sudo apt install docker.io"
+            echo "  • RHEL/Fedora:   sudo dnf install docker"
+            echo "  • macOS:         brew install --cask docker"
+            exit 1
+          fi
+          
+          # Check if Docker daemon is running
+          if ! docker info >/dev/null 2>&1; then
+            echo "❌ Docker daemon not running"
+            echo ""
+            echo "💡 Start Docker:"
+            echo "  • sudo systemctl start docker"
+            echo "  • Or start Docker Desktop"
+            exit 1
+          fi
+          
+          ACTION="{{.action}}"
+          
+          if [ -z "$ACTION" ]; then
+            ACTION="list"
+          fi
+          
+          echo "$ACTION" > /tmp/clipilot_docker_action.txt
+        next: branch_action
+      
+      branch_action:
+        type: branch
+        message: "Selecting action..."
+        based_on: last_output
+        branches:
+          list:
+            next: list_containers
+          start:
+            next: start_container
+          stop:
+            next: stop_container
+          restart:
+            next: restart_container
+          logs:
+            next: show_logs
+          inspect:
+            next: inspect_container
+          stats:
+            next: show_stats
+          default:
+            next: list_containers
+      
+      list_containers:
+        type: action
+        message: "Listing Docker containers..."
+        command: |
+          SHOW_ALL="{{.all}}"
+          
+          echo "🐳 Docker Containers"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo ""
+          
+          if [ "$SHOW_ALL" = "true" ]; then
+            docker ps -a --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}\t{{.Image}}"
+          else
+            docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}\t{{.Image}}"
+            echo ""
+            echo "💡 Use all=true to see stopped containers"
+          fi
+        next: end
+      
+      start_container:
+        type: action
+        message: "Starting container..."
+        command: |
+          CONTAINER="{{.container}}"
+          
+          if [ -z "$CONTAINER" ]; then
+            echo "❌ Must specify container name or ID"
+            echo ""
+            echo "💡 Example: action=start container=my-app"
+            exit 1
+          fi
+          
+          echo "🐳 Starting container: $CONTAINER"
+          echo ""
+          
+          docker start "$CONTAINER"
+          
+          if [ $? -eq 0 ]; then
+            echo ""
+            echo "✅ Container started successfully"
+            echo ""
+            docker ps --filter "name=$CONTAINER" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+          else
+            echo "❌ Failed to start container"
+            exit 1
+          fi
+        next: end
+      
+      stop_container:
+        type: action
+        message: "Stopping container..."
+        command: |
+          CONTAINER="{{.container}}"
+          
+          if [ -z "$CONTAINER" ]; then
+            echo "❌ Must specify container name or ID"
+            exit 1
+          fi
+          
+          echo "🐳 Stopping container: $CONTAINER"
+          echo ""
+          
+          docker stop "$CONTAINER"
+          
+          if [ $? -eq 0 ]; then
+            echo ""
+            echo "✅ Container stopped successfully"
+          else
+            echo "❌ Failed to stop container"
+            exit 1
+          fi
+        next: end
+      
+      restart_container:
+        type: action
+        message: "Restarting container..."
+        command: |
+          CONTAINER="{{.container}}"
+          
+          if [ -z "$CONTAINER" ]; then
+            echo "❌ Must specify container name or ID"
+            exit 1
+          fi
+          
+          echo "🐳 Restarting container: $CONTAINER"
+          echo ""
+          
+          docker restart "$CONTAINER"
+          
+          if [ $? -eq 0 ]; then
+            echo ""
+            echo "✅ Container restarted successfully"
+            echo ""
+            docker ps --filter "name=$CONTAINER" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+          else
+            echo "❌ Failed to restart container"
+            exit 1
+          fi
+        next: end
+      
+      show_logs:
+        type: action
+        message: "Fetching container logs..."
+        command: |
+          CONTAINER="{{.container}}"
+          LINES="{{.lines}}"
+          FOLLOW="{{.follow}}"
+          
+          if [ -z "$CONTAINER" ]; then
+            echo "❌ Must specify container name or ID"
+            exit 1
+          fi
+          
+          if [ -z "$LINES" ]; then
+            LINES=100
+          fi
+          
+          echo "🐳 Container Logs: $CONTAINER"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo ""
+          
+          if [ "$FOLLOW" = "true" ]; then
+            docker logs --tail "$LINES" -f "$CONTAINER"
+          else
+            docker logs --tail "$LINES" "$CONTAINER"
+          fi
+        next: end
+      
+      inspect_container:
+        type: action
+        message: "Inspecting container..."
+        command: |
+          CONTAINER="{{.container}}"
+          
+          if [ -z "$CONTAINER" ]; then
+            echo "❌ Must specify container name or ID"
+            exit 1
+          fi
+          
+          echo "🐳 Container Details: $CONTAINER"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo ""
+          
+          docker inspect "$CONTAINER"
+        next: end
+      
+      show_stats:
+        type: action
+        message: "Showing container stats..."
+        command: |
+          CONTAINER="{{.container}}"
+          
+          echo "🐳 Container Resource Usage"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo ""
+          
+          if [ -n "$CONTAINER" ]; then
+            docker stats --no-stream "$CONTAINER"
+          else
+            docker stats --no-stream
+          fi
+          
+          echo ""
+          echo "💡 Use follow=true for live stats"
+        next: end
+      
+      end:
+        type: terminal
+        message: "Docker operation complete"

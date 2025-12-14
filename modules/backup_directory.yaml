@@ -1,0 +1,130 @@
+name: backup_directory
+id: org.themobileprof.backup_directory
+version: 1.0.0
+description: Create a compressed backup of a directory with timestamp
+tags: [backup, composite, archive, directory, utility]
+provides:
+  - directory_backed_up
+requires:
+  - check_is_directory
+  - get_directory_size
+  - check_disk_space
+  - archive_directory
+size_kb: 2
+
+flows:
+  main:
+    start: validate_source
+    steps:
+      validate_source:
+        type: action
+        message: "Validating source directory..."
+        command: |
+          SOURCE="{{.source}}"
+          BACKUP_DIR="{{.backup_dir}}"
+          
+          # Expand tilde
+          if [[ "$SOURCE" == ~* ]]; then
+            SOURCE="${SOURCE/#\~/$HOME}"
+          fi
+          
+          if [[ "$BACKUP_DIR" == ~* ]]; then
+            BACKUP_DIR="${BACKUP_DIR/#\~/$HOME}"
+          fi
+          
+          # Use default backup location if not specified
+          if [ -z "$BACKUP_DIR" ]; then
+            BACKUP_DIR="$HOME/backups"
+          fi
+          
+          echo "📦 Backup Configuration"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "Source:      $SOURCE"
+          echo "Backup Dir:  $BACKUP_DIR"
+          echo ""
+          
+          # Create backup directory if it doesn't exist
+          if [ ! -d "$BACKUP_DIR" ]; then
+            mkdir -p "$BACKUP_DIR"
+            echo "✅ Created backup directory: $BACKUP_DIR"
+          fi
+          
+          echo "$SOURCE" > /tmp/clipilot_backup_source.txt
+          echo "$BACKUP_DIR" > /tmp/clipilot_backup_dir.txt
+        next: check_size
+      
+      check_size:
+        type: action
+        message: "Calculating directory size..."
+        command: |
+          SOURCE=$(cat /tmp/clipilot_backup_source.txt)
+          
+          SIZE=$(du -sh "$SOURCE" 2>/dev/null | cut -f1)
+          
+          echo "Directory size: $SIZE"
+          echo ""
+        next: create_archive
+      
+      create_archive:
+        type: action
+        message: "Creating compressed archive..."
+        command: |
+          SOURCE=$(cat /tmp/clipilot_backup_source.txt)
+          BACKUP_DIR=$(cat /tmp/clipilot_backup_dir.txt)
+          COMPRESSION="{{.compression}}"
+          
+          # Default to gzip
+          if [ -z "$COMPRESSION" ]; then
+            COMPRESSION="gz"
+          fi
+          
+          # Generate backup filename with timestamp
+          DIR_NAME=$(basename "$SOURCE")
+          TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+          
+          case "$COMPRESSION" in
+            gz)
+              BACKUP_FILE="$BACKUP_DIR/${DIR_NAME}_backup_${TIMESTAMP}.tar.gz"
+              TAR_CMD="tar -czf"
+              ;;
+            bz2)
+              BACKUP_FILE="$BACKUP_DIR/${DIR_NAME}_backup_${TIMESTAMP}.tar.bz2"
+              TAR_CMD="tar -cjf"
+              ;;
+            xz)
+              BACKUP_FILE="$BACKUP_DIR/${DIR_NAME}_backup_${TIMESTAMP}.tar.xz"
+              TAR_CMD="tar -cJf"
+              ;;
+            *)
+              BACKUP_FILE="$BACKUP_DIR/${DIR_NAME}_backup_${TIMESTAMP}.tar"
+              TAR_CMD="tar -cf"
+              ;;
+          esac
+          
+          echo "Creating backup: $(basename "$BACKUP_FILE")"
+          
+          $TAR_CMD "$BACKUP_FILE" -C "$(dirname "$SOURCE")" "$(basename "$SOURCE")"
+          
+          if [ $? -eq 0 ]; then
+            echo ""
+            echo "✅ Backup created successfully!"
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo "Backup file: $BACKUP_FILE"
+            
+            BACKUP_SIZE=$(du -sh "$BACKUP_FILE" | cut -f1)
+            echo "Backup size: $BACKUP_SIZE"
+            
+            echo ""
+            echo "💡 To restore:"
+            echo "   tar -xzf $BACKUP_FILE"
+          else
+            echo "❌ Backup failed"
+            exit 1
+          fi
+          
+          rm -f /tmp/clipilot_backup_source.txt /tmp/clipilot_backup_dir.txt
+        next: end
+      
+      end:
+        type: terminal
+        message: "Backup complete"

@@ -1,0 +1,83 @@
+name: check_port_status
+id: org.themobileprof.check_port_status
+version: 1.0.0
+description: Check if a port is open/listening and show process using it
+tags: [network, diagnostics, port, netstat, lsof, devops]
+provides:
+  - port_checked
+requires:
+  - check_command_exists
+size_kb: 2
+
+flows:
+  main:
+    start: check_port
+    steps:
+      check_port:
+        type: action
+        message: "Checking port {{.port}}..."
+        command: |
+          PORT="{{.port}}"
+          
+          if [ -z "$PORT" ]; then
+            echo "❌ Must specify port number"
+            echo ""
+            echo "💡 Example: port=8080"
+            exit 1
+          fi
+          
+          echo "🔍 Port Status Check"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "Port: $PORT"
+          echo ""
+          
+          # Try multiple methods to check port
+          FOUND=false
+          
+          # Method 1: lsof (most detailed)
+          if command -v lsof >/dev/null 2>&1; then
+            LSOF_OUTPUT=$(lsof -i :$PORT 2>/dev/null)
+            if [ -n "$LSOF_OUTPUT" ]; then
+              echo "✅ Port $PORT is LISTENING"
+              echo ""
+              echo "$LSOF_OUTPUT"
+              FOUND=true
+            fi
+          fi
+          
+          # Method 2: netstat
+          if [ "$FOUND" = false ] && command -v netstat >/dev/null 2>&1; then
+            NETSTAT_OUTPUT=$(netstat -tuln 2>/dev/null | grep ":$PORT ")
+            if [ -n "$NETSTAT_OUTPUT" ]; then
+              echo "✅ Port $PORT is LISTENING"
+              echo ""
+              echo "$NETSTAT_OUTPUT"
+              FOUND=true
+            fi
+          fi
+          
+          # Method 3: ss (modern replacement for netstat)
+          if [ "$FOUND" = false ] && command -v ss >/dev/null 2>&1; then
+            SS_OUTPUT=$(ss -tuln 2>/dev/null | grep ":$PORT ")
+            if [ -n "$SS_OUTPUT" ]; then
+              echo "✅ Port $PORT is LISTENING"
+              echo ""
+              echo "$SS_OUTPUT"
+              FOUND=true
+            fi
+          fi
+          
+          if [ "$FOUND" = false ]; then
+            echo "❌ Port $PORT is NOT listening"
+            echo ""
+            echo "💡 The port is available and can be used"
+          fi
+          
+          echo ""
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "💡 Tools: lsof -i :PORT | netstat -tuln | ss -tuln"
+        next: end
+      
+      end:
+        type: terminal
+        message: "Port check complete"

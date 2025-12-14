@@ -1,0 +1,181 @@
+name: service_control
+id: org.themobileprof.service_control
+version: 1.0.0
+description: Manage systemd/init services (start, stop, restart, status)
+tags: [service, systemd, daemon, control, devops, sre]
+provides:
+  - service_controlled
+requires:
+  - check_command_exists
+  - get_current_user
+size_kb: 3
+
+flows:
+  main:
+    start: validate_input
+    steps:
+      validate_input:
+        type: action
+        message: "Validating service control request..."
+        command: |
+          SERVICE_NAME="{{.service}}"
+          ACTION="{{.action}}"
+          
+          if [ -z "$SERVICE_NAME" ]; then
+            echo "❌ Must specify service name"
+            echo ""
+            echo "💡 Example: service=nginx action=status"
+            exit 1
+          fi
+          
+          if [ -z "$ACTION" ]; then
+            ACTION="status"
+          fi
+          
+          case "$ACTION" in
+            start|stop|restart|reload|status|enable|disable)
+              ;;
+            *)
+              echo "❌ Invalid action: $ACTION"
+              echo ""
+              echo "Valid actions: start, stop, restart, reload, status, enable, disable"
+              exit 1
+              ;;
+          esac
+          
+          echo "🔧 Service Control"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "Service: $SERVICE_NAME"
+          echo "Action:  $ACTION"
+          echo ""
+          
+          echo "$SERVICE_NAME" > /tmp/clipilot_service.txt
+          echo "$ACTION" > /tmp/clipilot_action.txt
+        next: detect_init_system
+      
+      detect_init_system:
+        type: action
+        message: "Detecting init system..."
+        command: |
+          # Detect init system
+          if command -v systemctl >/dev/null 2>&1 && systemctl --version >/dev/null 2>&1; then
+            echo "SYSTEMD"
+          elif command -v service >/dev/null 2>&1; then
+            echo "SYSVINIT"
+          else
+            echo "UNKNOWN"
+          fi
+        next: branch_init
+      
+      branch_init:
+        type: branch
+        message: "Selecting init system..."
+        based_on: last_output
+        branches:
+          SYSTEMD:
+            next: systemd_control
+          SYSVINIT:
+            next: sysvinit_control
+          default:
+            next: error_no_init
+      
+      systemd_control:
+        type: action
+        message: "Using systemd..."
+        command: |
+          SERVICE_NAME=$(cat /tmp/clipilot_service.txt)
+          ACTION=$(cat /tmp/clipilot_action.txt)
+          
+          # Check if we need sudo
+          USE_SUDO=""
+          if [ "$(id -u)" -ne 0 ] && [ "$ACTION" != "status" ]; then
+            if command -v sudo >/dev/null 2>&1; then
+              USE_SUDO="sudo"
+              echo "ℹ️  Using sudo (may prompt for password)"
+              echo ""
+            else
+              echo "⚠️  Warning: Not running as root, command may fail"
+              echo ""
+            fi
+          fi
+          
+          # Execute systemctl command
+          $USE_SUDO systemctl $ACTION $SERVICE_NAME
+          
+          EXIT_CODE=$?
+          
+          if [ $EXIT_CODE -eq 0 ]; then
+            echo ""
+            echo "✅ Service $ACTION completed successfully"
+            
+            # Show status after non-status actions
+            if [ "$ACTION" != "status" ]; then
+              echo ""
+              echo "Current status:"
+              systemctl status $SERVICE_NAME --no-pager -l | head -15
+            fi
+          else
+            echo ""
+            echo "❌ Service $ACTION failed"
+            exit 1
+          fi
+          
+          rm -f /tmp/clipilot_service.txt /tmp/clipilot_action.txt
+        next: end
+      
+      sysvinit_control:
+        type: action
+        message: "Using SysV init..."
+        command: |
+          SERVICE_NAME=$(cat /tmp/clipilot_service.txt)
+          ACTION=$(cat /tmp/clipilot_action.txt)
+          
+          # Map systemd actions to SysV
+          case "$ACTION" in
+            reload)
+              ACTION="force-reload"
+              ;;
+            enable|disable)
+              echo "❌ Enable/disable not supported with SysV init"
+              echo "💡 Use update-rc.d or chkconfig manually"
+              rm -f /tmp/clipilot_service.txt /tmp/clipilot_action.txt
+              exit 1
+              ;;
+          esac
+          
+          # Check if we need sudo
+          USE_SUDO=""
+          if [ "$(id -u)" -ne 0 ] && [ "$ACTION" != "status" ]; then
+            if command -v sudo >/dev/null 2>&1; then
+              USE_SUDO="sudo"
+              echo "ℹ️  Using sudo (may prompt for password)"
+              echo ""
+            fi
+          fi
+          
+          # Execute service command
+          $USE_SUDO service $SERVICE_NAME $ACTION
+          
+          if [ $? -eq 0 ]; then
+            echo ""
+            echo "✅ Service $ACTION completed successfully"
+          else
+            echo ""
+            echo "❌ Service $ACTION failed"
+            exit 1
+          fi
+          
+          rm -f /tmp/clipilot_service.txt /tmp/clipilot_action.txt
+        next: end
+      
+      error_no_init:
+        type: instruction
+        message: "❌ No supported init system found"
+        command: |
+          echo "Neither systemd nor SysV init detected"
+          rm -f /tmp/clipilot_service.txt /tmp/clipilot_action.txt
+        next: end
+      
+      end:
+        type: terminal
+        message: "Service control complete"

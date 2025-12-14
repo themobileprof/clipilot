@@ -1,0 +1,214 @@
+name: cleanup_old_files
+id: org.themobileprof.cleanup_old_files
+version: 1.0.0
+description: Find and optionally delete files older than specified days
+tags: [cleanup, composite, maintenance, files, utility]
+provides:
+  - old_files_cleaned
+requires:
+  - check_is_directory
+  - find_files
+  - get_file_info
+  - delete_file
+size_kb: 3
+
+flows:
+  main:
+    start: validate_directory
+    steps:
+      validate_directory:
+        type: action
+        message: "Validating directory..."
+        command: |
+          TARGET_DIR="{{.directory}}"
+          DAYS_OLD="{{.days_old}}"
+          
+          if [ -z "$TARGET_DIR" ]; then
+            echo "❌ Must specify directory to clean"
+            echo ""
+            echo "💡 Example: directory=~/Downloads days_old=30"
+            exit 1
+          fi
+          
+          # Expand tilde
+          if [[ "$TARGET_DIR" == ~* ]]; then
+            TARGET_DIR="${TARGET_DIR/#\~/$HOME}"
+          fi
+          
+          if [ ! -d "$TARGET_DIR" ]; then
+            echo "❌ Not a directory: $TARGET_DIR"
+            exit 1
+          fi
+          
+          # Default to 30 days if not specified
+          if [ -z "$DAYS_OLD" ]; then
+            DAYS_OLD=30
+          fi
+          
+          echo "🧹 Cleanup Configuration"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "Directory:    $TARGET_DIR"
+          echo "Delete files: Older than $DAYS_OLD days"
+          echo ""
+          
+          echo "$TARGET_DIR" > /tmp/clipilot_cleanup_dir.txt
+          echo "$DAYS_OLD" > /tmp/clipilot_cleanup_days.txt
+        next: find_old_files
+      
+      find_old_files:
+        type: action
+        message: "Scanning for old files..."
+        command: |
+          TARGET_DIR=$(cat /tmp/clipilot_cleanup_dir.txt)
+          DAYS_OLD=$(cat /tmp/clipilot_cleanup_days.txt)
+          
+          echo "Searching for files older than $DAYS_OLD days..."
+          echo ""
+          
+          # Find old files
+          OLD_FILES=$(find "$TARGET_DIR" -type f -mtime +$DAYS_OLD 2>/dev/null)
+          
+          if [ -z "$OLD_FILES" ]; then
+            echo "✅ No files found older than $DAYS_OLD days"
+            rm -f /tmp/clipilot_cleanup_dir.txt /tmp/clipilot_cleanup_days.txt
+            exit 0
+          fi
+          
+          FILE_COUNT=$(echo "$OLD_FILES" | wc -l)
+          
+          echo "Found $FILE_COUNT old file(s):"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo ""
+          
+          # Show files with dates
+          echo "$OLD_FILES" | head -20 | while read FILE; do
+            if [ -f "$FILE" ]; then
+              SIZE=$(du -h "$FILE" | cut -f1)
+              DATE=$(stat -c %y "$FILE" 2>/dev/null | cut -d' ' -f1 || stat -f "%Sm" -t "%Y-%m-%d" "$FILE" 2>/dev/null)
+              echo "  $DATE  $SIZE  $(basename "$FILE")"
+            fi
+          done
+          
+          if [ "$FILE_COUNT" -gt 20 ]; then
+            echo "  ... and $((FILE_COUNT - 20)) more files"
+          fi
+          
+          echo ""
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          
+          # Calculate total size
+          TOTAL_SIZE=$(echo "$OLD_FILES" | xargs du -ch 2>/dev/null | tail -1 | cut -f1)
+          echo "Total size: $TOTAL_SIZE"
+          echo ""
+          
+          echo "$OLD_FILES" > /tmp/clipilot_cleanup_files.txt
+          echo "$FILE_COUNT" > /tmp/clipilot_cleanup_count.txt
+          echo "FOUND"
+        next: branch_found
+      
+      branch_found:
+        type: branch
+        message: "Checking results..."
+        based_on: last_output
+        branches:
+          FOUND:
+            next: confirm_delete
+          default:
+            next: end
+      
+      confirm_delete:
+        type: instruction
+        message: "Delete these files? (yes/no):"
+        command: |
+          AUTO_CONFIRM="{{.auto_confirm}}"
+          DRY_RUN="{{.dry_run}}"
+          
+          if [ "$DRY_RUN" = "true" ]; then
+            echo "DRY_RUN"
+          elif [ "$AUTO_CONFIRM" = "true" ]; then
+            echo "YES"
+          else
+            read -p "Delete these files? (yes/no): " CONFIRM
+            CONFIRM=$(echo "$CONFIRM" | tr '[:upper:]' '[:lower:]' | xargs)
+            
+            if [ "$CONFIRM" = "yes" ] || [ "$CONFIRM" = "y" ]; then
+              echo "YES"
+            else
+              echo "NO"
+            fi
+          fi
+        next: branch_confirm
+      
+      branch_confirm:
+        type: branch
+        message: "Processing confirmation..."
+        based_on: last_output
+        branches:
+          YES:
+            next: delete_files
+          DRY_RUN:
+            next: dry_run_end
+          default:
+            next: cancelled
+      
+      delete_files:
+        type: action
+        message: "Deleting old files..."
+        command: |
+          OLD_FILES=$(cat /tmp/clipilot_cleanup_files.txt)
+          
+          DELETED=0
+          FAILED=0
+          
+          echo "Deleting files..."
+          echo ""
+          
+          echo "$OLD_FILES" | while read FILE; do
+            if [ -f "$FILE" ]; then
+              rm -f "$FILE"
+              if [ $? -eq 0 ]; then
+                echo "✅ Deleted: $(basename "$FILE")"
+                DELETED=$((DELETED + 1))
+              else
+                echo "❌ Failed: $(basename "$FILE")"
+                FAILED=$((FAILED + 1))
+              fi
+            fi
+          done
+          
+          echo ""
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "Cleanup complete!"
+          echo ""
+          echo "Files deleted: $DELETED"
+          
+          if [ "$FAILED" -gt 0 ]; then
+            echo "Files failed:  $FAILED"
+          fi
+          
+          rm -f /tmp/clipilot_cleanup_dir.txt /tmp/clipilot_cleanup_days.txt /tmp/clipilot_cleanup_files.txt /tmp/clipilot_cleanup_count.txt
+        next: end
+      
+      dry_run_end:
+        type: instruction
+        message: "Dry run complete - no files deleted"
+        command: |
+          echo "ℹ️  Dry run mode - no files were deleted"
+          echo ""
+          echo "💡 Remove dry_run=true to actually delete files"
+          
+          rm -f /tmp/clipilot_cleanup_dir.txt /tmp/clipilot_cleanup_days.txt /tmp/clipilot_cleanup_files.txt /tmp/clipilot_cleanup_count.txt
+        next: end
+      
+      cancelled:
+        type: instruction
+        message: "Cleanup cancelled"
+        command: |
+          echo "ℹ️  Cleanup cancelled - no files deleted"
+          
+          rm -f /tmp/clipilot_cleanup_dir.txt /tmp/clipilot_cleanup_days.txt /tmp/clipilot_cleanup_files.txt /tmp/clipilot_cleanup_count.txt
+        next: end
+      
+      end:
+        type: terminal
+        message: "Cleanup operation complete"
