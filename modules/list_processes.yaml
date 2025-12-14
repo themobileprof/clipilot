@@ -1,0 +1,96 @@
+name: list_processes
+id: org.themobileprof.list_processes
+version: 1.0.0
+description: List running processes with filtering and sorting options
+tags: [system, process, ps, monitor, diagnostics]
+provides:
+  - processes_listed
+requires: []
+size_kb: 3
+
+flows:
+  main:
+    start: list_procs
+    steps:
+      list_procs:
+        type: action
+        message: "Listing processes..."
+        command: |
+          FILTER="{{.filter}}"
+          SHOW_ALL="{{.show_all}}"
+          SORT_BY="{{.sort_by}}"
+          
+          echo "⚙️  Running Processes"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo ""
+          
+          # Build ps command based on platform
+          if ps aux >/dev/null 2>&1; then
+            # BSD-style (Linux, macOS)
+            PS_CMD="ps aux"
+          elif ps -ef >/dev/null 2>&1; then
+            # POSIX-style
+            PS_CMD="ps -ef"
+          else
+            echo "❌ Unable to list processes (ps command not available)"
+            exit 1
+          fi
+          
+          # Get process list
+          if [ "$SHOW_ALL" = "true" ]; then
+            PROC_OUTPUT=$($PS_CMD)
+          else
+            # Show only user's processes
+            PROC_OUTPUT=$($PS_CMD | grep "^$(whoami)" || $PS_CMD | awk -v user="$(whoami)" '$1 == user')
+          fi
+          
+          # Apply filter if specified
+          if [ -n "$FILTER" ]; then
+            PROC_OUTPUT=$(echo "$PROC_OUTPUT" | grep -i "$FILTER")
+            echo "Filter: $FILTER"
+            echo ""
+          fi
+          
+          # Sort if requested
+          case "$SORT_BY" in
+            cpu)
+              # Sort by CPU usage (column varies by ps format)
+              PROC_OUTPUT=$(echo "$PROC_OUTPUT" | head -1; echo "$PROC_OUTPUT" | tail -n +2 | sort -k3 -rn)
+              ;;
+            mem|memory)
+              # Sort by memory usage
+              PROC_OUTPUT=$(echo "$PROC_OUTPUT" | head -1; echo "$PROC_OUTPUT" | tail -n +2 | sort -k4 -rn)
+              ;;
+            *)
+              # Default order
+              ;;
+          esac
+          
+          # Display results
+          if [ -z "$PROC_OUTPUT" ] || [ "$(echo "$PROC_OUTPUT" | wc -l)" -le 1 ]; then
+            echo "No processes found matching criteria"
+          else
+            echo "$PROC_OUTPUT" | head -50
+            
+            TOTAL=$(echo "$PROC_OUTPUT" | tail -n +2 | wc -l)
+            echo ""
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            
+            if [ "$TOTAL" -gt 49 ]; then
+              echo "Showing first 50 of $TOTAL processes"
+            else
+              echo "Total: $TOTAL process(es)"
+            fi
+            
+            echo ""
+            echo "💡 Tips:"
+            echo "  • Use filter=NAME to search for specific processes"
+            echo "  • Use sort_by=cpu to sort by CPU usage"
+            echo "  • Use sort_by=memory to sort by memory usage"
+            echo "  • Use show_all=true to see all system processes"
+          fi
+        next: end
+      
+      end:
+        type: terminal
+        message: "Process listing complete"

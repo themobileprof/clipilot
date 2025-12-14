@@ -1,0 +1,73 @@
+name: check_permissions
+id: org.themobileprof.check_permissions
+version: 1.0.0
+description: Check if user has read, write, or execute permissions on a path
+tags: [validation, filesystem, permissions, security, access]
+provides:
+  - permissions_checked
+requires: []
+size_kb: 2
+
+flows:
+  main:
+    start: check_access
+    steps:
+      check_access:
+        type: action
+        message: "Checking permissions for: {{.path}}"
+        command: |
+          TARGET="{{.path}}"
+          
+          # Expand tilde
+          if [[ "$TARGET" == ~* ]]; then
+            TARGET="${TARGET/#\~/$HOME}"
+          fi
+          
+          if [ ! -e "$TARGET" ]; then
+            echo "❌ Path does not exist: $TARGET"
+            exit 1
+          fi
+          
+          echo "🔐 Permission Check: $TARGET"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo ""
+          
+          # Check each permission
+          RESULTS=""
+          
+          if [ -r "$TARGET" ]; then
+            echo "✅ Read:    Yes"
+            RESULTS="${RESULTS}r"
+          else
+            echo "❌ Read:    No"
+            RESULTS="${RESULTS}-"
+          fi
+          
+          if [ -w "$TARGET" ]; then
+            echo "✅ Write:   Yes"
+            RESULTS="${RESULTS}w"
+          else
+            echo "❌ Write:   No"
+            RESULTS="${RESULTS}-"
+          fi
+          
+          if [ -x "$TARGET" ]; then
+            echo "✅ Execute: Yes"
+            RESULTS="${RESULTS}x"
+          else
+            echo "❌ Execute: No"
+            RESULTS="${RESULTS}-"
+          fi
+          
+          echo ""
+          echo "Detailed permissions:"
+          ls -ld "$TARGET" 2>/dev/null || stat "$TARGET" 2>/dev/null
+          
+          # Return summary
+          echo ""
+          echo "PERMISSIONS:$RESULTS"
+        next: end
+      
+      end:
+        type: terminal
+        message: "Permission check complete"

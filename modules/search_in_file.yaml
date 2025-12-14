@@ -1,0 +1,74 @@
+name: search_in_file
+id: org.themobileprof.search_in_file
+version: 1.0.0
+description: Search for text pattern in file using grep
+tags: [search, text, grep, find, pattern]
+provides:
+  - text_searched
+requires:
+  - check_file_exists
+size_kb: 2
+
+flows:
+  main:
+    start: search_pattern
+    steps:
+      search_pattern:
+        type: action
+        message: "Searching for '{{.pattern}}' in {{.path}}"
+        command: |
+          FILE_PATH="{{.path}}"
+          PATTERN="{{.pattern}}"
+          CASE_SENSITIVE="{{.case_sensitive}}"
+          SHOW_LINE_NUMBERS="{{.line_numbers}}"
+          
+          # Expand tilde
+          if [[ "$FILE_PATH" == ~* ]]; then
+            FILE_PATH="${FILE_PATH/#\~/$HOME}"
+          fi
+          
+          if [ ! -f "$FILE_PATH" ]; then
+            echo "❌ Not a file: $FILE_PATH"
+            exit 1
+          fi
+          
+          echo "🔍 Searching in: $FILE_PATH"
+          echo "🔎 Pattern: $PATTERN"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo ""
+          
+          # Build grep command
+          GREP_CMD="grep"
+          
+          if [ "$CASE_SENSITIVE" != "true" ]; then
+            GREP_CMD="$GREP_CMD -i"
+          fi
+          
+          if [ "$SHOW_LINE_NUMBERS" = "true" ]; then
+            GREP_CMD="$GREP_CMD -n"
+          fi
+          
+          GREP_CMD="$GREP_CMD --color=auto"
+          
+          # Execute search
+          RESULTS=$($GREP_CMD "$PATTERN" "$FILE_PATH" 2>/dev/null)
+          
+          if [ -n "$RESULTS" ]; then
+            echo "$RESULTS"
+            echo ""
+            COUNT=$(echo "$RESULTS" | wc -l)
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo "✅ Found $COUNT match(es)"
+          else
+            echo "❌ No matches found for: $PATTERN"
+            echo ""
+            echo "💡 Tips:"
+            echo "  • Check spelling"
+            echo "  • Try case_sensitive=false for case-insensitive search"
+            echo "  • Use simpler patterns or wildcards"
+          fi
+        next: end
+      
+      end:
+        type: terminal
+        message: "Search complete"

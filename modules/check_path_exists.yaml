@@ -1,0 +1,46 @@
+name: check_path_exists
+id: org.themobileprof.check_path_exists
+version: 1.0.0
+description: Check if a file or directory path exists on the filesystem
+tags: [validation, filesystem, utility, path, check]
+provides:
+  - path_validated
+requires: []
+size_kb: 2
+
+flows:
+  main:
+    start: check_path
+    steps:
+      check_path:
+        type: action
+        message: "Checking if path exists: {{.path}}"
+        command: |
+          if [ -e "{{.path}}" ]; then
+            echo "EXISTS"
+          else
+            echo "NOT_FOUND"
+          fi
+        next: report_result
+      
+      report_result:
+        type: instruction
+        message: |
+          Path check result: {{.last_output}}
+          
+          {{if eq .last_output "EXISTS"}}
+          ✅ Path exists: {{.path}}
+          {{else}}
+          ❌ Path does not exist: {{.path}}
+          
+          💡 Troubleshooting:
+            • Check spelling and capitalization (Linux paths are case-sensitive)
+            • Use 'ls' to list files in the parent directory
+            • Try using tab completion in your shell
+            • Verify you have permission to access this location
+          {{end}}
+        next: end
+      
+      end:
+        type: terminal
+        message: "Path existence check complete"

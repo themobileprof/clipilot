@@ -1,0 +1,83 @@
+name: count_lines
+id: org.themobileprof.count_lines
+version: 1.0.0
+description: Count lines, words, characters, or bytes in a file using wc
+tags: [text, utility, count, wc, analysis]
+provides:
+  - lines_counted
+requires:
+  - check_file_exists
+size_kb: 2
+
+flows:
+  main:
+    start: count_file
+    steps:
+      count_file:
+        type: action
+        message: "Analyzing file: {{.path}}"
+        command: |
+          FILE_PATH="{{.path}}"
+          COUNT_TYPE="{{.count_type}}"
+          
+          # Expand tilde
+          if [[ "$FILE_PATH" == ~* ]]; then
+            FILE_PATH="${FILE_PATH/#\~/$HOME}"
+          fi
+          
+          if [ ! -f "$FILE_PATH" ]; then
+            echo "❌ Not a file: $FILE_PATH"
+            exit 1
+          fi
+          
+          echo "📊 File Analysis: $FILE_PATH"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo ""
+          
+          # Perform counts based on type
+          case "$COUNT_TYPE" in
+            lines|l)
+              LINES=$(wc -l < "$FILE_PATH")
+              echo "Lines:      $LINES"
+              ;;
+            words|w)
+              WORDS=$(wc -w < "$FILE_PATH")
+              echo "Words:      $WORDS"
+              ;;
+            chars|c)
+              CHARS=$(wc -m < "$FILE_PATH" 2>/dev/null || wc -c < "$FILE_PATH")
+              echo "Characters: $CHARS"
+              ;;
+            bytes|b)
+              BYTES=$(wc -c < "$FILE_PATH")
+              echo "Bytes:      $BYTES"
+              ;;
+            *)
+              # Default: show all counts
+              WC_OUTPUT=$(wc "$FILE_PATH")
+              LINES=$(echo "$WC_OUTPUT" | awk '{print $1}')
+              WORDS=$(echo "$WC_OUTPUT" | awk '{print $2}')
+              BYTES=$(echo "$WC_OUTPUT" | awk '{print $3}')
+              
+              echo "Lines:      $LINES"
+              echo "Words:      $WORDS"
+              echo "Characters: $BYTES"
+              
+              # Calculate average line length
+              if [ "$LINES" -gt 0 ]; then
+                AVG=$((BYTES / LINES))
+                echo "Avg/Line:   $AVG chars"
+              fi
+              ;;
+          esac
+          
+          echo ""
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          
+          # Show file info
+          ls -lh "$FILE_PATH"
+        next: end
+      
+      end:
+        type: terminal
+        message: "File counting complete"

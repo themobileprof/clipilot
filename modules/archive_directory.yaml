@@ -1,0 +1,132 @@
+name: archive_directory
+id: org.themobileprof.archive_directory
+version: 1.0.0
+description: Create tar archive of directory with optional compression
+tags: [archive, compress, tar, backup, zip]
+provides:
+  - directory_archived
+requires:
+  - check_is_directory
+  - check_command_exists
+size_kb: 3
+
+flows:
+  main:
+    start: validate_directory
+    steps:
+      validate_directory:
+        type: action
+        message: "Validating directory: {{.source}}"
+        command: |
+          SOURCE="{{.source}}"
+          
+          # Expand tilde
+          if [[ "$SOURCE" == ~* ]]; then
+            SOURCE="${SOURCE/#\~/$HOME}"
+          fi
+          
+          if [ ! -d "$SOURCE" ]; then
+            echo "❌ Not a directory: $SOURCE"
+            exit 1
+          fi
+          
+          echo "$SOURCE" > /tmp/clipilot_archive_source.txt
+          echo "✅ Directory: $SOURCE"
+          du -sh "$SOURCE"
+        next: determine_output
+      
+      determine_output:
+        type: action
+        message: "Preparing archive..."
+        command: |
+          SOURCE=$(cat /tmp/clipilot_archive_source.txt)
+          OUTPUT="{{.output}}"
+          COMPRESSION="{{.compression}}"
+          
+          # Default output name
+          if [ -z "$OUTPUT" ]; then
+            BASENAME=$(basename "$SOURCE")
+            TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+            
+            case "$COMPRESSION" in
+              gzip|gz)
+                OUTPUT="${BASENAME}_${TIMESTAMP}.tar.gz"
+                ;;
+              bzip2|bz2)
+                OUTPUT="${BASENAME}_${TIMESTAMP}.tar.bz2"
+                ;;
+              xz)
+                OUTPUT="${BASENAME}_${TIMESTAMP}.tar.xz"
+                ;;
+              *)
+                OUTPUT="${BASENAME}_${TIMESTAMP}.tar"
+                ;;
+            esac
+          fi
+          
+          # Expand tilde in output
+          if [[ "$OUTPUT" == ~* ]]; then
+            OUTPUT="${OUTPUT/#\~/$HOME}"
+          fi
+          
+          echo "$OUTPUT" > /tmp/clipilot_archive_output.txt
+          
+          echo "📦 Archive settings:"
+          echo "   Source:      $SOURCE"
+          echo "   Output:      $OUTPUT"
+          echo "   Compression: ${COMPRESSION:-none}"
+        next: create_archive
+      
+      create_archive:
+        type: action
+        message: "Creating archive..."
+        command: |
+          SOURCE=$(cat /tmp/clipilot_archive_source.txt)
+          OUTPUT=$(cat /tmp/clipilot_archive_output.txt)
+          COMPRESSION="{{.compression}}"
+          
+          # Build tar command
+          TAR_CMD="tar"
+          
+          case "$COMPRESSION" in
+            gzip|gz)
+              TAR_CMD="$TAR_CMD -czf"
+              ;;
+            bzip2|bz2)
+              TAR_CMD="$TAR_CMD -cjf"
+              ;;
+            xz)
+              TAR_CMD="$TAR_CMD -cJf"
+              ;;
+            *)
+              TAR_CMD="$TAR_CMD -cf"
+              ;;
+          esac
+          
+          echo "🔄 Creating archive..."
+          $TAR_CMD "$OUTPUT" -C "$(dirname "$SOURCE")" "$(basename "$SOURCE")"
+          
+          if [ $? -eq 0 ] && [ -f "$OUTPUT" ]; then
+            echo ""
+            echo "✅ Archive created successfully!"
+            echo ""
+            ls -lh "$OUTPUT"
+            echo ""
+            echo "📊 Compression ratio:"
+            ORIG_SIZE=$(du -sb "$SOURCE" | cut -f1)
+            ARCH_SIZE=$(stat -c%s "$OUTPUT" 2>/dev/null || stat -f%z "$OUTPUT")
+            RATIO=$((100 - (ARCH_SIZE * 100 / ORIG_SIZE)))
+            echo "   Original: $(numfmt --to=iec-i --suffix=B $ORIG_SIZE 2>/dev/null || echo "$ORIG_SIZE bytes")"
+            echo "   Archive:  $(numfmt --to=iec-i --suffix=B $ARCH_SIZE 2>/dev/null || echo "$ARCH_SIZE bytes")"
+            echo "   Saved:    ${RATIO}%"
+          else
+            echo "❌ Archive creation failed"
+            exit 1
+          fi
+          
+          rm -f /tmp/clipilot_archive_source.txt /tmp/clipilot_archive_output.txt
+        next: end
+      
+      end:
+        type: terminal
+        message: "Archive creation complete"

@@ -1,0 +1,69 @@
+name: read_file
+id: org.themobileprof.read_file
+version: 1.0.0
+description: Display file contents with optional line limits
+tags: [filesystem, file, read, view, cat, text]
+provides:
+  - file_read
+requires:
+  - check_file_exists
+size_kb: 2
+
+flows:
+  main:
+    start: validate_and_read
+    steps:
+      validate_and_read:
+        type: action
+        message: "Reading file: {{.path}}"
+        command: |
+          FILE_PATH="{{.path}}"
+          MAX_LINES="{{.max_lines}}"
+          START_LINE="{{.start_line}}"
+          END_LINE="{{.end_line}}"
+          
+          # Expand tilde
+          if [[ "$FILE_PATH" == ~* ]]; then
+            FILE_PATH="${FILE_PATH/#\~/$HOME}"
+          fi
+          
+          if [ ! -f "$FILE_PATH" ]; then
+            echo "❌ Not a file: $FILE_PATH"
+            exit 1
+          fi
+          
+          echo "📄 File: $FILE_PATH"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo ""
+          
+          # Determine reading strategy
+          if [ -n "$START_LINE" ] && [ -n "$END_LINE" ]; then
+            # Read specific range
+            sed -n "${START_LINE},${END_LINE}p" "$FILE_PATH"
+            TOTAL=$(wc -l < "$FILE_PATH")
+            echo ""
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo "Showing lines $START_LINE-$END_LINE of $TOTAL"
+          elif [ -n "$MAX_LINES" ]; then
+            # Read first N lines
+            head -n "$MAX_LINES" "$FILE_PATH"
+            TOTAL=$(wc -l < "$FILE_PATH")
+            echo ""
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo "Showing first $MAX_LINES of $TOTAL lines"
+            if [ "$TOTAL" -gt "$MAX_LINES" ]; then
+              echo "💡 Use start_line and end_line to see more"
+            fi
+          else
+            # Read entire file
+            cat "$FILE_PATH"
+            TOTAL=$(wc -l < "$FILE_PATH")
+            echo ""
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo "Total lines: $TOTAL"
+          fi
+        next: end
+      
+      end:
+        type: terminal
+        message: "File reading complete"

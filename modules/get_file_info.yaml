@@ -1,0 +1,68 @@
+name: get_file_info
+id: org.themobileprof.get_file_info
+version: 1.0.0
+description: Get detailed information about a file (size, permissions, timestamps)
+tags: [filesystem, utility, file, info, metadata]
+provides:
+  - file_info_retrieved
+requires:
+  - check_file_exists
+size_kb: 3
+
+flows:
+  main:
+    start: gather_info
+    steps:
+      gather_info:
+        type: action
+        message: "Gathering file information: {{.path}}"
+        command: |
+          FILE_PATH="{{.path}}"
+          
+          # Expand tilde
+          if [[ "$FILE_PATH" == ~* ]]; then
+            FILE_PATH="${FILE_PATH/#\~/$HOME}"
+          fi
+          
+          if [ ! -f "$FILE_PATH" ]; then
+            echo "ERROR: Not a regular file"
+            exit 1
+          fi
+          
+          echo "📄 File Information:"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo ""
+          echo "Path: $FILE_PATH"
+          echo "Name: $(basename "$FILE_PATH")"
+          echo ""
+          
+          # Size
+          if command -v stat >/dev/null 2>&1; then
+            # Linux stat
+            if stat -c "%s" "$FILE_PATH" >/dev/null 2>&1; then
+              SIZE=$(stat -c "%s" "$FILE_PATH")
+              echo "Size: $SIZE bytes ($(numfmt --to=iec-i --suffix=B $SIZE 2>/dev/null || echo "$SIZE"))"
+              echo "Permissions: $(stat -c "%A" "$FILE_PATH")"
+              echo "Owner: $(stat -c "%U:%G" "$FILE_PATH")"
+              echo "Modified: $(stat -c "%y" "$FILE_PATH")"
+            # macOS/BSD stat
+            else
+              SIZE=$(stat -f "%z" "$FILE_PATH")
+              echo "Size: $SIZE bytes"
+              echo "Permissions: $(stat -f "%Sp" "$FILE_PATH")"
+              echo "Owner: $(stat -f "%Su:%Sg" "$FILE_PATH")"
+              echo "Modified: $(stat -f "%Sm" "$FILE_PATH")"
+            fi
+          else
+            # Fallback to ls
+            ls -lh "$FILE_PATH"
+          fi
+          
+          echo ""
+          echo "File type:"
+          file "$FILE_PATH" 2>/dev/null || echo "  (file command not available)"
+        next: end
+      
+      end:
+        type: terminal
+        message: "File information retrieved"

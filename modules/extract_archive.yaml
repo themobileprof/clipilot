@@ -1,0 +1,232 @@
+name: extract_archive
+id: org.themobileprof.extract_archive
+version: 1.0.0
+description: Extract tar, tar.gz, tar.bz2, tar.xz, or zip archives
+tags: [archive, extract, untar, unzip, decompress]
+provides:
+  - archive_extracted
+requires:
+  - check_file_exists
+  - check_command_exists
+size_kb: 3
+
+flows:
+  main:
+    start: validate_archive
+    steps:
+      validate_archive:
+        type: action
+        message: "Validating archive: {{.archive}}"
+        command: |
+          ARCHIVE="{{.archive}}"
+          
+          # Expand tilde
+          if [[ "$ARCHIVE" == ~* ]]; then
+            ARCHIVE="${ARCHIVE/#\~/$ARCHIVE}"
+          fi
+          
+          if [ ! -f "$ARCHIVE" ]; then
+            echo "❌ Archive file not found: $ARCHIVE"
+            exit 1
+          fi
+          
+          echo "$ARCHIVE" > /tmp/clipilot_extract_archive.txt
+          echo "✅ Archive found: $ARCHIVE"
+          ls -lh "$ARCHIVE"
+        next: detect_type
+      
+      detect_type:
+        type: action
+        message: "Detecting archive type..."
+        command: |
+          ARCHIVE=$(cat /tmp/clipilot_extract_archive.txt)
+          
+          # Detect archive type by extension
+          case "$ARCHIVE" in
+            *.tar.gz|*.tgz)
+              echo "TAR_GZ"
+              ;;
+            *.tar.bz2|*.tbz2)
+              echo "TAR_BZ2"
+              ;;
+            *.tar.xz|*.txz)
+              echo "TAR_XZ"
+              ;;
+            *.tar)
+              echo "TAR"
+              ;;
+            *.zip)
+              echo "ZIP"
+              ;;
+            *)
+              echo "UNKNOWN"
+              ;;
+          esac
+        next: branch_type
+      
+      branch_type:
+        type: branch
+        message: "Processing archive type..."
+        based_on: last_output
+        branches:
+          TAR_GZ:
+            next: extract_tar_gz
+          TAR_BZ2:
+            next: extract_tar_bz2
+          TAR_XZ:
+            next: extract_tar_xz
+          TAR:
+            next: extract_tar
+          ZIP:
+            next: extract_zip
+          default:
+            next: error_unknown_type
+      
+      error_unknown_type:
+        type: instruction
+        message: |
+          ❌ Unknown archive type
+          
+          Supported formats:
+            • .tar
+            • .tar.gz, .tgz
+            • .tar.bz2, .tbz2
+            • .tar.xz, .txz
+            • .zip
+        next: cleanup
+      
+      extract_tar_gz:
+        type: action
+        message: "Extracting gzip compressed tar archive..."
+        command: |
+          ARCHIVE=$(cat /tmp/clipilot_extract_archive.txt)
+          OUTPUT="{{.output_dir}}"
+          
+          if [ -z "$OUTPUT" ]; then
+            OUTPUT="."
+          fi
+          
+          echo "📦 Extracting: $ARCHIVE"
+          echo "📂 To: $OUTPUT"
+          echo ""
+          
+          tar -xzf "$ARCHIVE" -C "$OUTPUT"
+          
+          if [ $? -eq 0 ]; then
+            echo ""
+            echo "✅ Extraction complete!"
+            echo ""
+            echo "Contents:"
+            tar -tzf "$ARCHIVE" | head -10
+          else
+            echo "❌ Extraction failed"
+            exit 1
+          fi
+        next: cleanup
+      
+      extract_tar_bz2:
+        type: action
+        message: "Extracting bzip2 compressed tar archive..."
+        command: |
+          ARCHIVE=$(cat /tmp/clipilot_extract_archive.txt)
+          OUTPUT="{{.output_dir}}"
+          
+          if [ -z "$OUTPUT" ]; then
+            OUTPUT="."
+          fi
+          
+          tar -xjf "$ARCHIVE" -C "$OUTPUT"
+          
+          if [ $? -eq 0 ]; then
+            echo "✅ Extraction complete!"
+          else
+            echo "❌ Extraction failed"
+            exit 1
+          fi
+        next: cleanup
+      
+      extract_tar_xz:
+        type: action
+        message: "Extracting xz compressed tar archive..."
+        command: |
+          ARCHIVE=$(cat /tmp/clipilot_extract_archive.txt)
+          OUTPUT="{{.output_dir}}"
+          
+          if [ -z "$OUTPUT" ]; then
+            OUTPUT="."
+          fi
+          
+          tar -xJf "$ARCHIVE" -C "$OUTPUT"
+          
+          if [ $? -eq 0 ]; then
+            echo "✅ Extraction complete!"
+          else
+            echo "❌ Extraction failed"
+            exit 1
+          fi
+        next: cleanup
+      
+      extract_tar:
+        type: action
+        message: "Extracting uncompressed tar archive..."
+        command: |
+          ARCHIVE=$(cat /tmp/clipilot_extract_archive.txt)
+          OUTPUT="{{.output_dir}}"
+          
+          if [ -z "$OUTPUT" ]; then
+            OUTPUT="."
+          fi
+          
+          tar -xf "$ARCHIVE" -C "$OUTPUT"
+          
+          if [ $? -eq 0 ]; then
+            echo "✅ Extraction complete!"
+          else
+            echo "❌ Extraction failed"
+            exit 1
+          fi
+        next: cleanup
+      
+      extract_zip:
+        type: action
+        message: "Extracting zip archive..."
+        command: |
+          ARCHIVE=$(cat /tmp/clipilot_extract_archive.txt)
+          OUTPUT="{{.output_dir}}"
+          
+          if ! command -v unzip >/dev/null 2>&1; then
+            echo "❌ unzip command not found"
+            echo ""
+            echo "💡 Install unzip:"
+            echo "  • Debian/Ubuntu: sudo apt install unzip"
+            echo "  • Fedora:        sudo dnf install unzip"
+            echo "  • macOS:         brew install unzip"
+            echo "  • Termux:        pkg install unzip"
+            exit 1
+          fi
+          
+          if [ -z "$OUTPUT" ]; then
+            unzip "$ARCHIVE"
+          else
+            unzip "$ARCHIVE" -d "$OUTPUT"
+          fi
+          
+          if [ $? -eq 0 ]; then
+            echo "✅ Extraction complete!"
+          else
+            echo "❌ Extraction failed"
+            exit 1
+          fi
+        next: cleanup
+      
+      cleanup:
+        type: action
+        message: "Cleaning up..."
+        command: |
+          rm -f /tmp/clipilot_extract_archive.txt
+          echo "Done"
+        next: end
+      
+      end:
+        type: terminal
+        message: "Archive extraction complete"

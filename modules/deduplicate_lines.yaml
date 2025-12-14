@@ -1,0 +1,156 @@
+name: deduplicate_lines
+id: org.themobileprof.deduplicate_lines
+version: 1.0.0
+description: Remove duplicate lines from a file using uniq
+tags: [text, uniq, utility, processing, filter]
+provides:
+  - lines_deduplicated
+requires:
+  - check_file_exists
+size_kb: 2
+
+flows:
+  main:
+    start: deduplicate_file
+    steps:
+      deduplicate_file:
+        type: action
+        message: "Deduplicating file: {{.path}}"
+        command: |
+          FILE_PATH="{{.path}}"
+          OUTPUT="{{.output}}"
+          COUNT_ONLY="{{.count}}"
+          SHOW_DUPLICATES="{{.show_duplicates}}"
+          IGNORE_CASE="{{.ignore_case}}"
+          
+          # Expand tilde
+          if [[ "$FILE_PATH" == ~* ]]; then
+            FILE_PATH="${FILE_PATH/#\~/$HOME}"
+          fi
+          
+          if [ ! -f "$FILE_PATH" ]; then
+            echo "❌ Not a file: $FILE_PATH"
+            exit 1
+          fi
+          
+          echo "🔄 Deduplicating: $FILE_PATH"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo ""
+          
+          # Note: uniq requires sorted input
+          NEEDS_SORT="true"
+          
+          # Build uniq command
+          UNIQ_CMD="uniq"
+          
+          if [ "$IGNORE_CASE" = "true" ]; then
+            UNIQ_CMD="$UNIQ_CMD -i"
+          fi
+          
+          if [ "$COUNT_ONLY" = "true" ]; then
+            # Show count of occurrences
+            if [ "$NEEDS_SORT" = "true" ]; then
+              if [ "$IGNORE_CASE" = "true" ]; then
+                sort -f "$FILE_PATH" | $UNIQ_CMD -c
+              else
+                sort "$FILE_PATH" | $UNIQ_CMD -c
+              fi
+            else
+              $UNIQ_CMD -c "$FILE_PATH"
+            fi
+            
+            echo ""
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo "Format: [count] [line]"
+            
+          elif [ "$SHOW_DUPLICATES" = "true" ]; then
+            # Show only duplicate lines
+            if [ "$NEEDS_SORT" = "true" ]; then
+              if [ "$IGNORE_CASE" = "true" ]; then
+                DUPLICATES=$(sort -f "$FILE_PATH" | $UNIQ_CMD -d)
+              else
+                DUPLICATES=$(sort "$FILE_PATH" | $UNIQ_CMD -d)
+              fi
+            else
+              DUPLICATES=$($UNIQ_CMD -d "$FILE_PATH")
+            fi
+            
+            if [ -n "$DUPLICATES" ]; then
+              echo "$DUPLICATES"
+              echo ""
+              echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+              DUP_COUNT=$(echo "$DUPLICATES" | wc -l)
+              echo "Duplicate lines: $DUP_COUNT"
+            else
+              echo "✅ No duplicate lines found"
+            fi
+            
+          else
+            # Remove duplicates
+            if [ -n "$OUTPUT" ]; then
+              # Save to file
+              if [[ "$OUTPUT" == ~* ]]; then
+                OUTPUT="${OUTPUT/#\~/$HOME}"
+              fi
+              
+              if [ "$NEEDS_SORT" = "true" ]; then
+                if [ "$IGNORE_CASE" = "true" ]; then
+                  sort -f "$FILE_PATH" | $UNIQ_CMD > "$OUTPUT"
+                else
+                  sort "$FILE_PATH" | $UNIQ_CMD > "$OUTPUT"
+                fi
+              else
+                $UNIQ_CMD "$FILE_PATH" > "$OUTPUT"
+              fi
+              
+              if [ $? -eq 0 ]; then
+                echo "✅ Deduplicated file saved to: $OUTPUT"
+                echo ""
+                echo "Preview (first 10 lines):"
+                head -10 "$OUTPUT"
+                echo ""
+                
+                ORIGINAL=$(wc -l < "$FILE_PATH")
+                UNIQUE=$(wc -l < "$OUTPUT")
+                REMOVED=$((ORIGINAL - UNIQUE))
+                
+                echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+                echo "Original lines: $ORIGINAL"
+                echo "Unique lines:   $UNIQUE"
+                echo "Removed:        $REMOVED duplicate(s)"
+              else
+                echo "❌ Deduplication failed"
+                exit 1
+              fi
+            else
+              # Output to stdout
+              if [ "$NEEDS_SORT" = "true" ]; then
+                if [ "$IGNORE_CASE" = "true" ]; then
+                  RESULT=$(sort -f "$FILE_PATH" | $UNIQ_CMD)
+                else
+                  RESULT=$(sort "$FILE_PATH" | $UNIQ_CMD)
+                fi
+              else
+                RESULT=$($UNIQ_CMD "$FILE_PATH")
+              fi
+              
+              echo "$RESULT"
+              echo ""
+              
+              ORIGINAL=$(wc -l < "$FILE_PATH")
+              UNIQUE=$(echo "$RESULT" | wc -l)
+              REMOVED=$((ORIGINAL - UNIQUE))
+              
+              echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+              echo "Original lines: $ORIGINAL"
+              echo "Unique lines:   $UNIQUE"
+              echo "Removed:        $REMOVED duplicate(s)"
+              echo ""
+              echo "💡 Use output=filename to save result"
+            fi
+          fi
+        next: end
+      
+      end:
+        type: terminal
+        message: "Deduplication complete"

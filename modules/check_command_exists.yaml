@@ -1,0 +1,78 @@
+name: check_command_exists
+id: org.themobileprof.check_command_exists
+version: 1.0.0
+description: Check if a command or program is available on the system
+tags: [validation, utility, command, program, check]
+provides:
+  - command_checked
+requires: []
+size_kb: 2
+
+flows:
+  main:
+    start: check_cmd
+    steps:
+      check_cmd:
+        type: action
+        message: "Checking if command exists: {{.command}}"
+        command: |
+          CMD="{{.command}}"
+          
+          echo "🔍 Checking for command: $CMD"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo ""
+          
+          if command -v "$CMD" >/dev/null 2>&1; then
+            echo "✅ Command found: $CMD"
+            echo ""
+            echo "Location:"
+            which "$CMD" 2>/dev/null || command -v "$CMD"
+            echo ""
+            echo "Version (if available):"
+            "$CMD" --version 2>/dev/null || "$CMD" -v 2>/dev/null || echo "  (version info not available)"
+            echo "FOUND"
+          else
+            echo "❌ Command not found: $CMD"
+            echo ""
+            echo "💡 Installation suggestions:"
+            echo ""
+            
+            # Provide installation hints based on common tools
+            case "$CMD" in
+              git)
+                echo "  • Debian/Ubuntu: sudo apt install git"
+                echo "  • Fedora/RHEL:   sudo dnf install git"
+                echo "  • macOS:         brew install git"
+                echo "  • Termux:        pkg install git"
+                ;;
+              docker)
+                echo "  • See: https://docs.docker.com/get-docker/"
+                echo "  • Debian/Ubuntu: sudo apt install docker.io"
+                echo "  • Fedora:        sudo dnf install docker"
+                ;;
+              python*|python3)
+                echo "  • Debian/Ubuntu: sudo apt install python3"
+                echo "  • Fedora:        sudo dnf install python3"
+                echo "  • macOS:         brew install python3"
+                echo "  • Termux:        pkg install python"
+                ;;
+              node|nodejs)
+                echo "  • Debian/Ubuntu: sudo apt install nodejs npm"
+                echo "  • Fedora:        sudo dnf install nodejs"
+                echo "  • macOS:         brew install node"
+                echo "  • Termux:        pkg install nodejs"
+                ;;
+              *)
+                echo "  • Try: apt search $CMD (Debian/Ubuntu)"
+                echo "  • Try: dnf search $CMD (Fedora/RHEL)"
+                echo "  • Try: brew search $CMD (macOS)"
+                echo "  • Try: pkg search $CMD (Termux)"
+                ;;
+            esac
+            echo "NOT_FOUND"
+          fi
+        next: end
+      
+      end:
+        type: terminal
+        message: "Command check complete"

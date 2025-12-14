@@ -1,0 +1,159 @@
+name: create_symlink
+id: org.themobileprof.create_symlink
+version: 1.0.0
+description: Create symbolic link from source to destination
+tags: [filesystem, symlink, link, ln, shortcut]
+provides:
+  - symlink_created
+requires:
+  - check_path_exists
+size_kb: 2
+
+flows:
+  main:
+    start: validate_target
+    steps:
+      validate_target:
+        type: action
+        message: "Validating target: {{.target}}"
+        command: |
+          TARGET="{{.target}}"
+          
+          # Expand tilde
+          if [[ "$TARGET" == ~* ]]; then
+            TARGET="${TARGET/#\~/$HOME}"
+          fi
+          
+          if [ ! -e "$TARGET" ]; then
+            echo "⚠️  WARNING: Target does not exist: $TARGET"
+            echo ""
+            echo "💡 You can still create the symlink, but it will be broken"
+            echo "   until the target is created."
+          else
+            echo "✅ Target exists: $TARGET"
+            if [ -d "$TARGET" ]; then
+              echo "   Type: Directory"
+            elif [ -f "$TARGET" ]; then
+              echo "   Type: File"
+            fi
+          fi
+          
+          echo "$TARGET" > /tmp/clipilot_symlink_target.txt
+        next: check_link_path
+      
+      check_link_path:
+        type: action
+        message: "Checking link path: {{.link_path}}"
+        command: |
+          LINK_PATH="{{.link_path}}"
+          
+          # Expand tilde
+          if [[ "$LINK_PATH" == ~* ]]; then
+            LINK_PATH="${LINK_PATH/#\~/$HOME}"
+          fi
+          
+          if [ -e "$LINK_PATH" ] || [ -L "$LINK_PATH" ]; then
+            echo "⚠️  WARNING: Path already exists: $LINK_PATH"
+            if [ -L "$LINK_PATH" ]; then
+              EXISTING_TARGET=$(readlink "$LINK_PATH")
+              echo "   Existing symlink points to: $EXISTING_TARGET"
+            fi
+            echo "OVERWRITE"
+          else
+            echo "CREATE_NEW"
+          fi
+          
+          echo "$LINK_PATH" > /tmp/clipilot_symlink_path.txt
+        next: branch_action
+      
+      branch_action:
+        type: branch
+        message: "Determining action..."
+        based_on: last_output
+        branches:
+          OVERWRITE:
+            next: confirm_overwrite
+          CREATE_NEW:
+            next: create_symlink
+          default:
+            next: create_symlink
+      
+      confirm_overwrite:
+        type: instruction
+        message: "Link path already exists. Overwrite? (yes/no):"
+        command: |
+          FORCE="{{.force}}"
+          
+          if [ "$FORCE" = "true" ]; then
+            echo "YES"
+          else
+            read -p "Overwrite existing link? (yes/no): " CONFIRM
+            CONFIRM=$(echo "$CONFIRM" | tr '[:upper:]' '[:lower:]' | xargs)
+            
+            if [ "$CONFIRM" = "yes" ] || [ "$CONFIRM" = "y" ]; then
+              echo "YES"
+            else
+              echo "NO"
+            fi
+          fi
+        next: branch_confirm
+      
+      branch_confirm:
+        type: branch
+        message: "Processing confirmation..."
+        based_on: last_output
+        branches:
+          YES:
+            next: remove_existing
+          default:
+            next: cancelled
+      
+      remove_existing:
+        type: action
+        message: "Removing existing path..."
+        command: |
+          LINK_PATH=$(cat /tmp/clipilot_symlink_path.txt)
+          rm -f "$LINK_PATH"
+          echo "Removed existing"
+        next: create_symlink
+      
+      create_symlink:
+        type: action
+        message: "Creating symbolic link..."
+        command: |
+          TARGET=$(cat /tmp/clipilot_symlink_target.txt)
+          LINK_PATH=$(cat /tmp/clipilot_symlink_path.txt)
+          
+          ln -s "$TARGET" "$LINK_PATH"
+          
+          if [ $? -eq 0 ]; then
+            echo "✅ Symbolic link created successfully"
+            echo ""
+            echo "Link:   $LINK_PATH"
+            echo "Target: $TARGET"
+            echo ""
+            ls -lh "$LINK_PATH"
+          else
+            echo "❌ Failed to create symbolic link"
+            echo ""
+            echo "💡 Possible reasons:"
+            echo "  • No write permission in directory"
+            echo "  • Filesystem doesn't support symlinks"
+            echo "  • Parent directory doesn't exist"
+            exit 1
+          fi
+          
+          rm -f /tmp/clipilot_symlink_target.txt /tmp/clipilot_symlink_path.txt
+        next: end
+      
+      cancelled:
+        type: instruction
+        message: "ℹ️  Symlink creation cancelled"
+        command: |
+          rm -f /tmp/clipilot_symlink_target.txt /tmp/clipilot_symlink_path.txt
+          echo "Cancelled"
+        next: end
+      
+      end:
+        type: terminal
+        message: "Symlink operation complete"

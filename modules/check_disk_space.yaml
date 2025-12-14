@@ -1,0 +1,57 @@
+name: check_disk_space
+id: org.themobileprof.check_disk_space
+version: 1.0.0
+description: Check available disk space on filesystem or specific path
+tags: [filesystem, utility, disk, space, storage]
+provides:
+  - disk_space_checked
+requires: []
+size_kb: 2
+
+flows:
+  main:
+    start: check_space
+    steps:
+      check_space:
+        type: action
+        message: "Checking disk space{{if .path}} for {{.path}}{{end}}..."
+        command: |
+          TARGET="${{.path}}"
+          
+          if [ -z "$TARGET" ]; then
+            TARGET="."
+          fi
+          
+          # Expand tilde
+          if [[ "$TARGET" == ~* ]]; then
+            TARGET="${TARGET/#\~/$HOME}"
+          fi
+          
+          echo "💾 Disk Space Information:"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo ""
+          
+          # Use df with human-readable output
+          if df -h "$TARGET" 2>/dev/null; then
+            echo ""
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            
+            # Get percentage and warn if high
+            USAGE=$(df "$TARGET" | tail -1 | awk '{print $5}' | sed 's/%//')
+            
+            if [ "$USAGE" -ge 90 ]; then
+              echo "⚠️  WARNING: Disk usage is at ${USAGE}%!"
+              echo "   Consider freeing up space."
+            elif [ "$USAGE" -ge 80 ]; then
+              echo "⚠️  NOTICE: Disk usage is at ${USAGE}%"
+            else
+              echo "✅ Disk usage is at ${USAGE}%"
+            fi
+          else
+            echo "❌ Cannot check disk space for: $TARGET"
+          fi
+        next: end
+      
+      end:
+        type: terminal
+        message: "Disk space check complete"

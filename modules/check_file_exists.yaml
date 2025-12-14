@@ -1,0 +1,63 @@
+name: check_file_exists
+id: org.themobileprof.check_file_exists
+version: 1.0.0
+description: Check if a file (not directory) exists on the filesystem
+tags: [validation, filesystem, utility, file, check]
+provides:
+  - file_validated
+requires: []
+size_kb: 2
+
+flows:
+  main:
+    start: check_file
+    steps:
+      check_file:
+        type: action
+        message: "Checking if file exists: {{.path}}"
+        command: |
+          PATH_TO_CHECK="{{.path}}"
+          
+          # Expand tilde
+          if [[ "$PATH_TO_CHECK" == ~* ]]; then
+            PATH_TO_CHECK="${PATH_TO_CHECK/#\~/$HOME}"
+          fi
+          
+          if [ ! -e "$PATH_TO_CHECK" ]; then
+            echo "NOT_EXISTS"
+          elif [ -f "$PATH_TO_CHECK" ]; then
+            echo "IS_FILE"
+          elif [ -d "$PATH_TO_CHECK" ]; then
+            echo "IS_DIRECTORY"
+          else
+            echo "IS_OTHER"
+          fi
+        next: report_result
+      
+      report_result:
+        type: instruction
+        message: |
+          File check result: {{.last_output}}
+          
+          {{if eq .last_output "IS_FILE"}}
+          ✅ File exists: {{.path}}
+          {{else if eq .last_output "IS_DIRECTORY"}}
+          ❌ Path is a directory, not a file
+          
+          💡 This is a directory. Use directory operations instead.
+          {{else if eq .last_output "NOT_EXISTS"}}
+          ❌ File does not exist: {{.path}}
+          
+          💡 Troubleshooting:
+            • Check spelling and capitalization
+            • Verify the file hasn't been moved or deleted
+            • Use 'ls' to list files in the directory
+            • Check file permissions with 'ls -l'
+          {{else}}
+          ⚠️  Path exists but is not a regular file
+          {{end}}
+        next: end
+      
+      end:
+        type: terminal
+        message: "File existence check complete"

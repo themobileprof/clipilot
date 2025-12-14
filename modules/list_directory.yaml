@@ -1,0 +1,74 @@
+name: list_directory
+id: org.themobileprof.list_directory
+version: 1.0.0
+description: List contents of a directory with optional details and hidden files
+tags: [filesystem, utility, directory, list, ls]
+provides:
+  - directory_listed
+requires:
+  - check_is_directory
+size_kb: 2
+
+flows:
+  main:
+    start: list_contents
+    steps:
+      list_contents:
+        type: action
+        message: "Listing directory: {{.path}}"
+        command: |
+          DIR_PATH="{{.path}}"
+          SHOW_HIDDEN="{{.show_hidden}}"
+          SHOW_DETAILS="{{.show_details}}"
+          
+          if [ -z "$DIR_PATH" ]; then
+            DIR_PATH="."
+          fi
+          
+          # Expand tilde
+          if [[ "$DIR_PATH" == ~* ]]; then
+            DIR_PATH="${DIR_PATH/#\~/$HOME}"
+          fi
+          
+          if [ ! -d "$DIR_PATH" ]; then
+            echo "❌ Not a directory: $DIR_PATH"
+            exit 1
+          fi
+          
+          echo "📂 Directory: $DIR_PATH"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo ""
+          
+          # Build ls command
+          LS_CMD="ls"
+          
+          if [ "$SHOW_DETAILS" = "true" ]; then
+            LS_CMD="$LS_CMD -lh"
+          fi
+          
+          if [ "$SHOW_HIDDEN" = "true" ]; then
+            LS_CMD="$LS_CMD -A"
+          fi
+          
+          # Execute listing
+          $LS_CMD "$DIR_PATH"
+          
+          echo ""
+          
+          # Count items
+          TOTAL=$(ls -A "$DIR_PATH" 2>/dev/null | wc -l)
+          VISIBLE=$(ls "$DIR_PATH" 2>/dev/null | wc -l)
+          HIDDEN=$((TOTAL - VISIBLE))
+          
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "Total: $TOTAL items ($VISIBLE visible, $HIDDEN hidden)"
+          
+          if [ $HIDDEN -gt 0 ] && [ "$SHOW_HIDDEN" != "true" ]; then
+            echo ""
+            echo "💡 Use show_hidden=true to see hidden files"
+          fi
+        next: end
+      
+      end:
+        type: terminal
+        message: "Directory listing complete"

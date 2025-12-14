@@ -1,0 +1,99 @@
+name: change_permissions
+id: org.themobileprof.change_permissions
+version: 1.0.0
+description: Change file or directory permissions using chmod
+tags: [filesystem, permissions, chmod, security, access]
+provides:
+  - permissions_changed
+requires:
+  - check_path_exists
+  - check_permissions
+size_kb: 3
+
+flows:
+  main:
+    start: validate_path
+    steps:
+      validate_path:
+        type: action
+        message: "Validating path: {{.path}}"
+        command: |
+          TARGET="{{.path}}"
+          
+          # Expand tilde
+          if [[ "$TARGET" == ~* ]]; then
+            TARGET="${TARGET/#\~/$HOME}"
+          fi
+          
+          if [ ! -e "$TARGET" ]; then
+            echo "❌ Path does not exist: $TARGET"
+            exit 1
+          fi
+          
+          echo "$TARGET" > /tmp/clipilot_chmod_path.txt
+          echo "📁 Target: $TARGET"
+          echo ""
+          echo "Current permissions:"
+          ls -ld "$TARGET"
+        next: apply_permissions
+      
+      apply_permissions:
+        type: action
+        message: "Changing permissions..."
+        command: |
+          TARGET=$(cat /tmp/clipilot_chmod_path.txt)
+          MODE="{{.mode}}"
+          RECURSIVE="{{.recursive}}"
+          
+          if [ -z "$MODE" ]; then
+            echo "❌ No permission mode specified"
+            echo ""
+            echo "💡 Examples:"
+            echo "  • mode=755    (rwxr-xr-x)"
+            echo "  • mode=644    (rw-r--r--)"
+            echo "  • mode=600    (rw-------)"
+            echo "  • mode=+x     (add execute)"
+            echo "  • mode=u+w    (add user write)"
+            echo "  • mode=go-w   (remove group/other write)"
+            exit 1
+          fi
+          
+          echo "🔧 Applying permissions: $MODE"
+          
+          # Build chmod command
+          if [ "$RECURSIVE" = "true" ] && [ -d "$TARGET" ]; then
+            chmod -R "$MODE" "$TARGET"
+          else
+            chmod "$MODE" "$TARGET"
+          fi
+          
+          if [ $? -eq 0 ]; then
+            echo ""
+            echo "✅ Permissions changed successfully"
+            echo ""
+            echo "New permissions:"
+            ls -ld "$TARGET"
+            
+            # Show in detail for directories
+            if [ -d "$TARGET" ] && [ "$RECURSIVE" = "true" ]; then
+              echo ""
+              echo "Sample of changed files:"
+              find "$TARGET" -maxdepth 2 -ls | head -10
+            fi
+          else
+            echo "❌ Permission change failed"
+            echo ""
+            echo "💡 Possible reasons:"
+            echo "  • You don't own the file/directory"
+            echo "  • Invalid permission format"
+            echo "  • Filesystem doesn't support permissions"
+            echo "  • Try using sudo for system files"
+            exit 1
+          fi
+          
+          rm -f /tmp/clipilot_chmod_path.txt
+        next: end
+      
+      end:
+        type: terminal
+        message: "Permission change complete"

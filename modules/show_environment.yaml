@@ -1,0 +1,83 @@
+name: show_environment
+id: org.themobileprof.show_environment
+version: 1.0.0
+description: Display environment variables with optional filtering
+tags: [system, environment, env, variables, config]
+provides:
+  - environment_shown
+requires: []
+size_kb: 2
+
+flows:
+  main:
+    start: show_env
+    steps:
+      show_env:
+        type: action
+        message: "Displaying environment variables..."
+        command: |
+          FILTER="{{.filter}}"
+          SHOW_ALL="{{.show_all}}"
+          
+          echo "🌍 Environment Variables"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo ""
+          
+          if [ -n "$FILTER" ]; then
+            # Filter by pattern (case-insensitive)
+            echo "Filter: $FILTER"
+            echo ""
+            env | grep -i "$FILTER" | sort
+            
+            COUNT=$(env | grep -i "$FILTER" | wc -l)
+            echo ""
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo "Found $COUNT matching variable(s)"
+            
+          elif [ "$SHOW_ALL" = "true" ]; then
+            # Show all variables
+            env | sort
+            
+            COUNT=$(env | wc -l)
+            echo ""
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo "Total: $COUNT environment variable(s)"
+            
+          else
+            # Show common/important variables
+            echo "Common Variables:"
+            echo ""
+            
+            COMMON_VARS="PATH HOME USER SHELL LANG LC_ALL TERM EDITOR PWD OLDPWD"
+            
+            # Add platform-specific variables
+            if [ -n "$TERMUX_VERSION" ]; then
+              COMMON_VARS="$COMMON_VARS TERMUX_VERSION PREFIX"
+            fi
+            
+            for VAR in $COMMON_VARS; do
+              VALUE=$(printenv "$VAR" 2>/dev/null)
+              if [ -n "$VALUE" ]; then
+                # Truncate long values
+                if [ ${#VALUE} -gt 80 ]; then
+                  VALUE="${VALUE:0:77}..."
+                fi
+                printf "%-15s %s\n" "$VAR:" "$VALUE"
+              fi
+            done
+            
+            echo ""
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            TOTAL=$(env | wc -l)
+            echo "Showing common variables (total: $TOTAL)"
+            echo ""
+            echo "💡 Tips:"
+            echo "  • Use show_all=true to see all variables"
+            echo "  • Use filter=PATTERN to search variables"
+            echo "  • Example: filter=PATH to see PATH-related vars"
+          fi
+        next: end
+      
+      end:
+        type: terminal
+        message: "Environment display complete"

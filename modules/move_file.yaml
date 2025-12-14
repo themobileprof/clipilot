@@ -1,0 +1,130 @@
+name: move_file
+id: org.themobileprof.move_file
+version: 1.0.0
+description: Move or rename a file from source to destination
+tags: [filesystem, file, move, rename, mv]
+provides:
+  - file_moved
+requires:
+  - check_file_exists
+  - check_path_exists
+size_kb: 3
+
+flows:
+  main:
+    start: validate_source
+    steps:
+      validate_source:
+        type: action
+        message: "Validating source file: {{.source}}"
+        command: |
+          SOURCE="{{.source}}"
+          
+          # Expand tilde
+          if [[ "$SOURCE" == ~* ]]; then
+            SOURCE="${SOURCE/#\~/$HOME}"
+          fi
+          
+          if [ ! -f "$SOURCE" ]; then
+            echo "❌ Source is not a file: $SOURCE"
+            exit 1
+          fi
+          
+          echo "$SOURCE" > /tmp/clipilot_move_source.txt
+          echo "✅ Source file exists"
+          ls -lh "$SOURCE"
+        next: get_destination
+      
+      get_destination:
+        type: instruction
+        message: "Source file validated. Destination: {{.destination}}"
+        command: |
+          DEST="{{.destination}}"
+          SOURCE=$(cat /tmp/clipilot_move_source.txt)
+          
+          # Expand tilde
+          if [[ "$DEST" == ~* ]]; then
+            DEST="${DEST/#\~/$HOME}"
+          fi
+          
+          echo "$DEST" > /tmp/clipilot_move_dest.txt
+          
+          # Check if destination exists
+          if [ -e "$DEST" ]; then
+            if [ -d "$DEST" ]; then
+              # Moving into directory
+              FINAL_DEST="$DEST/$(basename "$SOURCE")"
+              echo "📂 Moving into directory: $FINAL_DEST"
+            else
+              echo "⚠️  WARNING: Destination file already exists!"
+              echo "   Will overwrite: $DEST"
+            fi
+          else
+            echo "📝 Will rename/move to: $DEST"
+          fi
+        next: confirm_move
+      
+      confirm_move:
+        type: instruction
+        message: "Confirm move operation? (yes/no):"
+        command: |
+          read -p "Proceed with move? (yes/no): " CONFIRM
+          CONFIRM=$(echo "$CONFIRM" | tr '[:upper:]' '[:lower:]' | xargs)
+          
+          if [ "$CONFIRM" = "yes" ] || [ "$CONFIRM" = "y" ]; then
+            echo "YES"
+          else
+            echo "NO"
+          fi
+        next: branch_confirm
+      
+      branch_confirm:
+        type: branch
+        message: "Processing confirmation..."
+        based_on: last_output
+        branches:
+          YES:
+            next: execute_move
+          default:
+            next: cancelled
+      
+      execute_move:
+        type: action
+        message: "Moving file..."
+        command: |
+          SOURCE=$(cat /tmp/clipilot_move_source.txt)
+          DEST=$(cat /tmp/clipilot_move_dest.txt)
+          
+          mv "$SOURCE" "$DEST"
+          
+          if [ $? -eq 0 ]; then
+            echo "✅ File moved successfully"
+            echo "   From: $SOURCE"
+            echo "   To:   $DEST"
+            
+            # Show new location
+            if [ -d "$DEST" ]; then
+              FINAL="$DEST/$(basename "$SOURCE")"
+              ls -lh "$FINAL" 2>/dev/null
+            else
+              ls -lh "$DEST" 2>/dev/null
+            fi
+          else
+            echo "❌ Move failed"
+            exit 1
+          fi
+          
+          rm -f /tmp/clipilot_move_source.txt /tmp/clipilot_move_dest.txt
+        next: end
+      
+      cancelled:
+        type: instruction
+        message: "ℹ️  Move operation cancelled"
+        command: |
+          rm -f /tmp/clipilot_move_source.txt /tmp/clipilot_move_dest.txt
+          echo "Cancelled"
+        next: end
+      
+      end:
+        type: terminal
+        message: "Move operation complete"

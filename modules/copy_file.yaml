@@ -1,0 +1,110 @@
+name: copy_file
+id: org.themobileprof.copy_file
+version: 1.0.0
+description: Copy a file from source to destination with validation
+tags: [filesystem, file, copy, backup, cp]
+provides:
+  - file_copied
+requires:
+  - check_file_exists
+  - check_disk_space
+size_kb: 3
+
+flows:
+  main:
+    start: validate_source
+    steps:
+      validate_source:
+        type: action
+        message: "Validating source file: {{.source}}"
+        command: |
+          SOURCE="{{.source}}"
+          
+          # Expand tilde
+          if [[ "$SOURCE" == ~* ]]; then
+            SOURCE="${SOURCE/#\~/$HOME}"
+          fi
+          
+          if [ ! -f "$SOURCE" ]; then
+            echo "❌ Source is not a file: $SOURCE"
+            exit 1
+          fi
+          
+          echo "$SOURCE" > /tmp/clipilot_copy_source.txt
+          echo "✅ Source file: $SOURCE"
+          ls -lh "$SOURCE"
+        next: check_destination
+      
+      check_destination:
+        type: action
+        message: "Checking destination: {{.destination}}"
+        command: |
+          DEST="{{.destination}}"
+          SOURCE=$(cat /tmp/clipilot_copy_source.txt)
+          
+          # Expand tilde
+          if [[ "$DEST" == ~* ]]; then
+            DEST="${DEST/#\~/$HOME}"
+          fi
+          
+          echo "$DEST" > /tmp/clipilot_copy_dest.txt
+          
+          if [ -d "$DEST" ]; then
+            FINAL="$DEST/$(basename "$SOURCE")"
+            echo "📂 Will copy into directory: $FINAL"
+            if [ -f "$FINAL" ]; then
+              echo "⚠️  WARNING: File already exists at destination"
+            fi
+          elif [ -f "$DEST" ]; then
+            echo "⚠️  WARNING: Destination file exists, will overwrite"
+          else
+            echo "✅ Will create new file: $DEST"
+          fi
+        next: execute_copy
+      
+      execute_copy:
+        type: action
+        message: "Copying file..."
+        command: |
+          SOURCE=$(cat /tmp/clipilot_copy_source.txt)
+          DEST=$(cat /tmp/clipilot_copy_dest.txt)
+          PRESERVE="{{.preserve_attributes}}"
+          
+          # Build copy command
+          if [ "$PRESERVE" = "true" ]; then
+            CP_CMD="cp -p"
+          else
+            CP_CMD="cp"
+          fi
+          
+          $CP_CMD "$SOURCE" "$DEST"
+          
+          if [ $? -eq 0 ]; then
+            echo "✅ File copied successfully"
+            echo "   From: $SOURCE"
+            echo "   To:   $DEST"
+            echo ""
+            
+            # Show destination
+            if [ -d "$DEST" ]; then
+              FINAL="$DEST/$(basename "$SOURCE")"
+              ls -lh "$FINAL"
+            else
+              ls -lh "$DEST"
+            fi
+          else
+            echo "❌ Copy failed"
+            echo ""
+            echo "💡 Possible reasons:"
+            echo "  • Insufficient disk space"
+            echo "  • No write permission at destination"
+            echo "  • Destination filesystem is read-only"
+            exit 1
+          fi
+          
+          rm -f /tmp/clipilot_copy_source.txt /tmp/clipilot_copy_dest.txt
+        next: end
+      
+      end:
+        type: terminal
+        message: "File copy complete"

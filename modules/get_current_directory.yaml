@@ -1,0 +1,34 @@
+name: get_current_directory
+id: org.themobileprof.get_current_directory
+version: 1.0.0
+description: Display the current working directory path
+tags: [filesystem, utility, directory, pwd, navigation]
+provides:
+  - current_directory_shown
+requires: []
+size_kb: 1
+
+flows:
+  main:
+    start: show_pwd
+    steps:
+      show_pwd:
+        type: action
+        message: "Getting current directory..."
+        command: |
+          echo "📍 Current Working Directory:"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo ""
+          pwd
+          echo ""
+          echo "💡 Helpful commands:"
+          echo "  • ls       - List files here"
+          echo "  • ls -la   - List all files with details"
+          echo "  • cd <dir> - Change to directory"
+          echo "  • cd ..    - Go up one level"
+          echo "  • cd ~     - Go to home directory"
+        next: end
+      
+      end:
+        type: terminal
+        message: "Current directory displayed"

@@ -1,0 +1,105 @@
+name: create_directory
+id: org.themobileprof.create_directory
+version: 1.0.0
+description: Create a new directory with optional parent directory creation
+tags: [filesystem, utility, directory, create, mkdir]
+provides:
+  - directory_created
+requires:
+  - check_path_exists
+size_kb: 2
+
+flows:
+  main:
+    start: check_exists
+    steps:
+      check_exists:
+        type: action
+        message: "Checking if directory already exists: {{.path}}"
+        command: |
+          DIR_PATH="{{.path}}"
+          
+          # Expand tilde
+          if [[ "$DIR_PATH" == ~* ]]; then
+            DIR_PATH="${DIR_PATH/#\~/$HOME}"
+          fi
+          
+          if [ -e "$DIR_PATH" ]; then
+            if [ -d "$DIR_PATH" ]; then
+              echo "EXISTS_DIR"
+            else
+              echo "EXISTS_FILE"
+            fi
+          else
+            echo "NOT_EXISTS"
+          fi
+        next: branch_exists
+      
+      branch_exists:
+        type: branch
+        message: "Evaluating path status..."
+        based_on: last_output
+        branches:
+          EXISTS_DIR:
+            next: already_exists
+          EXISTS_FILE:
+            next: path_is_file
+          NOT_EXISTS:
+            next: create_dir
+          default:
+            next: create_dir
+      
+      already_exists:
+        type: instruction
+        message: |
+          ℹ️  Directory already exists: {{.path}}
+          
+          No action needed - the directory is ready to use.
+        next: end
+      
+      path_is_file:
+        type: instruction
+        message: |
+          ❌ ERROR: Path exists but is a file, not a directory
+          
+          Path: {{.path}}
+          
+          💡 Please choose a different name or remove the file first.
+        next: end
+      
+      create_dir:
+        type: action
+        message: "Creating directory: {{.path}}"
+        command: |
+          DIR_PATH="{{.path}}"
+          CREATE_PARENTS="{{.create_parents}}"
+          
+          # Expand tilde
+          if [[ "$DIR_PATH" == ~* ]]; then
+            DIR_PATH="${DIR_PATH/#\~/$HOME}"
+          fi
+          
+          # Create with or without parent directories
+          if [ "$CREATE_PARENTS" = "true" ]; then
+            mkdir -p "$DIR_PATH"
+          else
+            mkdir "$DIR_PATH"
+          fi
+          
+          if [ $? -eq 0 ]; then
+            echo "✅ Directory created successfully: $DIR_PATH"
+            ls -ld "$DIR_PATH"
+          else
+            echo "❌ Failed to create directory"
+            echo ""
+            echo "💡 Common issues:"
+            echo "  • Parent directory doesn't exist (use create_parents=true)"
+            echo "  • No write permission in parent directory"
+            echo "  • Invalid path or characters"
+            exit 1
+          fi
+        next: end
+      
+      end:
+        type: terminal
+        message: "Directory creation complete"

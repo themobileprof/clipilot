@@ -1,0 +1,52 @@
+name: check_is_directory
+id: org.themobileprof.check_is_directory
+version: 1.0.0
+description: Check if a path is a directory (not a file or other type)
+tags: [validation, filesystem, utility, directory, check]
+provides:
+  - directory_validated
+requires:
+  - check_path_exists
+size_kb: 2
+
+flows:
+  main:
+    start: check_type
+    steps:
+      check_type:
+        type: action
+        message: "Checking if path is a directory: {{.path}}"
+        command: |
+          if [ ! -e "{{.path}}" ]; then
+            echo "NOT_EXISTS"
+          elif [ -d "{{.path}}" ]; then
+            echo "IS_DIRECTORY"
+          elif [ -f "{{.path}}" ]; then
+            echo "IS_FILE"
+          else
+            echo "IS_OTHER"
+          fi
+        next: report_result
+      
+      report_result:
+        type: instruction
+        message: |
+          Path type check result: {{.last_output}}
+          
+          {{if eq .last_output "IS_DIRECTORY"}}
+          ✅ Path is a directory: {{.path}}
+          {{else if eq .last_output "IS_FILE"}}
+          ❌ Path exists but is not a directory - it's a file.
+          
+          💡 This is a file. To copy a file, use:
+             cp "{{.path}}" /destination/path/
+          {{else if eq .last_output "NOT_EXISTS"}}
+          ❌ Path does not exist: {{.path}}
+          {{else}}
+          ⚠️  Path exists but is neither a file nor directory (might be a symlink, device, etc.)
+          {{end}}
+        next: end
+      
+      end:
+        type: terminal
+        message: "Directory type check complete"

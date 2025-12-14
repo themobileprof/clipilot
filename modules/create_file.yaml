@@ -1,0 +1,113 @@
+name: create_file
+id: org.themobileprof.create_file
+version: 1.0.0
+description: Create a new empty file or file with content
+tags: [filesystem, file, create, touch, new]
+provides:
+  - file_created
+requires:
+  - check_path_exists
+size_kb: 2
+
+flows:
+  main:
+    start: check_exists
+    steps:
+      check_exists:
+        type: action
+        message: "Checking if file exists: {{.path}}"
+        command: |
+          FILE_PATH="{{.path}}"
+          
+          # Expand tilde
+          if [[ "$FILE_PATH" == ~* ]]; then
+            FILE_PATH="${FILE_PATH/#\~/$HOME}"
+          fi
+          
+          if [ -e "$FILE_PATH" ]; then
+            echo "EXISTS"
+          else
+            echo "NOT_EXISTS"
+          fi
+        next: branch_exists
+      
+      branch_exists:
+        type: branch
+        message: "Checking file status..."
+        based_on: last_output
+        branches:
+          EXISTS:
+            next: already_exists
+          NOT_EXISTS:
+            next: create_file
+          default:
+            next: create_file
+      
+      already_exists:
+        type: instruction
+        message: |
+          ℹ️  File already exists: {{.path}}
+          
+          {{if .update_timestamp}}
+          Updating timestamp...
+          {{else}}
+          No action taken. Use update_timestamp=true to touch the file.
+          {{end}}
+        command: |
+          UPDATE="{{.update_timestamp}}"
+          FILE_PATH="{{.path}}"
+          
+          # Expand tilde
+          if [[ "$FILE_PATH" == ~* ]]; then
+            FILE_PATH="${FILE_PATH/#\~/$HOME}"
+          fi
+          
+          if [ "$UPDATE" = "true" ]; then
+            touch "$FILE_PATH"
+            echo "✅ Timestamp updated"
+            ls -lh "$FILE_PATH"
+          fi
+        next: end
+      
+      create_file:
+        type: action
+        message: "Creating file: {{.path}}"
+        command: |
+          FILE_PATH="{{.path}}"
+          CONTENT="{{.content}}"
+          
+          # Expand tilde
+          if [[ "$FILE_PATH" == ~* ]]; then
+            FILE_PATH="${FILE_PATH/#\~/$HOME}"
+          fi
+          
+          # Create parent directory if needed
+          PARENT=$(dirname "$FILE_PATH")
+          if [ ! -d "$PARENT" ]; then
+            mkdir -p "$PARENT"
+          fi
+          
+          # Create file with content or empty
+          if [ -n "$CONTENT" ]; then
+            echo "$CONTENT" > "$FILE_PATH"
+          else
+            touch "$FILE_PATH"
+          fi
+          
+          if [ $? -eq 0 ]; then
+            echo "✅ File created: $FILE_PATH"
+            ls -lh "$FILE_PATH"
+          else
+            echo "❌ Failed to create file"
+            echo ""
+            echo "💡 Possible reasons:"
+            echo "  • No write permission in directory"
+            echo "  • Invalid filename characters"
+            echo "  • Filesystem is read-only"
+            exit 1
+          fi
+        next: end
+      
+      end:
+        type: terminal
+        message: "File creation complete"

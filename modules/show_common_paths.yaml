@@ -1,0 +1,55 @@
+name: show_common_paths
+id: org.themobileprof.show_common_paths
+version: 1.0.0
+description: Display common filesystem locations and helpful navigation commands
+tags: [utility, filesystem, help, navigation, termux]
+provides:
+  - path_help_shown
+requires: []
+size_kb: 2
+
+flows:
+  main:
+    start: show_help
+    steps:
+      show_help:
+        type: instruction
+        message: |
+          📂 Common Filesystem Locations:
+          
+          User Directories:
+            • ~                      - Your home directory
+            • ~/Downloads            - Downloads folder
+            • ~/Documents            - Documents folder
+            • ~/Desktop              - Desktop folder
+          
+          {{if eq .platform "termux"}}
+          Termux/Android Specific:
+            • ~/storage/downloads    - Android Downloads
+            • ~/storage/dcim         - Camera/Photos
+            • ~/storage/pictures     - Pictures
+            • ~/storage/music        - Music files
+            • ~/storage/movies       - Videos
+            • /sdcard                - SD card (if available)
+          {{end}}
+          
+          System Directories:
+            • /tmp                   - Temporary files
+            • /var/log               - System logs
+            • /etc                   - Configuration files
+          
+          Helpful Navigation Commands:
+            • pwd                    - Show current directory
+            • ls                     - List files in current directory
+            • ls -lah                - List with details and hidden files
+            • cd <path>              - Change to directory
+            • find ~ -name "name"    - Search for files/directories
+            • du -sh <path>          - Show directory size
+          
+          Tab Completion:
+            Start typing a path and press TAB to auto-complete!
+        next: end
+      
+      end:
+        type: terminal
+        message: "Path help displayed"

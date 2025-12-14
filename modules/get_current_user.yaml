@@ -1,0 +1,79 @@
+name: get_current_user
+id: org.themobileprof.get_current_user
+version: 1.0.0
+description: Display current user information and group memberships
+tags: [system, user, whoami, identity, diagnostics]
+provides:
+  - user_info_shown
+requires: []
+size_kb: 2
+
+flows:
+  main:
+    start: show_user_info
+    steps:
+      show_user_info:
+        type: action
+        message: "Gathering user information..."
+        command: |
+          echo "👤 Current User Information"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo ""
+          
+          # Username
+          USERNAME=$(whoami)
+          echo "Username:    $USERNAME"
+          
+          # User ID
+          if command -v id >/dev/null 2>&1; then
+            USER_ID=$(id -u)
+            GROUP_ID=$(id -g)
+            echo "User ID:     $USER_ID"
+            echo "Group ID:    $GROUP_ID"
+          fi
+          
+          # Full name (if available)
+          if command -v getent >/dev/null 2>&1; then
+            FULL_NAME=$(getent passwd "$USERNAME" | cut -d: -f5 | cut -d, -f1)
+            if [ -n "$FULL_NAME" ]; then
+              echo "Full Name:   $FULL_NAME"
+            fi
+          fi
+          
+          # Home directory
+          echo "Home Dir:    $HOME"
+          
+          # Shell
+          echo "Shell:       $SHELL"
+          
+          # Groups
+          if command -v groups >/dev/null 2>&1; then
+            GROUPS_LIST=$(groups)
+            echo "Groups:      $GROUPS_LIST"
+          fi
+          
+          echo ""
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          
+          # Check privileges
+          if [ "$USER_ID" = "0" ] || [ "$USERNAME" = "root" ]; then
+            echo "⚠️  Running as ROOT user (full system access)"
+          else
+            echo "ℹ️  Running as regular user"
+            
+            # Check sudo access
+            if command -v sudo >/dev/null 2>&1; then
+              if sudo -n true 2>/dev/null; then
+                echo "✅ Has sudo access (no password required)"
+              elif groups | grep -qE '\b(sudo|wheel|admin)\b'; then
+                echo "✅ In sudo group (may require password)"
+              else
+                echo "❌ No sudo access"
+              fi
+            fi
+          fi
+        next: end
+      
+      end:
+        type: terminal
+        message: "User information displayed"

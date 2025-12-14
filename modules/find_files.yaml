@@ -1,0 +1,66 @@
+name: find_files
+id: org.themobileprof.find_files
+version: 1.0.0
+description: Search for files by name, extension, or pattern in directory tree
+tags: [search, filesystem, utility, find, locate]
+provides:
+  - files_found
+requires: []
+size_kb: 3
+
+flows:
+  main:
+    start: search_files
+    steps:
+      search_files:
+        type: action
+        message: "Searching for files: {{.pattern}}"
+        command: |
+          PATTERN="{{.pattern}}"
+          SEARCH_PATH="{{.search_path}}"
+          
+          if [ -z "$SEARCH_PATH" ]; then
+            SEARCH_PATH="."
+          fi
+          
+          # Expand tilde
+          if [[ "$SEARCH_PATH" == ~* ]]; then
+            SEARCH_PATH="${SEARCH_PATH/#\~/$HOME}"
+          fi
+          
+          echo "🔍 Searching for: $PATTERN"
+          echo "📂 In directory: $SEARCH_PATH"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo ""
+          
+          # Use find command (available on all Unix-like systems)
+          if [ -d "$SEARCH_PATH" ]; then
+            # Search with case-insensitive match
+            FOUND=0
+            while IFS= read -r file; do
+              echo "  $file"
+              FOUND=$((FOUND + 1))
+            done < <(find "$SEARCH_PATH" -type f -iname "*${PATTERN}*" 2>/dev/null | head -50)
+            
+            echo ""
+            if [ $FOUND -eq 0 ]; then
+              echo "❌ No files found matching: $PATTERN"
+              echo ""
+              echo "💡 Tips:"
+              echo "  • Try a broader search pattern"
+              echo "  • Check if you have permission to access directories"
+              echo "  • Use wildcards: *.txt, file*, *name*"
+            elif [ $FOUND -eq 50 ]; then
+              echo "📝 Showing first 50 results (more may exist)"
+            else
+              echo "✅ Found $FOUND file(s)"
+            fi
+          else
+            echo "❌ Search path is not a directory: $SEARCH_PATH"
+            exit 1
+          fi
+        next: end
+      
+      end:
+        type: terminal
+        message: "File search complete"

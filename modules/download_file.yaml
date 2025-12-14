@@ -1,0 +1,132 @@
+name: download_file
+id: org.themobileprof.download_file
+version: 1.0.0
+description: Download file from URL using curl or wget
+tags: [network, download, curl, wget, http]
+provides:
+  - file_downloaded
+requires:
+  - check_network_connectivity
+  - check_disk_space
+size_kb: 3
+
+flows:
+  main:
+    start: check_tool
+    steps:
+      check_tool:
+        type: action
+        message: "Checking for download tools..."
+        command: |
+          if command -v curl >/dev/null 2>&1; then
+            echo "CURL"
+          elif command -v wget >/dev/null 2>&1; then
+            echo "WGET"
+          else
+            echo "NONE"
+          fi
+        next: branch_tool
+      
+      branch_tool:
+        type: branch
+        message: "Selecting download tool..."
+        based_on: last_output
+        branches:
+          CURL:
+            next: download_curl
+          WGET:
+            next: download_wget
+          default:
+            next: error_no_tool
+      
+      error_no_tool:
+        type: instruction
+        message: |
+          ❌ No download tool available
+          
+          Neither curl nor wget is installed.
+          
+          💡 Install one of these:
+            • Debian/Ubuntu: sudo apt install curl
+            • Fedora/RHEL:   sudo dnf install curl
+            • macOS:         brew install curl
+            • Termux:        pkg install curl
+        next: end
+      
+      download_curl:
+        type: action
+        message: "Downloading with curl: {{.url}}"
+        command: |
+          URL="{{.url}}"
+          OUTPUT="{{.output}}"
+          
+          if [ -z "$OUTPUT" ]; then
+            OUTPUT=$(basename "$URL")
+          fi
+          
+          # Expand tilde
+          if [[ "$OUTPUT" == ~* ]]; then
+            OUTPUT="${OUTPUT/#\~/$HOME}"
+          fi
+          
+          echo "📥 Downloading..."
+          echo "   URL:    $URL"
+          echo "   Output: $OUTPUT"
+          echo ""
+          
+          curl -L -o "$OUTPUT" "$URL" --progress-bar
+          
+          if [ $? -eq 0 ] && [ -f "$OUTPUT" ]; then
+            echo ""
+            echo "✅ Download complete!"
+            ls -lh "$OUTPUT"
+          else
+            echo ""
+            echo "❌ Download failed"
+            echo ""
+            echo "💡 Possible reasons:"
+            echo "  • URL is incorrect or unreachable"
+            echo "  • Network connection issues"
+            echo "  • Insufficient disk space"
+            echo "  • No write permission"
+            exit 1
+          fi
+        next: end
+      
+      download_wget:
+        type: action
+        message: "Downloading with wget: {{.url}}"
+        command: |
+          URL="{{.url}}"
+          OUTPUT="{{.output}}"
+          
+          if [ -z "$OUTPUT" ]; then
+            OUTPUT=$(basename "$URL")
+          fi
+          
+          # Expand tilde
+          if [[ "$OUTPUT" == ~* ]]; then
+            OUTPUT="${OUTPUT/#\~/$HOME}"
+          fi
+          
+          echo "📥 Downloading..."
+          echo "   URL:    $URL"
+          echo "   Output: $OUTPUT"
+          echo ""
+          
+          wget -O "$OUTPUT" "$URL"
+          
+          if [ $? -eq 0 ] && [ -f "$OUTPUT" ]; then
+            echo ""
+            echo "✅ Download complete!"
+            ls -lh "$OUTPUT"
+          else
+            echo ""
+            echo "❌ Download failed"
+            exit 1
+          fi
+        next: end
+      
+      end:
+        type: terminal
+        message: "Download operation complete"

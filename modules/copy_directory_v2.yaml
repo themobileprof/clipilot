@@ -1,0 +1,327 @@
+name: copy_directory
+id: org.themobileprof.copy_directory
+version: 2.0.0
+description: Interactive directory copying with modular validation helpers
+tags: [copy, directory, files, move, backup, termux]
+provides:
+  - directory_copied
+requires:
+  - check_path_exists
+  - check_is_directory
+  - get_directory_size
+  - show_common_paths
+size_kb: 8
+
+flows:
+  main:
+    start: explain_task
+    steps:
+      explain_task:
+        type: instruction
+        message: |
+          📁 Directory Copy Assistant
+          
+          I'll help you copy a directory from one location to another.
+          This works completely offline on your device.
+        next: show_path_help
+      
+      show_path_help:
+        type: instruction
+        message: |
+          💡 First, I need to know the SOURCE directory (what to copy).
+          
+          Here are helpful commands and common locations...
+        command: |
+          # Show helpful paths using imported module
+          cat << 'EOF'
+          📂 Common Filesystem Locations:
+          
+          User Directories:
+            • ~                      - Your home directory
+            • ~/Downloads            - Downloads folder
+            • ~/Documents            - Documents folder
+            • ~/Desktop              - Desktop folder
+          
+          Termux/Android Specific:
+            • ~/storage/downloads    - Android Downloads
+            • ~/storage/dcim         - Camera/Photos
+            • ~/storage/pictures     - Pictures
+            • ~/storage/music        - Music files
+            • ~/storage/movies       - Videos
+            • /sdcard                - SD card (if available)
+          
+          Helpful Navigation Commands:
+            • pwd                    - Show current directory
+            • ls                     - List files in current directory
+            • ls -lah                - List with details and hidden files
+            • cd <path>              - Change to directory
+            • find ~ -name "name"    - Search for files/directories
+            • du -sh <path>          - Show directory size
+          EOF
+        next: get_source_path
+      
+      get_source_path:
+        type: instruction
+        message: |
+          Please enter the full path to the SOURCE directory:
+        command: |
+          echo ""
+          echo "Current location: $(pwd)"
+          echo ""
+          read -p "Enter SOURCE path (directory to copy FROM): " SOURCE_PATH
+          
+          # Trim whitespace
+          SOURCE_PATH=$(echo "$SOURCE_PATH" | xargs)
+          
+          # Expand tilde if present
+          if [[ "$SOURCE_PATH" == ~* ]]; then
+            SOURCE_PATH="${SOURCE_PATH/#\~/$HOME}"
+          fi
+          
+          # Save to temp file for next steps
+          echo "$SOURCE_PATH" > /tmp/clipilot_source_path.txt
+          echo "$SOURCE_PATH"
+        next: validate_source_exists
+      
+      validate_source_exists:
+        type: action
+        message: "🔍 Checking if source path exists..."
+        command: |
+          SOURCE_PATH=$(cat /tmp/clipilot_source_path.txt)
+          
+          if [ -e "$SOURCE_PATH" ]; then
+            echo "✅ Path exists"
+          else
+            echo "❌ ERROR: Path does not exist: $SOURCE_PATH"
+            echo ""
+            echo "💡 Troubleshooting:"
+            echo "  • Check spelling and capitalization (paths are case-sensitive)"
+            echo "  • Use 'ls' to list files in the parent directory"
+            echo "  • Try tab completion in your terminal"
+            echo "  • Use 'find' to search: find ~ -name \"dirname\""
+            exit 1
+          fi
+        next: validate_source_is_directory
+      
+      validate_source_is_directory:
+        type: action
+        message: "🔍 Verifying source is a directory..."
+        command: |
+          SOURCE_PATH=$(cat /tmp/clipilot_source_path.txt)
+          
+          if [ -d "$SOURCE_PATH" ]; then
+            echo "✅ Path is a directory"
+          elif [ -f "$SOURCE_PATH" ]; then
+            echo "❌ ERROR: Path is a file, not a directory"
+            echo ""
+            echo "💡 To copy a single file, use:"
+            echo "   cp \"$SOURCE_PATH\" /destination/path/"
+            exit 1
+          else
+            echo "⚠️  WARNING: Path is not a regular directory"
+            echo "   (might be a symlink, device file, or other special type)"
+            exit 1
+          fi
+        next: show_source_info
+      
+      show_source_info:
+        type: action
+        message: "📊 Source directory information..."
+        command: |
+          SOURCE_PATH=$(cat /tmp/clipilot_source_path.txt)
+          
+          echo "📁 Source Directory: $SOURCE_PATH"
+          echo ""
+          echo "Contents (first 10 items):"
+          ls -lh "$SOURCE_PATH" 2>/dev/null | head -10 || echo "Cannot read directory contents"
+          echo ""
+          echo "Total size:"
+          du -sh "$SOURCE_PATH" 2>/dev/null || echo "Cannot calculate size"
+          
+          # Save source info
+          SIZE=$(du -sh "$SOURCE_PATH" 2>/dev/null | cut -f1 || echo "Unknown")
+          echo "$SIZE" > /tmp/clipilot_source_size.txt
+        next: get_dest_path
+      
+      get_dest_path:
+        type: instruction
+        message: |
+          Now I need the DESTINATION path (where to copy TO).
+          
+          Common destinations:
+            • ~/backup              - Backup location
+            • ~/storage/documents   - Documents folder
+            • /sdcard/backup        - SD card backup
+          
+          The directory will be copied INTO this location.
+          Please enter the DESTINATION path:
+        command: |
+          echo ""
+          read -p "Enter DESTINATION path (where to copy TO): " DEST_PATH
+          
+          # Trim whitespace
+          DEST_PATH=$(echo "$DEST_PATH" | xargs)
+          
+          # Expand tilde if present
+          if [[ "$DEST_PATH" == ~* ]]; then
+            DEST_PATH="${DEST_PATH/#\~/$HOME}"
+          fi
+          
+          echo "$DEST_PATH" > /tmp/clipilot_dest_path.txt
+          echo "$DEST_PATH"
+        next: validate_dest_parent
+      
+      validate_dest_parent:
+        type: action
+        message: "🔍 Validating destination path..."
+        command: |
+          DEST_PATH=$(cat /tmp/clipilot_dest_path.txt)
+          PARENT_DIR=$(dirname "$DEST_PATH")
+          
+          if [ ! -d "$PARENT_DIR" ]; then
+            echo "❌ ERROR: Parent directory does not exist: $PARENT_DIR"
+            echo ""
+            echo "💡 Create the parent directory first:"
+            echo "   mkdir -p \"$PARENT_DIR\""
+            exit 1
+          fi
+          
+          if [ -e "$DEST_PATH" ] && [ ! -d "$DEST_PATH" ]; then
+            echo "❌ ERROR: Destination exists but is not a directory"
+            echo "   Path: $DEST_PATH"
+            exit 1
+          fi
+          
+          if [ -d "$DEST_PATH" ]; then
+            echo "⚠️  WARNING: Destination directory already exists"
+            echo "   The source directory will be copied INTO this location"
+          else
+            echo "✅ Destination path is valid"
+          fi
+        next: prepare_copy_command
+      
+      prepare_copy_command:
+        type: instruction
+        message: "📝 Preparing copy command..."
+        command: |
+          SOURCE_PATH=$(cat /tmp/clipilot_source_path.txt)
+          DEST_PATH=$(cat /tmp/clipilot_dest_path.txt)
+          SIZE=$(cat /tmp/clipilot_source_size.txt)
+          SOURCE_NAME=$(basename "$SOURCE_PATH")
+          
+          # Determine final destination
+          if [ -d "$DEST_PATH" ]; then
+            FINAL_DEST="$DEST_PATH/$SOURCE_NAME"
+          else
+            FINAL_DEST="$DEST_PATH"
+          fi
+          
+          echo "=========================================="
+          echo "📦 Ready to Copy Directory"
+          echo "=========================================="
+          echo ""
+          echo "Source:      $SOURCE_PATH"
+          echo "Destination: $FINAL_DEST"
+          echo "Size:        $SIZE"
+          echo ""
+          echo "Command to execute:"
+          echo "  cp -r \"$SOURCE_PATH\" \"$DEST_PATH/\""
+          echo ""
+          echo "What this does:"
+          echo "  • cp -r = Copy recursively (all files and subdirectories)"
+          echo "  • Source will be copied to: $FINAL_DEST"
+          echo ""
+          
+          # Save final command
+          echo "cp -r \"$SOURCE_PATH\" \"$DEST_PATH/\"" > /tmp/clipilot_copy_command.txt
+          echo "$FINAL_DEST" > /tmp/clipilot_final_dest.txt
+        next: confirm_copy
+      
+      confirm_copy:
+        type: instruction
+        message: |
+          Do you want to execute this copy? (yes/no):
+        command: |
+          read -p "Execute copy? (yes/no): " CONFIRM
+          CONFIRM=$(echo "$CONFIRM" | tr '[:upper:]' '[:lower:]' | xargs)
+          
+          if [ "$CONFIRM" = "yes" ] || [ "$CONFIRM" = "y" ]; then
+            echo "YES"
+          else
+            echo "NO"
+          fi
+        next: branch_execute
+      
+      branch_execute:
+        type: branch
+        message: "Processing user choice..."
+        based_on: last_output
+        branches:
+          YES:
+            next: execute_copy
+          default:
+            next: show_manual_instructions
+      
+      execute_copy:
+        type: action
+        message: "📦 Copying directory..."
+        command: |
+          COPY_CMD=$(cat /tmp/clipilot_copy_command.txt)
+          
+          eval "$COPY_CMD"
+          
+          if [ $? -eq 0 ]; then
+            echo "✅ SUCCESS! Directory copied successfully"
+          else
+            echo "❌ ERROR: Copy failed"
+            exit 1
+          fi
+        next: verify_copy
+      
+      verify_copy:
+        type: action
+        message: "🔍 Verifying copy..."
+        command: |
+          FINAL_DEST=$(cat /tmp/clipilot_final_dest.txt)
+          
+          if [ -d "$FINAL_DEST" ]; then
+            echo "✅ Verification successful"
+            echo ""
+            echo "Copied to: $FINAL_DEST"
+            echo ""
+            echo "Contents:"
+            ls -lh "$FINAL_DEST" | head -10
+          else
+            echo "⚠️  WARNING: Could not verify destination"
+          fi
+        next: cleanup
+      
+      show_manual_instructions:
+        type: instruction
+        message: |
+          📋 Manual Copy Instructions
+          
+          Copy cancelled. If you want to copy manually, use this command:
+        command: |
+          COPY_CMD=$(cat /tmp/clipilot_copy_command.txt)
+          echo ""
+          echo "$COPY_CMD"
+          echo ""
+          echo "Or use a file manager if you prefer a GUI approach."
+        next: cleanup
+      
+      cleanup:
+        type: action
+        message: "🧹 Cleaning up temporary files..."
+        command: |
+          rm -f /tmp/clipilot_source_path.txt
+          rm -f /tmp/clipilot_dest_path.txt
+          rm -f /tmp/clipilot_source_size.txt
+          rm -f /tmp/clipilot_copy_command.txt
+          rm -f /tmp/clipilot_final_dest.txt
+          echo "Done"
+        next: end
+      
+      end:
+        type: terminal
+        message: "✅ Directory copy operation complete"

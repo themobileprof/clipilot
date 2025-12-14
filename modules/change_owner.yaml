@@ -1,0 +1,124 @@
+name: change_owner
+id: org.themobileprof.change_owner
+version: 1.0.0
+description: Change file or directory ownership using chown
+tags: [filesystem, permissions, chown, owner, admin]
+provides:
+  - ownership_changed
+requires:
+  - check_path_exists
+  - get_current_user
+size_kb: 2
+
+flows:
+  main:
+    start: validate_path
+    steps:
+      validate_path:
+        type: action
+        message: "Validating path: {{.path}}"
+        command: |
+          TARGET="{{.path}}"
+          
+          # Expand tilde
+          if [[ "$TARGET" == ~* ]]; then
+            TARGET="${TARGET/#\~/$HOME}"
+          fi
+          
+          if [ ! -e "$TARGET" ]; then
+            echo "❌ Path does not exist: $TARGET"
+            exit 1
+          fi
+          
+          echo "$TARGET" > /tmp/clipilot_chown_path.txt
+          echo "📁 Target: $TARGET"
+          echo ""
+          echo "Current ownership:"
+          ls -ld "$TARGET"
+        next: apply_ownership
+      
+      apply_ownership:
+        type: action
+        message: "Changing ownership..."
+        command: |
+          TARGET=$(cat /tmp/clipilot_chown_path.txt)
+          OWNER="{{.owner}}"
+          GROUP="{{.group}}"
+          RECURSIVE="{{.recursive}}"
+          
+          if [ -z "$OWNER" ] && [ -z "$GROUP" ]; then
+            echo "❌ Must specify owner and/or group"
+            echo ""
+            echo "💡 Examples:"
+            echo "  • owner=username"
+            echo "  • group=groupname"
+            echo "  • owner=username group=groupname"
+            echo "  • owner=username:groupname"
+            exit 1
+          fi
+          
+          # Build ownership string
+          if [ -n "$OWNER" ] && [ -n "$GROUP" ]; then
+            OWNERSHIP="$OWNER:$GROUP"
+          elif [ -n "$OWNER" ]; then
+            OWNERSHIP="$OWNER"
+          else
+            OWNERSHIP=":$GROUP"
+          fi
+          
+          echo "🔧 Applying ownership: $OWNERSHIP"
+          
+          # Check if we need sudo
+          CURRENT_USER=$(whoami)
+          if [ "$CURRENT_USER" != "root" ]; then
+            echo ""
+            echo "⚠️  WARNING: Changing ownership typically requires sudo"
+            echo ""
+            
+            if command -v sudo >/dev/null 2>&1; then
+              echo "This will use sudo (may prompt for password)"
+              CHOWN_CMD="sudo chown"
+            else
+              echo "❌ sudo not available, attempting without..."
+              CHOWN_CMD="chown"
+            fi
+          else
+            CHOWN_CMD="chown"
+          fi
+          
+          # Apply ownership
+          if [ "$RECURSIVE" = "true" ] && [ -d "$TARGET" ]; then
+            $CHOWN_CMD -R "$OWNERSHIP" "$TARGET"
+          else
+            $CHOWN_CMD "$OWNERSHIP" "$TARGET"
+          fi
+          
+          if [ $? -eq 0 ]; then
+            echo ""
+            echo "✅ Ownership changed successfully"
+            echo ""
+            echo "New ownership:"
+            ls -ld "$TARGET"
+            
+            if [ -d "$TARGET" ] && [ "$RECURSIVE" = "true" ]; then
+              echo ""
+              echo "Sample of changed files:"
+              find "$TARGET" -maxdepth 2 -ls | head -10
+            fi
+          else
+            echo "❌ Ownership change failed"
+            echo ""
+            echo "💡 Possible reasons:"
+            echo "  • Insufficient permissions (need root/sudo)"
+            echo "  • Invalid username or group"
+            echo "  • User doesn't exist on system"
+            echo "  • Filesystem doesn't support ownership"
+            exit 1
+          fi
+          
+          rm -f /tmp/clipilot_chown_path.txt
+        next: end
+      
+      end:
+        type: terminal
+        message: "Ownership change complete"

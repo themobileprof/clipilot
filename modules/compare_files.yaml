@@ -1,0 +1,122 @@
+name: compare_files
+id: org.themobileprof.compare_files
+version: 1.0.0
+description: Compare two files and show differences using diff
+tags: [text, compare, diff, analysis, version]
+provides:
+  - files_compared
+requires:
+  - check_file_exists
+size_kb: 3
+
+flows:
+  main:
+    start: validate_files
+    steps:
+      validate_files:
+        type: action
+        message: "Validating files..."
+        command: |
+          FILE1="{{.file1}}"
+          FILE2="{{.file2}}"
+          
+          # Expand tildes
+          if [[ "$FILE1" == ~* ]]; then
+            FILE1="${FILE1/#\~/$HOME}"
+          fi
+          if [[ "$FILE2" == ~* ]]; then
+            FILE2="${FILE2/#\~/$HOME}"
+          fi
+          
+          if [ ! -f "$FILE1" ]; then
+            echo "❌ First file not found: $FILE1"
+            exit 1
+          fi
+          
+          if [ ! -f "$FILE2" ]; then
+            echo "❌ Second file not found: $FILE2"
+            exit 1
+          fi
+          
+          echo "$FILE1" > /tmp/clipilot_diff_file1.txt
+          echo "$FILE2" > /tmp/clipilot_diff_file2.txt
+          
+          echo "✅ Files validated"
+          echo "   File 1: $FILE1"
+          echo "   File 2: $FILE2"
+        next: compare
+      
+      compare:
+        type: action
+        message: "Comparing files..."
+        command: |
+          FILE1=$(cat /tmp/clipilot_diff_file1.txt)
+          FILE2=$(cat /tmp/clipilot_diff_file2.txt)
+          FORMAT="{{.format}}"
+          IGNORE_CASE="{{.ignore_case}}"
+          IGNORE_WHITESPACE="{{.ignore_whitespace}}"
+          
+          echo ""
+          echo "📊 File Comparison"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo ""
+          
+          # Build diff command
+          DIFF_CMD="diff"
+          
+          if [ "$IGNORE_CASE" = "true" ]; then
+            DIFF_CMD="$DIFF_CMD -i"
+          fi
+          
+          if [ "$IGNORE_WHITESPACE" = "true" ]; then
+            DIFF_CMD="$DIFF_CMD -w"
+          fi
+          
+          case "$FORMAT" in
+            unified|u)
+              DIFF_CMD="$DIFF_CMD -u"
+              ;;
+            context|c)
+              DIFF_CMD="$DIFF_CMD -c"
+              ;;
+            side-by-side|y)
+              DIFF_CMD="$DIFF_CMD -y --width=160"
+              ;;
+            *)
+              # Default format
+              ;;
+          esac
+          
+          # Run diff
+          DIFF_OUTPUT=$($DIFF_CMD "$FILE1" "$FILE2" 2>&1)
+          EXIT_CODE=$?
+          
+          if [ $EXIT_CODE -eq 0 ]; then
+            echo "✅ Files are identical"
+            echo ""
+            echo "No differences found between:"
+            echo "  $FILE1"
+            echo "  $FILE2"
+          elif [ $EXIT_CODE -eq 1 ]; then
+            echo "⚠️  Files differ"
+            echo ""
+            echo "$DIFF_OUTPUT"
+            echo ""
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            
+            # Count differences
+            DIFF_LINES=$(echo "$DIFF_OUTPUT" | grep -c "^[<>]" || true)
+            if [ "$DIFF_LINES" -gt 0 ]; then
+              echo "Total difference lines: $DIFF_LINES"
+            fi
+          else
+            echo "❌ Comparison error"
+            echo "$DIFF_OUTPUT"
+          fi
+          
+          rm -f /tmp/clipilot_diff_file1.txt /tmp/clipilot_diff_file2.txt
+        next: end
+      
+      end:
+        type: terminal
+        message: "File comparison complete"

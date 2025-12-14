@@ -1,0 +1,157 @@
+name: delete_file
+id: org.themobileprof.delete_file
+version: 1.0.0
+description: Safely delete a file with confirmation and validation
+tags: [filesystem, file, delete, remove, rm]
+provides:
+  - file_deleted
+requires:
+  - check_file_exists
+size_kb: 2
+
+flows:
+  main:
+    start: validate_file
+    steps:
+      validate_file:
+        type: action
+        message: "Validating file: {{.path}}"
+        command: |
+          FILE_PATH="{{.path}}"
+          FORCE="{{.force}}"
+          
+          # Expand tilde
+          if [[ "$FILE_PATH" == ~* ]]; then
+            FILE_PATH="${FILE_PATH/#\~/$HOME}"
+          fi
+          
+          if [ ! -e "$FILE_PATH" ]; then
+            echo "NOT_EXISTS"
+          elif [ -f "$FILE_PATH" ]; then
+            echo "$FILE_PATH" > /tmp/clipilot_delete_file.txt
+            echo "IS_FILE"
+          elif [ -d "$FILE_PATH" ]; then
+            echo "IS_DIRECTORY"
+          else
+            echo "IS_OTHER"
+          fi
+        next: branch_type
+      
+      branch_type:
+        type: branch
+        message: "Checking file type..."
+        based_on: last_output
+        branches:
+          IS_FILE:
+            next: show_file_info
+          IS_DIRECTORY:
+            next: error_is_directory
+          NOT_EXISTS:
+            next: error_not_exists
+          default:
+            next: error_other
+      
+      error_not_exists:
+        type: instruction
+        message: |
+          ❌ File does not exist: {{.path}}
+          
+          Nothing to delete.
+        next: end
+      
+      error_is_directory:
+        type: instruction
+        message: |
+          ❌ Path is a directory, not a file: {{.path}}
+          
+          💡 To delete a directory, use a delete_directory module instead.
+        next: end
+      
+      error_other:
+        type: instruction
+        message: |
+          ⚠️  Path exists but is not a regular file
+          
+          This might be a symlink, device file, or other special type.
+          Use 'rm' command directly if you know what you're doing.
+        next: end
+      
+      show_file_info:
+        type: action
+        message: "File information..."
+        command: |
+          FILE_PATH=$(cat /tmp/clipilot_delete_file.txt)
+          
+          echo "⚠️  About to delete file:"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "Path: $FILE_PATH"
+          ls -lh "$FILE_PATH" 2>/dev/null || stat "$FILE_PATH"
+          echo ""
+          echo "⚠️  WARNING: This action cannot be undone!"
+        next: confirm_delete
+      
+      confirm_delete:
+        type: instruction
+        message: |
+          Are you sure you want to delete this file? (yes/no):
+        command: |
+          FORCE="{{.force}}"
+          
+          if [ "$FORCE" = "true" ]; then
+            echo "YES"
+          else
+            read -p "Delete file? (yes/no): " CONFIRM
+            CONFIRM=$(echo "$CONFIRM" | tr '[:upper:]' '[:lower:]' | xargs)
+            
+            if [ "$CONFIRM" = "yes" ] || [ "$CONFIRM" = "y" ]; then
+              echo "YES"
+            else
+              echo "NO"
+            fi
+          fi
+        next: branch_confirm
+      
+      branch_confirm:
+        type: branch
+        message: "Processing confirmation..."
+        based_on: last_output
+        branches:
+          YES:
+            next: delete_file
+          default:
+            next: cancelled
+      
+      delete_file:
+        type: action
+        message: "Deleting file..."
+        command: |
+          FILE_PATH=$(cat /tmp/clipilot_delete_file.txt)
+          
+          rm -f "$FILE_PATH"
+          
+          if [ $? -eq 0 ]; then
+            echo "✅ File deleted successfully: $FILE_PATH"
+            rm -f /tmp/clipilot_delete_file.txt
+          else
+            echo "❌ Failed to delete file"
+            echo ""
+            echo "💡 Possible reasons:"
+            echo "  • No write permission in directory"
+            echo "  • File is locked or in use"
+            echo "  • Filesystem is read-only"
+            exit 1
+          fi
+        next: end
+      
+      cancelled:
+        type: instruction
+        message: |
+          ℹ️  Deletion cancelled. File was not deleted.
+        command: |
+          rm -f /tmp/clipilot_delete_file.txt
+          echo "Cancelled"
+        next: end
+      
+      end:
+        type: terminal
+        message: "File deletion operation complete"

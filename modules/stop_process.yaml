@@ -1,0 +1,240 @@
+name: stop_process
+id: org.themobileprof.stop_process
+version: 1.0.0
+description: Stop a running process by PID or name with signal options
+tags: [system, process, kill, stop, terminate]
+provides:
+  - process_stopped
+requires:
+  - list_processes
+size_kb: 3
+
+flows:
+  main:
+    start: validate_target
+    steps:
+      validate_target:
+        type: action
+        message: "Validating process target..."
+        command: |
+          PID="{{.pid}}"
+          PROCESS_NAME="{{.process_name}}"
+          
+          if [ -z "$PID" ] && [ -z "$PROCESS_NAME" ]; then
+            echo "❌ ERROR: Must specify either pid or process_name"
+            echo ""
+            echo "💡 Examples:"
+            echo "  • pid=1234"
+            echo "  • process_name=firefox"
+            exit 1
+          fi
+          
+          # If process name given, find PID
+          if [ -n "$PROCESS_NAME" ]; then
+            FOUND_PIDS=$(pgrep "$PROCESS_NAME" 2>/dev/null)
+            
+            if [ -z "$FOUND_PIDS" ]; then
+              echo "❌ No process found with name: $PROCESS_NAME"
+              exit 1
+            fi
+            
+            COUNT=$(echo "$FOUND_PIDS" | wc -l)
+            if [ "$COUNT" -gt 1 ]; then
+              echo "⚠️  Multiple processes found with name: $PROCESS_NAME"
+              echo ""
+              ps -p $(echo "$FOUND_PIDS" | tr '\n' ',') 2>/dev/null || \
+                ps $(echo "$FOUND_PIDS" | tr '\n' ' ')
+              echo ""
+              echo "MULTIPLE:$FOUND_PIDS"
+            else
+              echo "$FOUND_PIDS" > /tmp/clipilot_kill_pid.txt
+              echo "SINGLE:$FOUND_PIDS"
+            fi
+          else
+            # Validate PID exists
+            if ! ps -p "$PID" >/dev/null 2>&1; then
+              echo "❌ Process not found with PID: $PID"
+              exit 1
+            fi
+            echo "$PID" > /tmp/clipilot_kill_pid.txt
+            echo "SINGLE:$PID"
+          fi
+        next: branch_count
+      
+      branch_count:
+        type: branch
+        message: "Checking process count..."
+        based_on: last_output
+        branches:
+          MULTIPLE*:
+            next: select_process
+          SINGLE*:
+            next: show_process_info
+          default:
+            next: error_end
+      
+      select_process:
+        type: instruction
+        message: |
+          Multiple processes found. Please specify which PID to stop,
+          or use 'all' to stop all matching processes.
+          
+          Enter PID (or 'all'):
+        command: |
+          read -p "Enter PID or 'all': " SELECTION
+          SELECTION=$(echo "$SELECTION" | xargs)
+          
+          if [ "$SELECTION" = "all" ]; then
+            echo "ALL"
+          elif echo "$SELECTION" | grep -qE '^[0-9]+$'; then
+            echo "$SELECTION" > /tmp/clipilot_kill_pid.txt
+            echo "SELECTED"
+          else
+            echo "INVALID"
+          fi
+        next: branch_selection
+      
+      branch_selection:
+        type: branch
+        message: "Processing selection..."
+        based_on: last_output
+        branches:
+          ALL:
+            next: stop_all
+          SELECTED:
+            next: show_process_info
+          default:
+            next: error_invalid
+      
+      show_process_info:
+        type: action
+        message: "Process information..."
+        command: |
+          PID=$(cat /tmp/clipilot_kill_pid.txt)
+          
+          echo "⚠️  About to stop process:"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          ps -p "$PID" -o pid,user,%cpu,%mem,command 2>/dev/null || \
+            ps -p "$PID" 2>/dev/null
+          echo ""
+          echo "⚠️  WARNING: This will terminate the process!"
+        next: confirm_stop
+      
+      confirm_stop:
+        type: instruction
+        message: "Stop this process? (yes/no):"
+        command: |
+          FORCE="{{.force}}"
+          
+          if [ "$FORCE" = "true" ]; then
+            echo "YES"
+          else
+            read -p "Stop process? (yes/no): " CONFIRM
+            CONFIRM=$(echo "$CONFIRM" | tr '[:upper:]' '[:lower:]' | xargs)
+            
+            if [ "$CONFIRM" = "yes" ] || [ "$CONFIRM" = "y" ]; then
+              echo "YES"
+            else
+              echo "NO"
+            fi
+          fi
+        next: branch_confirm
+      
+      branch_confirm:
+        type: branch
+        message: "Processing confirmation..."
+        based_on: last_output
+        branches:
+          YES:
+            next: stop_process
+          default:
+            next: cancelled
+      
+      stop_process:
+        type: action
+        message: "Stopping process..."
+        command: |
+          PID=$(cat /tmp/clipilot_kill_pid.txt)
+          SIGNAL="{{.signal}}"
+          
+          # Default to TERM signal
+          if [ -z "$SIGNAL" ]; then
+            SIGNAL="TERM"
+          fi
+          
+          # Send signal
+          kill -s "$SIGNAL" "$PID" 2>/dev/null
+          
+          if [ $? -eq 0 ]; then
+            echo "✅ Signal sent: $SIGNAL to PID $PID"
+            
+            # Wait a moment and check if stopped
+            sleep 1
+            if ! ps -p "$PID" >/dev/null 2>&1; then
+              echo "✅ Process stopped successfully"
+            else
+              echo "⚠️  Process still running. May need stronger signal."
+              echo ""
+              echo "💡 Try signal=KILL for forceful termination"
+            fi
+          else
+            echo "❌ Failed to stop process"
+            echo ""
+            echo "💡 Possible reasons:"
+            echo "  • Insufficient permissions (try sudo)"
+            echo "  • Process is protected"
+            echo "  • Invalid PID"
+            exit 1
+          fi
+          
+          rm -f /tmp/clipilot_kill_pid.txt
+        next: end
+      
+      stop_all:
+        type: action
+        message: "Stopping all matching processes..."
+        command: |
+          PROCESS_NAME="{{.process_name}}"
+          SIGNAL="{{.signal}}"
+          
+          if [ -z "$SIGNAL" ]; then
+            SIGNAL="TERM"
+          fi
+          
+          pkill -s "$SIGNAL" "$PROCESS_NAME"
+          
+          if [ $? -eq 0 ]; then
+            echo "✅ Signal sent to all '$PROCESS_NAME' processes"
+          else
+            echo "❌ Failed to stop processes"
+            exit 1
+          fi
+        next: end
+      
+      cancelled:
+        type: instruction
+        message: "ℹ️  Process stop cancelled"
+        command: |
+          rm -f /tmp/clipilot_kill_pid.txt
+          echo "Cancelled"
+        next: end
+      
+      error_invalid:
+        type: instruction
+        message: "❌ Invalid selection"
+        command: |
+          rm -f /tmp/clipilot_kill_pid.txt
+          echo "Error"
+        next: end
+      
+      error_end:
+        type: instruction
+        message: "❌ Operation failed"
+        command: |
+          rm -f /tmp/clipilot_kill_pid.txt
+          echo "Error"
+        next: end
+      
+      end:
+        type: terminal
+        message: "Process stop operation complete"

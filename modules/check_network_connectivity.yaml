@@ -1,0 +1,78 @@
+name: check_network_connectivity
+id: org.themobileprof.check_network_connectivity
+version: 1.0.0
+description: Check internet and network connectivity with ping tests
+tags: [network, utility, connectivity, internet, diagnostics]
+provides:
+  - network_checked
+requires: []
+size_kb: 2
+
+flows:
+  main:
+    start: test_connectivity
+    steps:
+      test_connectivity:
+        type: action
+        message: "Testing network connectivity..."
+        command: |
+          echo "🌐 Network Connectivity Test"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo ""
+          
+          # Test DNS resolution first
+          echo "Testing DNS resolution..."
+          if command -v nslookup >/dev/null 2>&1; then
+            if nslookup google.com >/dev/null 2>&1; then
+              echo "✅ DNS resolution: Working"
+            else
+              echo "❌ DNS resolution: Failed"
+            fi
+          elif command -v host >/dev/null 2>&1; then
+            if host google.com >/dev/null 2>&1; then
+              echo "✅ DNS resolution: Working"
+            else
+              echo "❌ DNS resolution: Failed"
+            fi
+          else
+            echo "⚠️  DNS tools not available (nslookup/host)"
+          fi
+          
+          echo ""
+          echo "Testing internet connectivity (ping)..."
+          
+          # Determine ping command options (varies by OS)
+          if ping -c 1 -W 1 google.com >/dev/null 2>&1; then
+            echo "✅ Internet: Connected (google.com reachable)"
+            
+            # Test another host for redundancy
+            if ping -c 1 -W 1 1.1.1.1 >/dev/null 2>&1; then
+              echo "✅ DNS Server: Reachable (1.1.1.1)"
+            fi
+          elif ping -c 1 8.8.8.8 >/dev/null 2>&1; then
+            echo "⚠️  Internet: Connected but DNS may have issues"
+            echo "   (8.8.8.8 reachable, but google.com failed)"
+          else
+            echo "❌ Internet: No connectivity detected"
+            echo ""
+            echo "💡 Troubleshooting:"
+            echo "  • Check if WiFi/mobile data is enabled"
+            echo "  • Verify network settings"
+            echo "  • Try: ip addr (Linux) or ifconfig (macOS)"
+            echo "  • Check firewall settings"
+          fi
+          
+          echo ""
+          echo "Network interfaces:"
+          if command -v ip >/dev/null 2>&1; then
+            ip addr show | grep "inet " | grep -v "127.0.0.1" | awk '{print "  " $2 " (" $NF ")"}'
+          elif command -v ifconfig >/dev/null 2>&1; then
+            ifconfig | grep "inet " | grep -v "127.0.0.1" | awk '{print "  " $2}'
+          else
+            echo "  (network tools not available)"
+          fi
+        next: end
+      
+      end:
+        type: terminal
+        message: "Network check complete"

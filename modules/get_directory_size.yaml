@@ -1,0 +1,44 @@
+name: get_directory_size
+id: org.themobileprof.get_directory_size
+version: 1.0.0
+description: Calculate and display the size of a directory and its contents
+tags: [filesystem, utility, directory, size, disk]
+provides:
+  - size_calculated
+requires:
+  - check_is_directory
+size_kb: 2
+
+flows:
+  main:
+    start: calculate_size
+    steps:
+      calculate_size:
+        type: action
+        message: "Calculating size of directory: {{.path}}"
+        command: |
+          if [ ! -d "{{.path}}" ]; then
+            echo "ERROR: Not a directory"
+            exit 1
+          fi
+          du -sh "{{.path}}" 2>/dev/null || echo "ERROR: Cannot read directory"
+        next: show_size
+      
+      show_size:
+        type: instruction
+        message: |
+          Directory size result:
+          
+          {{if contains .last_output "ERROR"}}
+          ❌ {{.last_output}}
+          {{else}}
+          📊 Size: {{.last_output}}
+          
+          You can also view detailed breakdown with:
+            du -h "{{.path}}" | sort -h
+          {{end}}
+        next: end
+      
+      end:
+        type: terminal
+        message: "Size calculation complete"

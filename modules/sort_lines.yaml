@@ -1,0 +1,102 @@
+name: sort_lines
+id: org.themobileprof.sort_lines
+version: 1.0.0
+description: Sort lines in a file with various sorting options
+tags: [text, sort, utility, processing, filter]
+provides:
+  - lines_sorted
+requires:
+  - check_file_exists
+size_kb: 2
+
+flows:
+  main:
+    start: sort_file
+    steps:
+      sort_file:
+        type: action
+        message: "Sorting file: {{.path}}"
+        command: |
+          FILE_PATH="{{.path}}"
+          OUTPUT="{{.output}}"
+          REVERSE="{{.reverse}}"
+          NUMERIC="{{.numeric}}"
+          UNIQUE="{{.unique}}"
+          IGNORE_CASE="{{.ignore_case}}"
+          
+          # Expand tilde
+          if [[ "$FILE_PATH" == ~* ]]; then
+            FILE_PATH="${FILE_PATH/#\~/$HOME}"
+          fi
+          
+          if [ ! -f "$FILE_PATH" ]; then
+            echo "❌ Not a file: $FILE_PATH"
+            exit 1
+          fi
+          
+          echo "📊 Sorting: $FILE_PATH"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo ""
+          
+          # Build sort command
+          SORT_CMD="sort"
+          
+          if [ "$REVERSE" = "true" ]; then
+            SORT_CMD="$SORT_CMD -r"
+          fi
+          
+          if [ "$NUMERIC" = "true" ]; then
+            SORT_CMD="$SORT_CMD -n"
+          fi
+          
+          if [ "$UNIQUE" = "true" ]; then
+            SORT_CMD="$SORT_CMD -u"
+          fi
+          
+          if [ "$IGNORE_CASE" = "true" ]; then
+            SORT_CMD="$SORT_CMD -f"
+          fi
+          
+          # Perform sort
+          if [ -n "$OUTPUT" ]; then
+            # Expand output tilde
+            if [[ "$OUTPUT" == ~* ]]; then
+              OUTPUT="${OUTPUT/#\~/$HOME}"
+            fi
+            
+            $SORT_CMD "$FILE_PATH" > "$OUTPUT"
+            
+            if [ $? -eq 0 ]; then
+              echo "✅ File sorted and saved to: $OUTPUT"
+              echo ""
+              echo "Preview (first 10 lines):"
+              head -10 "$OUTPUT"
+              echo ""
+              TOTAL=$(wc -l < "$OUTPUT")
+              echo "Total lines: $TOTAL"
+            else
+              echo "❌ Sort failed"
+              exit 1
+            fi
+          else
+            # Output to stdout
+            SORTED=$($SORT_CMD "$FILE_PATH")
+            
+            if [ $? -eq 0 ]; then
+              echo "$SORTED"
+              echo ""
+              echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+              TOTAL=$(echo "$SORTED" | wc -l)
+              echo "Total lines: $TOTAL"
+              echo ""
+              echo "💡 Use output=filename to save sorted result"
+            else
+              echo "❌ Sort failed"
+              exit 1
+            fi
+          fi
+        next: end
+      
+      end:
+        type: terminal
+        message: "Sort complete"
