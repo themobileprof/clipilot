@@ -8,19 +8,22 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/themobileprof/clipilot/internal/engine"
 	"github.com/themobileprof/clipilot/internal/intent"
 	"github.com/themobileprof/clipilot/internal/modules"
+	"github.com/themobileprof/clipilot/internal/registry"
 )
 
 // REPL represents the interactive command-line interface
 type REPL struct {
-	db       *sql.DB
-	loader   *modules.Loader
-	runner   *engine.Runner
-	detector *intent.Detector
-	history  []string
+	db             *sql.DB
+	loader         *modules.Loader
+	runner         *engine.Runner
+	detector       *intent.Detector
+	registryClient *registry.Client
+	history        []string
 }
 
 // NewREPL creates a new REPL interface
@@ -29,12 +32,17 @@ func NewREPL(db *sql.DB) *REPL {
 	runner := engine.NewRunner(db, loader)
 	detector := intent.NewDetector(db)
 
+	// Get registry URL from settings
+	registryURL, _ := registry.GetRegistryURL(db)
+	registryClient := registry.NewClient(db, registryURL)
+
 	return &REPL{
-		db:       db,
-		loader:   loader,
-		runner:   runner,
-		detector: detector,
-		history:  []string{},
+		db:             db,
+		loader:         loader,
+		runner:         runner,
+		detector:       detector,
+		registryClient: registryClient,
+		history:        []string{},
 	}
 }
 
@@ -96,6 +104,8 @@ func (repl *REPL) handleCommand(input string) error {
 			return fmt.Errorf("usage: modules <list|install|remove>")
 		}
 		return repl.handleModulesCommand(args)
+	case "sync":
+		return repl.syncRegistry()
 	case "settings":
 		return repl.showSettings()
 	case "logs":
@@ -113,7 +123,10 @@ Available Commands:
   help                    - Show this help message
   search <query>          - Search for modules matching query
   run <module_id>         - Execute a specific module
+  sync                    - Sync registry catalog (updates available modules)
   modules list            - List all installed modules
+  modules list --all      - List all modules (installed + available)
+  modules list --available - List available modules (not installed)
   modules install <id>    - Download and install a module
   modules remove <id>     - Remove an installed module
   settings                - Show current settings
@@ -125,6 +138,8 @@ Natural Language:
   try to find and suggest relevant modules.
 
 Examples:
+  > sync
+  > modules list --all
   > install mysql
   > setup docker
   > how to configure git
@@ -211,7 +226,8 @@ func (repl *REPL) handleModulesCommand(args []string) error {
 
 	switch subcommand {
 	case "list":
-		return repl.listModules()
+		flags := args[1:]
+		return repl.listModules(flags)
 	case "install":
 		if len(args) < 2 {
 			return fmt.Errorf("usage: modules install <module_id>")
@@ -227,16 +243,33 @@ func (repl *REPL) handleModulesCommand(args []string) error {
 	}
 }
 
-// listModules lists all installed modules
-func (repl *REPL) listModules() error {
+// listModules lists modules based on flags
+func (repl *REPL) listModules(flags []string) error {
+	listAll := false
+	listAvailable := false
+
+	for _, flag := range flags {
+		switch flag {
+		case "--all", "-a":
+			listAll = true
+		case "--available", "--avail":
+			listAvailable = true
+		}
+	}
+
+	if listAvailable || listAll {
+		return repl.listAvailableModules(listAll)
+	}
+
+	// Default: list only installed modules
 	modules, err := repl.loader.ListModules()
 	if err != nil {
 		return fmt.Errorf("failed to list modules: %w", err)
 	}
 
 	if len(modules) == 0 {
-		fmt.Println("No modules installed.")
-		fmt.Println("Use 'modules install <id>' to install modules.")
+		fmt.Println("\nNo modules installed.")
+		fmt.Println("Use 'sync' to fetch available modules, then 'modules install <id>' to install.")
 		return nil
 	}
 
@@ -249,6 +282,55 @@ func (repl *REPL) listModules() error {
 			fmt.Printf("  Tags: %s\n", strings.Join(mod.Tags, ", "))
 		}
 		fmt.Println()
+	}
+
+	return nil
+}
+
+// listAvailableModules lists available and optionally installed modules
+func (repl *REPL) listAvailableModules(includeInstalled bool) error {
+	available, err := repl.registryClient.ListAvailableModules()
+	if err != nil {
+		return fmt.Errorf("failed to list available modules: %w", err)
+	}
+
+	var installed []registry.ModuleMetadata
+	if includeInstalled {
+		installed, err = repl.registryClient.ListInstalledModules()
+		if err != nil {
+			return fmt.Errorf("failed to list installed modules: %w", err)
+		}
+	}
+
+	if len(available) == 0 && len(installed) == 0 {
+		fmt.Println("\nNo modules found.")
+		fmt.Println("Run 'sync' to fetch modules from registry.")
+		return nil
+	}
+
+	if includeInstalled && len(installed) > 0 {
+		fmt.Printf("\nInstalled Modules (%d):\n\n", len(installed))
+		for _, mod := range installed {
+			fmt.Printf("✓ %s (v%s) [INSTALLED]\n", mod.Name, mod.Version)
+			fmt.Printf("  %s\n", mod.Description)
+			if len(mod.Tags) > 0 {
+				fmt.Printf("  Tags: %s\n", strings.Join(mod.Tags, ", "))
+			}
+			fmt.Println()
+		}
+	}
+
+	if len(available) > 0 {
+		fmt.Printf("\nAvailable Modules (%d):\n\n", len(available))
+		for _, mod := range available {
+			fmt.Printf("○ %s (v%s)\n", mod.Name, mod.Version)
+			fmt.Printf("  %s\n", mod.Description)
+			if len(mod.Tags) > 0 {
+				fmt.Printf("  Tags: %s\n", strings.Join(mod.Tags, ", "))
+			}
+			fmt.Printf("  Install: modules install %s.%s.%s\n", "org.themobileprof", mod.Name, mod.Version)
+			fmt.Println()
+		}
 	}
 
 	return nil
@@ -390,4 +472,55 @@ func (repl *REPL) showLogs() error {
 // ExecuteNonInteractive runs a command non-interactively
 func (repl *REPL) ExecuteNonInteractive(input string) error {
 	return repl.handleCommand(input)
+}
+
+// syncRegistry syncs the module registry catalog
+func (repl *REPL) syncRegistry() error {
+	fmt.Println("Syncing module registry...")
+
+	startTime := time.Now()
+	err := repl.registryClient.SyncRegistry()
+	duration := time.Since(startTime)
+
+	if err != nil {
+		return fmt.Errorf("sync failed: %w", err)
+	}
+
+	// Get sync status
+	status, err := repl.registryClient.GetSyncStatus()
+	if err != nil {
+		return fmt.Errorf("failed to get sync status: %w", err)
+	}
+
+	fmt.Printf("\n✓ Registry synced successfully in %.2fs\n", duration.Seconds())
+	fmt.Printf("  Total modules: %d\n", status.TotalModules)
+	fmt.Printf("  Cached modules: %d\n", status.CachedModules)
+	fmt.Printf("  Last sync: %s\n\n", status.LastSync.Format("2006-01-02 15:04:05"))
+
+	return nil
+}
+
+// AutoSyncIfNeeded performs auto-sync if enabled and due
+func (repl *REPL) AutoSyncIfNeeded() error {
+	shouldSync, err := repl.registryClient.ShouldAutoSync()
+	if err != nil {
+		return err
+	}
+
+	if !shouldSync {
+		return nil
+	}
+
+	fmt.Println("Auto-syncing registry...")
+	err = repl.registryClient.SyncRegistry()
+	if err != nil {
+		return err
+	}
+
+	status, _ := repl.registryClient.GetSyncStatus()
+	if status != nil {
+		fmt.Printf("✓ Synced %d modules from registry\n", status.TotalModules)
+	}
+
+	return nil
 }

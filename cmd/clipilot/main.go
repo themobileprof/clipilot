@@ -85,8 +85,16 @@ func main() {
 	// Create REPL
 	repl := ui.NewREPL(database.Conn())
 
-	// Check for non-interactive command
+	// Auto-sync registry if needed (only in interactive mode)
 	args := flag.Args()
+	if len(args) == 0 {
+		// Interactive mode - check for auto-sync
+		if err := repl.AutoSyncIfNeeded(); err != nil {
+			log.Printf("Warning: Auto-sync failed: %v", err)
+		}
+	}
+
+	// Check for non-interactive command
 	if len(args) > 0 {
 		// Non-interactive mode
 		command := args[0]

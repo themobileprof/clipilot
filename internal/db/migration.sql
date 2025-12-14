@@ -16,6 +16,10 @@ CREATE TABLE IF NOT EXISTS modules (
   requires TEXT, -- comma-separated list of dependencies
   size_kb INTEGER DEFAULT 0,
   installed BOOLEAN DEFAULT 0,
+  registry_id INTEGER, -- ID from remote registry (NULL for local-only modules)
+  download_url TEXT, -- URL to download module from registry
+  author TEXT, -- Module author
+  last_synced INTEGER, -- Unix timestamp of last registry sync
   json_content TEXT, -- compressed JSON/YAML of full module definition
   created_at INTEGER DEFAULT (strftime('%s', 'now')),
   updated_at INTEGER DEFAULT (strftime('%s', 'now'))
@@ -100,6 +104,19 @@ CREATE TABLE IF NOT EXISTS settings (
   updated_at INTEGER DEFAULT (strftime('%s', 'now'))
 );
 
+-- Registry cache metadata
+CREATE TABLE IF NOT EXISTS registry_cache (
+  id INTEGER PRIMARY KEY CHECK (id = 1), -- Single row table
+  registry_url TEXT,
+  last_sync INTEGER, -- Unix timestamp
+  total_modules INTEGER DEFAULT 0,
+  cached_modules INTEGER DEFAULT 0,
+  sync_status TEXT DEFAULT 'never', -- never, syncing, success, failed
+  sync_error TEXT,
+  created_at INTEGER DEFAULT (strftime('%s', 'now')),
+  updated_at INTEGER DEFAULT (strftime('%s', 'now'))
+);
+
 -- Indexes for performance
 CREATE INDEX IF NOT EXISTS idx_modules_installed ON modules(installed);
 CREATE INDEX IF NOT EXISTS idx_modules_tags ON modules(tags);
@@ -120,7 +137,14 @@ INSERT OR IGNORE INTO settings (key, value, value_type, description) VALUES
   ('telemetry_enabled', 'false', 'boolean', 'Anonymous usage statistics'),
   ('color_output', 'false', 'boolean', 'Enable colored terminal output'),
   ('max_history', '1000', 'integer', 'Maximum command history entries'),
-  ('db_version', '1', 'integer', 'Database schema version');
+  ('db_version', '2', 'integer', 'Database schema version'),
+  ('registry_url', 'http://localhost:8080', 'string', 'Module registry server URL'),
+  ('auto_sync', 'true', 'boolean', 'Auto-sync registry on startup'),
+  ('sync_interval', '86400', 'integer', 'Registry sync interval in seconds (24h)');
+
+-- Initialize registry cache
+INSERT OR IGNORE INTO registry_cache (id, registry_url, sync_status) VALUES
+  (1, 'http://localhost:8080', 'never');
 
 -- Triggers for updated_at timestamps
 CREATE TRIGGER IF NOT EXISTS update_modules_timestamp 
