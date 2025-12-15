@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  registry:
+    build:
+      context: .
+      dockerfile: Dockerfile.registry
+    container_name: clipilot-registry
+    ports:
+      - "8080:8080"
+    volumes:
+      # Persist database and uploads
+      - registry-data:/app/data
+    environment:
+      # Registry configuration
+      - REGISTRY_PORT=8080
+      - REGISTRY_ADMIN_USER=${ADMIN_USER:-admin}
+      - REGISTRY_ADMIN_PASS=${ADMIN_PASS:-changeme}
+      - REGISTRY_DB_PATH=/app/data/registry.db
+      - REGISTRY_UPLOAD_DIR=/app/data/uploads
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+
+volumes:
+  registry-data:
+    driver: local

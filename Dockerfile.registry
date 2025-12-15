@@ -1,0 +1,53 @@
+# Build stage
+FROM golang:1.21-alpine AS builder
+
+# Install build dependencies
+RUN apk add --no-cache gcc musl-dev sqlite-dev
+
+WORKDIR /build
+
+# Copy go mod files
+COPY go.mod go.sum ./
+RUN go mod download
+
+# Copy source code
+COPY . .
+
+# Build the registry binary with CGO enabled for SQLite
+RUN CGO_ENABLED=1 GOOS=linux go build -ldflags="-s -w" -o registry ./cmd/registry
+
+# Runtime stage
+FROM alpine:latest
+
+# Install runtime dependencies
+RUN apk add --no-cache ca-certificates sqlite-libs tzdata
+
+# Create non-root user
+RUN addgroup -g 1000 clipilot && \
+    adduser -D -u 1000 -G clipilot clipilot
+
+WORKDIR /app
+
+# Copy binary from builder
+COPY --from=builder /build/registry .
+
+# Copy static assets and templates
+COPY --from=builder /build/server/static ./static
+COPY --from=builder /build/server/templates ./templates
+
+# Create data directory for uploads and database
+RUN mkdir -p /app/data/uploads && \
+    chown -R clipilot:clipilot /app
+
+# Switch to non-root user
+USER clipilot
+
+# Expose port
+EXPOSE 8080
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD wget --no-verbose --tries=1 --spider http://localhost:8080/health || exit 1
+
+# Run the registry server
+CMD ["./registry"]

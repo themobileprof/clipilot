@@ -339,6 +339,42 @@ nano ~/.clipilot/config.yaml
 clipilot --config=/path/to/config.yaml
 ```
 
+## 🌐 Module Registry (Self-Hosted)
+
+The CLIPilot Registry is a Docker-based web application for hosting and sharing modules within your organization or community.
+
+### Local Development
+
+```bash
+# Using Docker Compose (development only)
+docker-compose up -d
+
+# Or using Docker directly
+docker run -d -p 8080:8080 \
+  -v registry-data:/app/data \
+  -e REGISTRY_ADMIN_USER=admin \
+  -e REGISTRY_ADMIN_PASS=your_password \
+  themobileprof/clipilot-registry:latest
+```
+
+### Production Deployment
+
+For production, use:
+- **Kubernetes** (recommended for scale)
+- **Docker Swarm** (simpler alternative)
+- **Managed services** (AWS ECS, Google Cloud Run, Azure Container Instances)
+
+⚠️ **Docker Compose is not recommended for production deployments.**
+
+### Features
+- 🌐 Web UI for browsing and searching modules
+- 📦 REST API for programmatic access
+- 🔐 Basic authentication for uploads
+- 💾 SQLite database for module metadata
+- 🐳 Multi-arch Docker images (amd64/arm64)
+
+**Full documentation:** [docs/REGISTRY_DOCKER.md](docs/REGISTRY_DOCKER.md)
+
 ## 🔒 Security & Privacy
 
 - **No Auto-Execution**: All commands require explicit user confirmation
