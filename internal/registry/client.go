@@ -105,7 +105,9 @@ func (c *Client) SyncRegistry() error {
 		c.updateSyncStatus("failed", err.Error(), 0)
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
-	defer tx.Rollback()
+	defer func() {
+		_ = tx.Rollback() // Ignore error as we might commit
+	}()
 
 	now := time.Now().Unix()
 	cached := 0

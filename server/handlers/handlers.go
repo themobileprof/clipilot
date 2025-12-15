@@ -357,7 +357,12 @@ func (h *Handlers) APIUpload(w http.ResponseWriter, r *http.Request) {
 	err = h.db.QueryRow("SELECT id, file_path FROM modules WHERE name = ? AND version = ?",
 		module.Name, module.Version).Scan(&existingID, &existingFilePath)
 
-	moduleExists := err == nil
+	moduleExists := (err == nil)
+	if err != nil && err != sql.ErrNoRows {
+		log.Printf("Database error checking for duplicates: %v", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
 
 	if moduleExists && !overwrite {
 		w.Header().Set("Content-Type", "application/json")
