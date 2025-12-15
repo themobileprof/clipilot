@@ -7,7 +7,7 @@ import (
 	"os"
 	"path/filepath"
 
-	_ "github.com/mattn/go-sqlite3"
+	_ "modernc.org/sqlite"
 )
 
 //go:embed migration.sql
@@ -29,7 +29,7 @@ func New(dbPath string) (*DB, error) {
 
 	// Open database connection
 	// Note: SQLite is embedded in the binary via CGO, no system installation needed
-	conn, err := sql.Open("sqlite3", dbPath)
+	conn, err := sql.Open("sqlite", dbPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open database: %w\nNote: SQLite is embedded in CLIPilot, but the database file may be corrupted or inaccessible", err)
 	}

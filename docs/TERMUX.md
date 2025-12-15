@@ -29,21 +29,20 @@ Transform your Android phone into a powerful portable development environment:
 
 ### 🚀 One-Line Installation
 
-**The installer automatically builds from source for perfect Termux compatibility:**
+**Pure Go binary - downloads and runs instantly, no compilation needed!**
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/themobileprof/clipilot/main/install.sh | bash
 ```
 
-**What happens automatically:**
+**What happens:**
 - ✅ Detects your device architecture (ARM64/ARM32/x86_64)
-- ✅ Installs build dependencies (Go, git, clang) if needed
-- ✅ Builds CLIPilot natively on your device
+- ✅ Downloads pre-built binary (no compilation!)
 - ✅ Installs to `$PREFIX/bin` (already in PATH)
 - ✅ Copies all 66+ modules including Termux-optimized ones
 - ✅ Initializes database and configuration
 
-**Installation time:** 2-5 minutes depending on your device
+**Installation time:** 10-30 seconds (just download, no build!)
 
 **First steps after installation:**
 ```bash
@@ -59,9 +58,9 @@ clipilot search android
 clipilot search mobile
 ```
 
-### Manual Build (Fallback Only)
+### Manual Build (Optional)
 
-Only needed if the installer can't find a pre-built binary for your architecture:
+Only if you want to build from source (rarely needed):
 
 ```bash
 # Install build tools
@@ -85,18 +84,18 @@ clipilot --init --load modules
 
 ### Error: "cannot execute: required file not found"
 
-**Cause:** Wrong architecture binary was downloaded, or you manually downloaded an x86_64 binary on an ARM device.
+**This error should NOT happen anymore!** CLIPilot now uses pure Go (no CGO), so binaries work on all Termux devices.
 
-**Solution:** Use the installer script which auto-detects your architecture:
+**If you still see this:**
+1. Make sure you're using the latest installer:
 ```bash
 curl -fsSL https://raw.githubusercontent.com/themobileprof/clipilot/main/install.sh | bash
 ```
 
-If the installer can't find a pre-built binary, it will automatically build from source (requires Go):
+2. Verify the binary downloaded correctly:
 ```bash
-pkg install golang git clang
-# Then run the installer again
-curl -fsSL https://raw.githubusercontent.com/themobileprof/clipilot/main/install.sh | bash
+file $PREFIX/bin/clipilot
+# Should show: ELF 64-bit LSB executable, ARM aarch64 (or similar)
 ```
 
 ### Error: "go: command not found"
@@ -109,14 +108,16 @@ pkg update
 pkg install golang
 ```
 
-### Error: Build fails with CGO errors
+### Error: Build fails (if building from source)
 
-**Cause:** Missing C compiler (needed for SQLite).
+**Cause:** Missing Go compiler.
 
 **Solution:**
 ```bash
-pkg install clang
+pkg install golang git
 ```
+
+Note: CGO is not needed anymore - CLIPilot uses pure Go!
 
 ### Error: "pkg: command not found"
 

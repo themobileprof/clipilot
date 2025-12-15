@@ -81,38 +81,29 @@ BINARY_NAME="clipilot-${OS}-${ARCH}"
 echo "Detected platform: ${OS}-${ARCH}"
 echo ""
 
-# For Termux, prefer building from source for maximum compatibility
-if [ "$IS_TERMUX" = true ]; then
-    echo -e "${YELLOW}📱 Building from source for optimal Termux compatibility...${NC}"
-    BUILD_FROM_SOURCE=true
+# Get latest release info
+echo "📥 Fetching latest release..."
+RELEASE_DATA=""
+if command -v curl &> /dev/null; then
+    RELEASE_DATA=$(curl -fsSL "$GITHUB_API" 2>/dev/null || echo "")
+elif command -v wget &> /dev/null; then
+    RELEASE_DATA=$(wget -qO- "$GITHUB_API" 2>/dev/null || echo "")
 else
-    BUILD_FROM_SOURCE=false
-    # Get latest release info
-    echo "📥 Fetching latest release..."
-    RELEASE_DATA=""
-    if command -v curl &> /dev/null; then
-        RELEASE_DATA=$(curl -fsSL "$GITHUB_API" 2>/dev/null || echo "")
-    elif command -v wget &> /dev/null; then
-        RELEASE_DATA=$(wget -qO- "$GITHUB_API" 2>/dev/null || echo "")
-    else
-        echo -e "${RED}Error: curl or wget is required for installation${NC}"
-        exit 1
-    fi
-
-    # Check if release exists and has binaries
-    DOWNLOAD_URL=""
-    if [ -n "$RELEASE_DATA" ] && ! echo "$RELEASE_DATA" | grep -q "Not Found"; then
-        # Extract download URL for the binary
-        DOWNLOAD_URL=$(echo "$RELEASE_DATA" | grep "browser_download_url.*${BINARY_NAME}.tar.gz\"" | cut -d '"' -f 4)
-    fi
+    echo -e "${RED}Error: curl or wget is required for installation${NC}"
+    exit 1
 fi
 
-if [ "$BUILD_FROM_SOURCE" = true ] || [ -z "$DOWNLOAD_URL" ]; then
-    if [ "$IS_TERMUX" != true ]; then
-        echo -e "${YELLOW}⚠️  No pre-built binary found for ${OS}-${ARCH}${NC}"
-        echo "Building from source instead..."
-        echo ""
-    fi
+# Check if release exists and has binaries
+DOWNLOAD_URL=""
+if [ -n "$RELEASE_DATA" ] && ! echo "$RELEASE_DATA" | grep -q "Not Found"; then
+    # Extract download URL for the binary
+    DOWNLOAD_URL=$(echo "$RELEASE_DATA" | grep "browser_download_url.*${BINARY_NAME}.tar.gz\"" | cut -d '"' -f 4)
+fi
+
+if [ -z "$DOWNLOAD_URL" ]; then
+    echo -e "${YELLOW}⚠️  No pre-built binary found for ${OS}-${ARCH}${NC}"
+    echo "Building from source instead..."
+    echo ""
     
     # Check if Go is installed
     if ! command -v go &> /dev/null; then

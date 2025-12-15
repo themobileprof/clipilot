@@ -69,17 +69,17 @@ CLIPilot is an intelligent command-line assistant designed for developers and op
 
 #### 📱 Termux (Android) - Recommended for Mobile Devices
 
-CLIPilot is designed with Termux as a **first-class platform**! Installation is fully automated:
+CLIPilot is designed with Termux as a **first-class platform**! Pure Go binaries work instantly:
 
 ```bash
-# One-line install (automatically builds from source for best compatibility)
+# One-line install (downloads pre-built binary, no compilation!)
 curl -fsSL https://raw.githubusercontent.com/themobileprof/clipilot/main/install.sh | bash
 ```
 
 **What happens:**
 - ✅ Detects your device architecture automatically
-- ✅ Builds from source for perfect Termux compatibility
-- ✅ Auto-installs build dependencies (Go, git, clang)
+- ✅ Downloads pre-built binary (10-30 seconds!)
+- ✅ No compilation needed (pure Go, no CGO)
 - ✅ Installs to `$PREFIX/bin` 
 - ✅ Copies **all 66+ modules** including Termux-optimized ones
 - ✅ Sets up database and configuration
@@ -341,37 +341,44 @@ clipilot --config=/path/to/config.yaml
 
 ## 🌐 Module Registry (Self-Hosted)
 
-The CLIPilot Registry is a Docker-based web application for hosting and sharing modules within your organization or community.
+Host your own module registry for sharing CLIPilot modules within your organization.
 
-### Local Development
+### Quick Start
 
 ```bash
-# Using Docker Compose (development only)
-docker-compose up -d
+# Pull and run the Docker image
+docker pull themobileprof/clipilot-registry:latest
 
-# Or using Docker directly
-docker run -d -p 8080:8080 \
+docker run -d \
+  --name clipilot-registry \
+  -p 8080:8080 \
   -v registry-data:/app/data \
   -e REGISTRY_ADMIN_USER=admin \
   -e REGISTRY_ADMIN_PASS=your_password \
   themobileprof/clipilot-registry:latest
 ```
 
-### Production Deployment
+### Build Your Own
 
-For production, use:
-- **Kubernetes** (recommended for scale)
-- **Docker Swarm** (simpler alternative)
-- **Managed services** (AWS ECS, Google Cloud Run, Azure Container Instances)
+```bash
+# Build the image
+docker build -f Dockerfile.registry -t your-username/clipilot-registry .
 
-⚠️ **Docker Compose is not recommended for production deployments.**
+# Push to Docker Hub
+docker login
+docker push your-username/clipilot-registry:latest
+
+# Pull and run anywhere
+docker pull your-username/clipilot-registry:latest
+docker run -d -p 8080:8080 your-username/clipilot-registry:latest
+```
 
 ### Features
-- 🌐 Web UI for browsing and searching modules
-- 📦 REST API for programmatic access
+- 🌐 Web UI for browsing modules
+- 📦 REST API for module distribution
 - 🔐 Basic authentication for uploads
-- 💾 SQLite database for module metadata
-- 🐳 Multi-arch Docker images (amd64/arm64)
+- 💾 SQLite database (no external DB needed)
+- 🐳 Multi-arch support (amd64/arm64)
 
 **Full documentation:** [docs/REGISTRY_DOCKER.md](docs/REGISTRY_DOCKER.md)
 

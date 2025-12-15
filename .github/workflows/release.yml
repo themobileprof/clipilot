@@ -58,28 +58,9 @@ jobs:
 
       - name: Build binary
         run: |
-          # Set CGO and cross-compilation tools based on platform
-          if [ "${{ matrix.goos }}" = "linux" ]; then
-            if [ "${{ matrix.goarch }}" = "arm64" ]; then
-              sudo apt-get update -qq
-              sudo apt-get install -y gcc-aarch64-linux-gnu > /dev/null 2>&1
-              export CC=aarch64-linux-gnu-gcc
-              export CGO_ENABLED=1
-            elif [ "${{ matrix.goarch }}" = "arm" ]; then
-              sudo apt-get update -qq
-              sudo apt-get install -y gcc-arm-linux-gnueabihf > /dev/null 2>&1
-              export CC=arm-linux-gnueabihf-gcc
-              export CGO_ENABLED=1
-            else
-              export CGO_ENABLED=1
-            fi
-          elif [ "${{ matrix.goos }}" = "darwin" ]; then
-            # Disable CGO for macOS cross-compilation
-            export CGO_ENABLED=0
-          fi
-          
-          # Build the binary
-          GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} GOARM=${{ matrix.goarm }} \
+          # Pure Go build - no CGO needed (uses modernc.org/sqlite)
+          # Works on all platforms including Termux without compilation
+          CGO_ENABLED=0 GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} GOARM=${{ matrix.goarm }} \
             go build -ldflags="-s -w" -o ${{ matrix.name }} ./cmd/clipilot
           
           # Verify binary was created

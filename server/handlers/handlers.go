@@ -14,8 +14,8 @@ import (
 	"strings"
 	"time"
 
-	_ "github.com/mattn/go-sqlite3"
 	"gopkg.in/yaml.v3"
+	_ "modernc.org/sqlite"
 
 	"github.com/themobileprof/clipilot/pkg/models"
 	"github.com/themobileprof/clipilot/server/auth"
@@ -54,7 +54,7 @@ type ModuleRecord struct {
 
 func New(cfg Config) *Handlers {
 	// Initialize database
-	db, err := sql.Open("sqlite3", cfg.DBPath)
+	db, err := sql.Open("sqlite", cfg.DBPath)
 	if err != nil {
 		log.Fatalf("Failed to open database: %v", err)
 	}

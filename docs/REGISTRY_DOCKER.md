@@ -1,43 +1,16 @@
 # CLIPilot Registry Server
 
-The CLIPilot Registry is a web application for hosting and distributing CLIPilot modules. It's designed to run as a Docker container.
+The CLIPilot Registry is a web application for hosting and distributing CLIPilot modules. It runs as a Docker container.
 
-## Quick Start (Local Development)
+## Quick Start
 
-### Using Docker Compose (Development Only)
-
-⚠️ **Note:** Docker Compose is suitable for local development and testing, but not recommended for production. See [Production Deployment](#production-deployment) below.
-
-1. **Create environment file**:
-   ```bash
-   cat > .env << EOF
-   ADMIN_USER=admin
-   ADMIN_PASS=your_secure_password_here
-   EOF
-   ```
-
-2. **Start the registry**:
-   ```bash
-   docker-compose up -d
-   ```
-
-3. **Access the registry**:
-   - Web UI: http://localhost:8080
-   - API: http://localhost:8080/api/modules
-
-4. **View logs**:
-   ```bash
-   docker-compose logs -f registry
-   ```
-
-5. **Stop the registry**:
-   ```bash
-   docker-compose down
-   ```
-
-### Using Docker Run (Development)
+### Pull and Run the Image
 
 ```bash
+# Pull the image from Docker Hub
+docker pull themobileprof/clipilot-registry:latest
+
+# Run the container
 docker run -d \
   --name clipilot-registry \
   -p 8080:8080 \
@@ -45,19 +18,101 @@ docker run -d \
   -e REGISTRY_ADMIN_USER=admin \
   -e REGISTRY_ADMIN_PASS=changeme \
   themobileprof/clipilot-registry:latest
+
+# Access the registry
+# Web UI: http://localhost:8080
+# API: http://localhost:8080/api/modules
 ```
 
-## Building from Source
+**Basic Docker commands:**
+```bash
+# View logs
+docker logs -f clipilot-registry
+
+# Stop the container
+docker stop clipilot-registry
+
+# Start it again
+docker start clipilot-registry
+
+# Remove the container
+docker rm clipilot-registry
+
+# Remove the image
+docker rmi themobileprof/clipilot-registry:latest
+```
+
+## Build, Push, and Deploy Your Own
+
+### 1. Build the Image
 
 ```bash
-# Build the Docker image
-docker build -f Dockerfile.registry -t clipilot-registry .
+# Build from source
+docker build -f Dockerfile.registry -t your-username/clipilot-registry:latest .
 
-# Run the container
-docker run -d -p 8080:8080 -v registry-data:/app/data clipilot-registry
+# Build for multiple architectures (requires buildx)
+docker buildx build \
+  --platform linux/amd64,linux/arm64 \
+  -f Dockerfile.registry \
+  -t your-username/clipilot-registry:latest \
+  .
 ```
 
-## Environment Variables
+### 2. Push to Docker Hub
+
+```bash
+# Login to Docker Hub
+docker login
+
+# Push the image
+docker push your-username/clipilot-registry:latest
+
+# Push with version tag
+docker tag your-username/clipilot-registry:latest your-username/clipilot-registry:1.0.0
+docker push your-username/clipilot-registry:1.0.0
+```
+
+### 3. Pull and Run on Any Server
+
+```bash
+# On your production server
+docker pull your-username/clipilot-registry:latest
+
+# Run it
+docker run -d \
+  --name clipilot-registry \
+  --restart unless-stopped \
+  -p 8080:8080 \
+  -v /path/to/data:/app/data \
+  -e REGISTRY_ADMIN_USER=admin \
+  -e REGISTRY_ADMIN_PASS=your_secure_password \
+  your-username/clipilot-registry:latest
+```
+
+## Using Docker Compose (Optional)
+
+For easier local development:
+
+```bash
+# Create .env file
+cat > .env << EOF
+ADMIN_USER=admin
+ADMIN_PASS=your_password
+EOF
+
+# Start with compose
+docker-compose up -d
+
+# View logs
+docker-compose logs -f
+
+# Stop
+docker-compose down
+```
+
+## Configuration
+
+### Environment Variables
 
 | Variable | Default | Description |
 |----------|---------|-------------|
@@ -67,7 +122,7 @@ docker run -d -p 8080:8080 -v registry-data:/app/data clipilot-registry
 | `REGISTRY_DB_PATH` | `/app/data/registry.db` | SQLite database path |
 | `REGISTRY_UPLOAD_DIR` | `/app/data/uploads` | Module upload directory |
 
-## Data Persistence
+### Data Persistence
 
 The registry stores data in `/app/data`:
 - `registry.db` - SQLite database with module metadata
@@ -80,9 +135,34 @@ Mount this directory as a volume to persist data:
 
 ## Production Deployment
 
-⚠️ **Docker Compose is NOT recommended for production.** Use one of these production-grade solutions:
+For production, consider:
 
-### Option 1: Kubernetes (Recommended for Scale)
+### 1. Run with HTTPS (Nginx Reverse Proxy)
+
+```bash
+# Run registry on internal port
+docker run -d \
+  --name clipilot-registry \
+  --restart unless-stopped \
+  -p 127.0.0.1:8080:8080 \
+  -v /data/registry:/app/data \
+  -e REGISTRY_ADMIN_USER=admin \
+  -e REGISTRY_ADMIN_PASS=secure_password \
+  themobileprof/clipilot-registry:latest
+
+# Setup nginx with Let's Encrypt
+# (Use certbot or your preferred SSL tool)
+```
+
+### 2. Run Multiple Instances (Load Balancing)
+
+If you need high availability, run multiple containers behind a load balancer (nginx, HAProxy, or cloud load balancer).
+
+### 3. Use Container Orchestration
+
+For larger deployments, consider:
+
+#### Kubernetes
 
 **Deployment manifest:**
 
@@ -182,134 +262,13 @@ spec:
               number: 80
 ```
 
-### Option 2: Docker Swarm (Simpler Alternative)
+#### Cloud Managed Services
 
-```bash
-# Initialize swarm (on manager node)
-docker swarm init
+- **AWS ECS**: Run as Fargate tasks
+- **Google Cloud Run**: Fully managed, auto-scaling
+- **Azure Container Instances**: Simple container hosting
 
-# Create secrets
-echo "admin" | docker secret create registry_user -
-echo "secure_password_here" | docker secret create registry_pass -
-
-# Deploy stack
-docker stack deploy -c docker-stack.yml registry
-```
-
-**docker-stack.yml:**
-
-```yaml
-version: '3.8'
-
-services:
-  registry:
-    image: themobileprof/clipilot-registry:latest
-    ports:
-      - "8080:8080"
-    volumes:
-      - registry-data:/app/data
-    secrets:
-      - registry_user
-      - registry_pass
-    environment:
-      - REGISTRY_ADMIN_USER_FILE=/run/secrets/registry_user
-      - REGISTRY_ADMIN_PASS_FILE=/run/secrets/registry_pass
-    deploy:
-      replicas: 2
-      update_config:
-        parallelism: 1
-        delay: 10s
-      restart_policy:
-        condition: on-failure
-      resources:
-        limits:
-          cpus: '0.5'
-          memory: 512M
-        reservations:
-          cpus: '0.1'
-          memory: 128M
-    healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8080/health"]
-      interval: 30s
-      timeout: 3s
-      retries: 3
-
-  nginx:
-    image: nginx:alpine
-    ports:
-      - "443:443"
-      - "80:80"
-    volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./certs:/etc/nginx/certs:ro
-    depends_on:
-      - registry
-    deploy:
-      replicas: 1
-
-volumes:
-  registry-data:
-    driver: local
-
-secrets:
-  registry_user:
-    external: true
-  registry_pass:
-    external: true
-```
-
-### Option 3: Managed Container Services
-
-**AWS ECS/Fargate:**
-```bash
-# Create task definition
-aws ecs register-task-definition --cli-input-json file://task-definition.json
-
-# Create service
-aws ecs create-service \
-  --cluster production \
-  --service-name clipilot-registry \
-  --task-definition clipilot-registry:1 \
-  --desired-count 2 \
-  --launch-type FARGATE \
-  --load-balancers targetGroupArn=arn:aws:...,containerName=registry,containerPort=8080
-```
-
-**Google Cloud Run:**
-```bash
-gcloud run deploy clipilot-registry \
-  --image themobileprof/clipilot-registry:latest \
-  --platform managed \
-  --region us-central1 \
-  --allow-unauthenticated \
-  --set-env-vars REGISTRY_ADMIN_USER=admin \
-  --set-secrets REGISTRY_ADMIN_PASS=registry-password:latest
-```
-
-**Azure Container Instances:**
-```bash
-az container create \
-  --resource-group myResourceGroup \
-  --name clipilot-registry \
-  --image themobileprof/clipilot-registry:latest \
-  --dns-name-label clipilot-registry \
-  --ports 8080 \
-  --environment-variables REGISTRY_ADMIN_USER=admin \
-  --secure-environment-variables REGISTRY_ADMIN_PASS=secure_password
-```
-
-### Production Best Practices
-
-1. **Orchestration**: Use Kubernetes, Docker Swarm, or managed container services
-2. **HTTPS/TLS**: Always use reverse proxy (nginx, Traefik, cloud load balancer) with SSL
-3. **Secrets Management**: Use orchestrator secrets, not environment variables
-4. **High Availability**: Run multiple replicas with load balancing
-5. **Persistent Storage**: Use network volumes (NFS, EBS, Cloud Filestore)
-6. **Monitoring**: Implement health checks, logging, and metrics
-7. **Backups**: Automate regular backups of `/app/data`
-8. **Updates**: Use rolling updates with zero downtime
-9. **Resource Limits**: Set CPU/memory limits to prevent resource exhaustion
-10. **Security**: Run as non-root, scan images, keep updated
+See cloud provider docs for specifics.
 
 ## API Endpoints
 
