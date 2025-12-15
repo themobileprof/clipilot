@@ -1,0 +1,734 @@
+name: database_clients_install
+id: org.themobileprof.database_clients_install
+version: 1.0.0
+description: Install database client tools (PostgreSQL, MySQL, MongoDB, Redis, SQLite) with individual selection and Termux compatibility
+tags: [installer, composite, database, development, termux-compatible]
+provides:
+  - database_clients_installed
+requires:
+  - check_command_exists
+size_kb: 15
+
+flows:
+  main:
+    start: check_existing
+    steps:
+      check_existing:
+        type: action
+        message: "Checking installed database clients..."
+        command: |
+          echo "🗄️  Database Client Tools Installation"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo ""
+          echo "Checking current installation status:"
+          
+          if command -v psql >/dev/null 2>&1; then
+            echo "  ✅ PostgreSQL client: $(psql --version | head -1)"
+          else
+            echo "  ❌ PostgreSQL client: not installed"
+          fi
+          
+          if command -v mysql >/dev/null 2>&1; then
+            echo "  ✅ MySQL client: $(mysql --version | head -1)"
+          else
+            echo "  ❌ MySQL client: not installed"
+          fi
+          
+          if command -v mongosh >/dev/null 2>&1; then
+            echo "  ✅ MongoDB Shell (mongosh): $(mongosh --version | head -1)"
+          elif command -v mongo >/dev/null 2>&1; then
+            echo "  ✅ MongoDB client (legacy): $(mongo --version | head -1)"
+          else
+            echo "  ❌ MongoDB client: not installed"
+          fi
+          
+          if command -v redis-cli >/dev/null 2>&1; then
+            echo "  ✅ Redis client: $(redis-cli --version | head -1)"
+          else
+            echo "  ❌ Redis client: not installed"
+          fi
+          
+          if command -v sqlite3 >/dev/null 2>&1; then
+            echo "  ✅ SQLite: $(sqlite3 --version | head -1)"
+          else
+            echo "  ❌ SQLite: not installed"
+          fi
+          
+          if command -v mariadb >/dev/null 2>&1; then
+            echo "  ✅ MariaDB client: $(mariadb --version | head -1)"
+          else
+            echo "  ❌ MariaDB client: not installed"
+          fi
+          
+          echo ""
+        next: detect_environment
+
+      detect_environment:
+        type: action
+        message: "Detecting environment..."
+        command: |
+          if [ -n "$TERMUX_VERSION" ] || [ -d "$PREFIX" ]; then
+            echo "TERMUX"
+          else
+            echo "STANDARD"
+          fi
+        next: branch_environment
+
+      branch_environment:
+        type: branch
+        message: "Configuring for environment..."
+        based_on: last_output
+        branches:
+          TERMUX:
+            next: explain_process_termux
+          STANDARD:
+            next: explain_process_standard
+          default:
+            next: explain_process_standard
+
+      explain_process_termux:
+        type: action
+        message: "Starting installation wizard for Termux..."
+        command: |
+          echo "🗄️  Database Client Tools Installation Wizard (Termux)"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo ""
+          echo "📱 Termux Environment Detected"
+          echo ""
+          echo "⚠️  Termux Notes:"
+          echo "  • PostgreSQL: Full server + client available"
+          echo "  • MySQL/MariaDB: MariaDB available (MySQL replacement)"
+          echo "  • MongoDB: NOT available in Termux repositories"
+          echo "  • Redis: Full server + client available"
+          echo "  • SQLite: Fully supported"
+          echo ""
+          echo "You will be asked about each tool individually."
+          echo ""
+          
+          # Initialize selections
+          echo "NONE" > /tmp/clipilot_selected_db_clients.txt
+          echo "TERMUX" > /tmp/clipilot_db_env.txt
+        next: ask_postgresql
+
+      explain_process_standard:
+        type: action
+        message: "Starting installation wizard..."
+        command: |
+          echo "🗄️  Database Client Tools Installation Wizard"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo ""
+          echo "💻 Standard Linux Environment"
+          echo ""
+          echo "You will be asked about each tool individually."
+          echo "Client-only packages will be installed (no servers)."
+          echo ""
+          
+          # Initialize selections
+          echo "NONE" > /tmp/clipilot_selected_db_clients.txt
+          echo "STANDARD" > /tmp/clipilot_db_env.txt
+        next: ask_postgresql
+
+      ask_postgresql:
+        type: instruction
+        message: |
+          
+          🐘 PostgreSQL Client (psql)
+          ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+          • Command-line client for PostgreSQL databases
+          • Connect to local or remote PostgreSQL servers
+          • Execute SQL queries, import/export data
+          • Most popular open-source relational database
+          • Size: ~50 MB (Termux: includes server)
+          • Usage: psql -h host -U user -d database
+          
+        command: |
+          ENV=$(cat /tmp/clipilot_db_env.txt)
+          if [ "$ENV" = "TERMUX" ]; then
+            echo "  Note: Termux installs PostgreSQL server + client together"
+          fi
+          
+          read -p "Install PostgreSQL client? (Y/n): " -r
+          echo
+          if [[ ! $REPLY =~ ^[Nn]$ ]]; then
+            echo "postgresql" >> /tmp/clipilot_selected_db_clients.txt
+            echo "YES"
+          else
+            echo "NO"
+          fi
+        next: ask_mysql
+
+      ask_mysql:
+        type: instruction
+        message: |
+          
+          🐬 MySQL/MariaDB Client
+          ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+          • Command-line client for MySQL/MariaDB databases
+          • Connect to local or remote MySQL servers
+          • Execute SQL queries, manage databases
+          • Industry standard relational database
+          • Size: ~30 MB (Termux: MariaDB client)
+          • Usage: mysql -h host -u user -p database
+          
+        command: |
+          ENV=$(cat /tmp/clipilot_db_env.txt)
+          if [ "$ENV" = "TERMUX" ]; then
+            echo "  Note: Termux provides MariaDB (MySQL-compatible)"
+          fi
+          
+          read -p "Install MySQL/MariaDB client? (Y/n): " -r
+          echo
+          if [[ ! $REPLY =~ ^[Nn]$ ]]; then
+            echo "mysql" >> /tmp/clipilot_selected_db_clients.txt
+            echo "YES"
+          else
+            echo "NO"
+          fi
+        next: ask_mongodb
+
+      ask_mongodb:
+        type: instruction
+        message: |
+          
+          🍃 MongoDB Client (mongosh)
+          ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+          • Modern MongoDB Shell for NoSQL databases
+          • Connect to MongoDB servers (local/remote/cloud)
+          • JavaScript-based query interface
+          • Popular document-oriented database
+          • Size: ~30 MB
+          • Usage: mongosh "mongodb://host:27017"
+          
+        command: |
+          ENV=$(cat /tmp/clipilot_db_env.txt)
+          if [ "$ENV" = "TERMUX" ]; then
+            echo ""
+            echo "  ⚠️  WARNING: MongoDB is NOT available in Termux!"
+            echo "  You can use MongoDB Atlas (cloud) from any device."
+            echo ""
+            read -p "Skip MongoDB (recommended for Termux)? (Y/n): " -r
+            echo
+            if [[ $REPLY =~ ^[Nn]$ ]]; then
+              echo "mongodb" >> /tmp/clipilot_selected_db_clients.txt
+              echo "WILL_FAIL"
+            else
+              echo "SKIP"
+            fi
+          else
+            read -p "Install MongoDB client? (Y/n): " -r
+            echo
+            if [[ ! $REPLY =~ ^[Nn]$ ]]; then
+              echo "mongodb" >> /tmp/clipilot_selected_db_clients.txt
+              echo "YES"
+            else
+              echo "NO"
+            fi
+          fi
+        next: ask_redis
+
+      ask_redis:
+        type: instruction
+        message: |
+          
+          🔴 Redis Client (redis-cli)
+          ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+          • Command-line client for Redis
+          • Connect to Redis servers (key-value store)
+          • Execute Redis commands, manage cache
+          • Blazing fast in-memory data structure store
+          • Size: ~5 MB (Termux: includes server)
+          • Usage: redis-cli -h host -p 6379
+          
+        command: |
+          ENV=$(cat /tmp/clipilot_db_env.txt)
+          if [ "$ENV" = "TERMUX" ]; then
+            echo "  Note: Termux installs Redis server + client together"
+          fi
+          
+          read -p "Install Redis client? (Y/n): " -r
+          echo
+          if [[ ! $REPLY =~ ^[Nn]$ ]]; then
+            echo "redis" >> /tmp/clipilot_selected_db_clients.txt
+            echo "YES"
+          else
+            echo "NO"
+          fi
+        next: ask_sqlite
+
+      ask_sqlite:
+        type: instruction
+        message: |
+          
+          📦 SQLite
+          ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+          • Lightweight embedded SQL database
+          • Serverless, self-contained, zero-configuration
+          • Perfect for local data storage and testing
+          • Used by Android, iOS, browsers, and many apps
+          • Size: ~2 MB
+          • Usage: sqlite3 database.db
+          
+        command: |
+          read -p "Install SQLite? (Y/n): " -r
+          echo
+          if [[ ! $REPLY =~ ^[Nn]$ ]]; then
+            echo "sqlite" >> /tmp/clipilot_selected_db_clients.txt
+            echo "YES"
+          else
+            echo "NO"
+          fi
+        next: confirm_selections
+
+      confirm_selections:
+        type: action
+        message: "Reviewing selections..."
+        command: |
+          SELECTED=$(cat /tmp/clipilot_selected_db_clients.txt | grep -v "NONE" | sort | uniq)
+          ENV=$(cat /tmp/clipilot_db_env.txt)
+          
+          if [ -z "$SELECTED" ]; then
+            echo "NO_TOOLS_SELECTED"
+          else
+            echo ""
+            echo "✓ Selected database clients for installation:"
+            echo "$SELECTED" | while read tool; do
+              case "$tool" in
+                postgresql)
+                  if [ "$ENV" = "TERMUX" ]; then
+                    echo "  • PostgreSQL (server + client)"
+                  else
+                    echo "  • PostgreSQL client (psql)"
+                  fi
+                  ;;
+                mysql)
+                  if [ "$ENV" = "TERMUX" ]; then
+                    echo "  • MariaDB client (MySQL-compatible)"
+                  else
+                    echo "  • MySQL client"
+                  fi
+                  ;;
+                mongodb) echo "  • MongoDB Shell (mongosh)" ;;
+                redis)
+                  if [ "$ENV" = "TERMUX" ]; then
+                    echo "  • Redis (server + client)"
+                  else
+                    echo "  • Redis client (redis-cli)"
+                  fi
+                  ;;
+                sqlite) echo "  • SQLite" ;;
+              esac
+            done
+            echo ""
+            
+            if [ "$ENV" = "TERMUX" ]; then
+              echo "📱 Termux Note: Some packages include full servers"
+            fi
+            echo ""
+            echo "TOOLS_SELECTED"
+          fi
+        next: branch_selections
+
+      branch_selections:
+        type: branch
+        message: "Processing selections..."
+        based_on: last_output
+        branches:
+          NO_TOOLS_SELECTED:
+            next: installation_cancelled
+          TOOLS_SELECTED:
+            next: detect_package_manager
+          default:
+            next: installation_cancelled
+
+      installation_cancelled:
+        type: terminal
+        message: |
+          
+          ⚠️  No database clients selected for installation.
+          
+          You can install database clients later by running:
+            clipilot run database_clients_install
+
+      detect_package_manager:
+        type: action
+        message: "Detecting package manager..."
+        command: |
+          if [ -n "$TERMUX_VERSION" ] || [ -d "$PREFIX" ]; then
+            echo "TERMUX"
+          elif command -v apt-get >/dev/null 2>&1; then
+            echo "APT"
+          elif command -v dnf >/dev/null 2>&1; then
+            echo "DNF"
+          elif command -v yum >/dev/null 2>&1; then
+            echo "YUM"
+          elif command -v pacman >/dev/null 2>&1; then
+            echo "PACMAN"
+          elif command -v brew >/dev/null 2>&1; then
+            echo "BREW"
+          else
+            echo "UNKNOWN"
+          fi
+        next: branch_package_manager
+
+      branch_package_manager:
+        type: branch
+        message: "Selecting installation method..."
+        based_on: last_output
+        branches:
+          TERMUX:
+            next: install_termux
+          APT:
+            next: install_apt
+          DNF:
+            next: install_dnf
+          YUM:
+            next: install_yum
+          PACMAN:
+            next: install_pacman
+          BREW:
+            next: install_brew
+          default:
+            next: install_unsupported
+
+      install_termux:
+        type: action
+        message: "Installing selected database clients for Termux..."
+        command: |
+          echo "Installing database clients for Termux..."
+          echo ""
+          
+          SELECTED=$(cat /tmp/clipilot_selected_db_clients.txt | grep -v "NONE" | sort | uniq)
+          
+          echo "$SELECTED" | while read tool; do
+            case "$tool" in
+              postgresql)
+                echo "📦 Installing PostgreSQL (server + client)..."
+                pkg install -y postgresql
+                echo "  Setting up PostgreSQL..."
+                mkdir -p $PREFIX/var/lib/postgresql
+                initdb $PREFIX/var/lib/postgresql 2>/dev/null || echo "  Database already initialized"
+                echo ""
+                echo "  To start PostgreSQL server:"
+                echo "    pg_ctl -D \$PREFIX/var/lib/postgresql start"
+                ;;
+              mysql)
+                echo "📦 Installing MariaDB client..."
+                pkg install -y mariadb
+                echo "  MariaDB client installed (mysql and mariadb commands)"
+                ;;
+              mongodb)
+                echo "⚠️  Skipping MongoDB (not available in Termux)"
+                echo "  Consider using MongoDB Atlas (cloud): https://www.mongodb.com/atlas"
+                ;;
+              redis)
+                echo "📦 Installing Redis (server + client)..."
+                pkg install -y redis
+                echo ""
+                echo "  To start Redis server:"
+                echo "    redis-server \$PREFIX/etc/redis.conf &"
+                ;;
+              sqlite)
+                echo "📦 Installing SQLite..."
+                pkg install -y sqlite
+                ;;
+            esac
+            echo ""
+          done
+          
+          rm -f /tmp/clipilot_selected_db_clients.txt
+          rm -f /tmp/clipilot_db_env.txt
+          echo "✅ Selected database clients installed successfully!"
+        next: show_summary
+
+      install_apt:
+        type: action
+        message: "Installing selected database clients..."
+        command: |
+          echo "Installing database clients (Debian/Ubuntu)..."
+          echo ""
+          
+          sudo apt-get update
+          echo ""
+          
+          SELECTED=$(cat /tmp/clipilot_selected_db_clients.txt | grep -v "NONE" | sort | uniq)
+          
+          echo "$SELECTED" | while read tool; do
+            case "$tool" in
+              postgresql)
+                echo "📦 Installing PostgreSQL client..."
+                sudo apt-get install -y postgresql-client
+                ;;
+              mysql)
+                echo "📦 Installing MySQL client..."
+                sudo apt-get install -y mysql-client
+                ;;
+              mongodb)
+                echo "📦 Installing MongoDB Shell..."
+                # MongoDB requires special repo setup on Debian/Ubuntu
+                if ! command -v mongosh >/dev/null 2>&1; then
+                  echo "  Installing from MongoDB repository..."
+                  wget -qO - https://www.mongodb.org/static/pgp/server-7.0.asc | sudo apt-key add - 2>/dev/null
+                  echo "deb [ arch=amd64,arm64 ] https://repo.mongodb.org/apt/ubuntu $(lsb_release -cs)/mongodb-org/7.0 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-7.0.list >/dev/null 2>&1
+                  sudo apt-get update 2>/dev/null
+                  sudo apt-get install -y mongodb-mongosh 2>/dev/null || echo "  Note: Manual installation may be required - visit https://www.mongodb.com/try/download/shell"
+                fi
+                ;;
+              redis)
+                echo "📦 Installing Redis client..."
+                sudo apt-get install -y redis-tools
+                ;;
+              sqlite)
+                echo "📦 Installing SQLite..."
+                sudo apt-get install -y sqlite3
+                ;;
+            esac
+            echo ""
+          done
+          
+          rm -f /tmp/clipilot_selected_db_clients.txt
+          rm -f /tmp/clipilot_db_env.txt
+          echo "✅ Selected database clients installed successfully!"
+        next: show_summary
+
+      install_dnf:
+        type: action
+        message: "Installing selected database clients..."
+        command: |
+          echo "Installing database clients (Fedora/RHEL)..."
+          echo ""
+          
+          SELECTED=$(cat /tmp/clipilot_selected_db_clients.txt | grep -v "NONE" | sort | uniq)
+          
+          echo "$SELECTED" | while read tool; do
+            case "$tool" in
+              postgresql)
+                echo "📦 Installing PostgreSQL client..."
+                sudo dnf install -y postgresql
+                ;;
+              mysql)
+                echo "📦 Installing MySQL client..."
+                sudo dnf install -y mysql
+                ;;
+              mongodb)
+                echo "📦 Installing MongoDB Shell..."
+                sudo dnf install -y mongodb-mongosh 2>/dev/null || echo "  Note: Visit https://www.mongodb.com/try/download/shell for manual installation"
+                ;;
+              redis)
+                echo "📦 Installing Redis client..."
+                sudo dnf install -y redis
+                ;;
+              sqlite)
+                echo "📦 Installing SQLite..."
+                sudo dnf install -y sqlite
+                ;;
+            esac
+            echo ""
+          done
+          
+          rm -f /tmp/clipilot_selected_db_clients.txt
+          rm -f /tmp/clipilot_db_env.txt
+          echo "✅ Selected database clients installed successfully!"
+        next: show_summary
+
+      install_yum:
+        type: action
+        message: "Installing selected database clients..."
+        command: |
+          echo "Installing database clients (CentOS/RHEL)..."
+          echo ""
+          
+          SELECTED=$(cat /tmp/clipilot_selected_db_clients.txt | grep -v "NONE" | sort | uniq)
+          
+          echo "$SELECTED" | while read tool; do
+            case "$tool" in
+              postgresql)
+                echo "📦 Installing PostgreSQL client..."
+                sudo yum install -y postgresql
+                ;;
+              mysql)
+                echo "📦 Installing MySQL client..."
+                sudo yum install -y mysql
+                ;;
+              mongodb)
+                echo "📦 Installing MongoDB Shell..."
+                sudo yum install -y mongodb-mongosh 2>/dev/null || echo "  Note: Visit https://www.mongodb.com/try/download/shell for manual installation"
+                ;;
+              redis)
+                echo "📦 Installing Redis..."
+                sudo yum install -y redis
+                ;;
+              sqlite)
+                echo "📦 Installing SQLite..."
+                sudo yum install -y sqlite
+                ;;
+            esac
+            echo ""
+          done
+          
+          rm -f /tmp/clipilot_selected_db_clients.txt
+          rm -f /tmp/clipilot_db_env.txt
+          echo "✅ Selected database clients installed successfully!"
+        next: show_summary
+
+      install_pacman:
+        type: action
+        message: "Installing selected database clients..."
+        command: |
+          echo "Installing database clients (Arch Linux)..."
+          echo ""
+          
+          SELECTED=$(cat /tmp/clipilot_selected_db_clients.txt | grep -v "NONE" | sort | uniq)
+          
+          echo "$SELECTED" | while read tool; do
+            case "$tool" in
+              postgresql)
+                echo "📦 Installing PostgreSQL client..."
+                sudo pacman -S --noconfirm postgresql-libs
+                ;;
+              mysql)
+                echo "📦 Installing MySQL client..."
+                sudo pacman -S --noconfirm mariadb-clients
+                ;;
+              mongodb)
+                echo "📦 Installing MongoDB Shell..."
+                sudo pacman -S --noconfirm mongodb-tools mongosh 2>/dev/null || echo "  Note: May need to install from AUR"
+                ;;
+              redis)
+                echo "📦 Installing Redis..."
+                sudo pacman -S --noconfirm redis
+                ;;
+              sqlite)
+                echo "📦 Installing SQLite..."
+                sudo pacman -S --noconfirm sqlite
+                ;;
+            esac
+            echo ""
+          done
+          
+          rm -f /tmp/clipilot_selected_db_clients.txt
+          rm -f /tmp/clipilot_db_env.txt
+          echo "✅ Selected database clients installed successfully!"
+        next: show_summary
+
+      install_brew:
+        type: action
+        message: "Installing selected database clients..."
+        command: |
+          echo "Installing database clients (macOS)..."
+          echo ""
+          
+          SELECTED=$(cat /tmp/clipilot_selected_db_clients.txt | grep -v "NONE" | sort | uniq)
+          
+          echo "$SELECTED" | while read tool; do
+            case "$tool" in
+              postgresql)
+                echo "📦 Installing PostgreSQL client..."
+                brew install libpq
+                echo "  Note: Add /opt/homebrew/opt/libpq/bin to PATH"
+                ;;
+              mysql)
+                echo "📦 Installing MySQL client..."
+                brew install mysql-client
+                echo "  Note: Add /opt/homebrew/opt/mysql-client/bin to PATH"
+                ;;
+              mongodb)
+                echo "📦 Installing MongoDB Shell..."
+                brew install mongosh
+                ;;
+              redis)
+                echo "📦 Installing Redis..."
+                brew install redis
+                ;;
+              sqlite)
+                echo "📦 Installing SQLite..."
+                brew install sqlite3
+                ;;
+            esac
+            echo ""
+          done
+          
+          rm -f /tmp/clipilot_selected_db_clients.txt
+          rm -f /tmp/clipilot_db_env.txt
+          echo "✅ Selected database clients installed successfully!"
+        next: show_summary
+
+      install_unsupported:
+        type: terminal
+        message: |
+          
+          ❌ Unsupported package manager
+          
+          Please install database clients manually using your system's package manager.
+          
+          Download links:
+          • PostgreSQL: https://www.postgresql.org/download/
+          • MySQL: https://dev.mysql.com/downloads/
+          • MongoDB Shell: https://www.mongodb.com/try/download/shell
+          • Redis: https://redis.io/download
+          • SQLite: https://www.sqlite.org/download.html
+
+      show_summary:
+        type: terminal
+        message: |
+          
+          ==========================================
+            Database Clients Installed!
+          ==========================================
+          
+          Installed clients:
+            • PostgreSQL: $(command -v psql >/dev/null 2>&1 && echo "✅ $(psql --version)" || echo "❌ not installed")
+            • MySQL/MariaDB: $(command -v mysql >/dev/null 2>&1 && echo "✅ $(mysql --version)" || echo "❌ not installed")
+            • MongoDB: $(command -v mongosh >/dev/null 2>&1 && echo "✅ $(mongosh --version)" || (command -v mongo >/dev/null 2>&1 && echo "✅ legacy mongo client" || echo "❌ not installed"))
+            • Redis: $(command -v redis-cli >/dev/null 2>&1 && echo "✅ $(redis-cli --version)" || echo "❌ not installed")
+            • SQLite: $(command -v sqlite3 >/dev/null 2>&1 && echo "✅ $(sqlite3 --version)" || echo "❌ not installed")
+          
+          Quick connection examples:
+            • PostgreSQL:  psql -h localhost -U postgres -d mydb
+            • MySQL:       mysql -h localhost -u root -p mydb
+            • MongoDB:     mongosh "mongodb://localhost:27017/mydb"
+            • Redis:       redis-cli -h localhost -p 6379
+            • SQLite:      sqlite3 database.db
+          
+          Common operations:
+            📊 List databases:
+              PostgreSQL:  \l (in psql)
+              MySQL:       SHOW DATABASES;
+              MongoDB:     show dbs
+              Redis:       INFO keyspace
+              SQLite:      .databases
+          
+            🔍 Connect to database:
+              PostgreSQL:  \c database_name
+              MySQL:       USE database_name;
+              MongoDB:     use database_name
+              Redis:       SELECT 0
+              SQLite:      (specify file: sqlite3 mydb.db)
+          
+            📝 Execute SQL file:
+              PostgreSQL:  psql -f script.sql
+              MySQL:       mysql < script.sql
+              SQLite:      sqlite3 db.db < script.sql
+          
+          Environment-specific notes:
+            $(if [ -n "$TERMUX_VERSION" ] || [ -d "$PREFIX" ]; then
+              echo "📱 Termux: PostgreSQL/Redis include full servers"
+              echo "   Start servers before connecting to localhost"
+              echo "   PostgreSQL: pg_ctl -D \$PREFIX/var/lib/postgresql start"
+              echo "   Redis: redis-server \$PREFIX/etc/redis.conf &"
+            else
+              echo "💻 Standard Linux: Client-only packages installed"
+              echo "   Connect to remote databases or install servers separately"
+            fi)
+          
+          Connection strings:
+            PostgreSQL:  postgresql://user:pass@host:5432/dbname
+            MySQL:       mysql://user:pass@host:3306/dbname
+            MongoDB:     mongodb://user:pass@host:27017/dbname
+            Redis:       redis://user:pass@host:6379/0
+          
+          🔒 Security tip: Never hardcode credentials in code!
+               Use environment variables or config files.
+
+metadata:
+  author: TheMobileProf
+  license: MIT

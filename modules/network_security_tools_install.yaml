@@ -1,0 +1,745 @@
+name: network_security_tools_install
+id: org.themobileprof.network_security_tools_install
+version: 1.0.0
+description: Install network and security tools (nmap, netcat, tcpdump, ngrep, iftop, iperf3) with individual selection
+tags: [installer, composite, network-ops, security, system-ops]
+provides:
+  - network_security_tools_installed
+requires:
+  - check_command_exists
+size_kb: 12
+
+flows:
+  main:
+    start: check_existing
+    steps:
+      check_existing:
+        type: action
+        message: "Checking installed network and security tools..."
+        command: |
+          echo "🔐 Network & Security Tools Installation"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo ""
+          echo "Checking current installation status:"
+          
+          if command -v nmap >/dev/null 2>&1; then
+            echo "  ✅ nmap: $(nmap --version 2>&1 | head -1)"
+          else
+            echo "  ❌ nmap: not installed"
+          fi
+          
+          if command -v nc >/dev/null 2>&1 || command -v netcat >/dev/null 2>&1; then
+            echo "  ✅ netcat: installed"
+          else
+            echo "  ❌ netcat: not installed"
+          fi
+          
+          if command -v socat >/dev/null 2>&1; then
+            echo "  ✅ socat: $(socat -V 2>&1 | head -1)"
+          else
+            echo "  ❌ socat: not installed"
+          fi
+          
+          if command -v tcpdump >/dev/null 2>&1; then
+            echo "  ✅ tcpdump: $(tcpdump --version 2>&1 | head -1)"
+          else
+            echo "  ❌ tcpdump: not installed"
+          fi
+          
+          if command -v ngrep >/dev/null 2>&1; then
+            echo "  ✅ ngrep: $(ngrep -V 2>&1 | head -1)"
+          else
+            echo "  ❌ ngrep: not installed"
+          fi
+          
+          if command -v iftop >/dev/null 2>&1; then
+            echo "  ✅ iftop: installed"
+          else
+            echo "  ❌ iftop: not installed"
+          fi
+          
+          if command -v iperf3 >/dev/null 2>&1; then
+            echo "  ✅ iperf3: $(iperf3 --version 2>&1 | head -1)"
+          else
+            echo "  ❌ iperf3: not installed"
+          fi
+          
+          if command -v traceroute >/dev/null 2>&1; then
+            echo "  ✅ traceroute: installed"
+          else
+            echo "  ❌ traceroute: not installed"
+          fi
+          
+          echo ""
+        next: explain_process
+
+      explain_process:
+        type: action
+        message: "Starting installation wizard..."
+        command: |
+          echo "🛡️  Network & Security Tools Installation Wizard"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo ""
+          echo "⚠️  Note: Some tools may require root/sudo privileges to run."
+          echo "You will be asked about each tool individually."
+          echo ""
+          
+          # Initialize selections
+          echo "NONE" > /tmp/clipilot_selected_net_tools.txt
+        next: ask_nmap
+
+      ask_nmap:
+        type: instruction
+        message: |
+          
+          🗺️  nmap
+          ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+          • Network exploration and security auditing tool
+          • Port scanning, OS detection, service discovery
+          • Find open ports and services on networks
+          • Essential for network administrators and security professionals
+          • Size: ~10 MB
+          • Usage: nmap -sV 192.168.1.1 (requires sudo for some scans)
+          
+        command: |
+          read -p "Install nmap? (Y/n): " -r
+          echo
+          if [[ ! $REPLY =~ ^[Nn]$ ]]; then
+            echo "nmap" >> /tmp/clipilot_selected_net_tools.txt
+            echo "YES"
+          else
+            echo "NO"
+          fi
+        next: ask_netcat
+
+      ask_netcat:
+        type: instruction
+        message: |
+          
+          🔌 netcat (nc)
+          ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+          • "Swiss Army knife" for TCP/IP networking
+          • Create TCP/UDP connections, listen on ports
+          • Transfer files, debug network connections
+          • Simple port scanning and banner grabbing
+          • Size: ~1 MB
+          • Usage: nc -l 8080 (listen) or nc host 80 (connect)
+          
+        command: |
+          read -p "Install netcat? (Y/n): " -r
+          echo
+          if [[ ! $REPLY =~ ^[Nn]$ ]]; then
+            echo "netcat" >> /tmp/clipilot_selected_net_tools.txt
+            echo "YES"
+          else
+            echo "NO"
+          fi
+        next: ask_socat
+
+      ask_socat:
+        type: instruction
+        message: |
+          
+          🔗 socat
+          ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+          • Advanced netcat replacement
+          • Bidirectional data relay between streams
+          • Support for SSL, proxies, and complex networking
+          • Port forwarding, tunneling
+          • Size: ~3 MB
+          • Usage: socat TCP-LISTEN:8080,fork TCP:target:80
+          
+        command: |
+          read -p "Install socat? (Y/n): " -r
+          echo
+          if [[ ! $REPLY =~ ^[Nn]$ ]]; then
+            echo "socat" >> /tmp/clipilot_selected_net_tools.txt
+            echo "YES"
+          else
+            echo "NO"
+          fi
+        next: ask_tcpdump
+
+      ask_tcpdump:
+        type: instruction
+        message: |
+          
+          📡 tcpdump
+          ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+          • Powerful packet analyzer/sniffer
+          • Capture and analyze network traffic
+          • Debug network issues, inspect packets
+          • Essential for network troubleshooting
+          • Size: ~5 MB
+          • Usage: sudo tcpdump -i eth0 port 80 (requires root)
+          
+        command: |
+          read -p "Install tcpdump? (Y/n): " -r
+          echo
+          if [[ ! $REPLY =~ ^[Nn]$ ]]; then
+            echo "tcpdump" >> /tmp/clipilot_selected_net_tools.txt
+            echo "YES"
+          else
+            echo "NO"
+          fi
+        next: ask_ngrep
+
+      ask_ngrep:
+        type: instruction
+        message: |
+          
+          🔍 ngrep
+          ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+          • Network packet analyzer with grep-like interface
+          • Search for patterns in network traffic
+          • Easier to use than tcpdump for simple tasks
+          • Real-time packet content inspection
+          • Size: ~2 MB
+          • Usage: sudo ngrep -q 'GET|POST' (requires root)
+          
+        command: |
+          read -p "Install ngrep? (Y/n): " -r
+          echo
+          if [[ ! $REPLY =~ ^[Nn]$ ]]; then
+            echo "ngrep" >> /tmp/clipilot_selected_net_tools.txt
+            echo "YES"
+          else
+            echo "NO"
+          fi
+        next: ask_iftop
+
+      ask_iftop:
+        type: instruction
+        message: |
+          
+          📊 iftop
+          ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+          • Real-time network bandwidth monitor
+          • Display bandwidth usage per connection
+          • See which hosts are using bandwidth
+          • Interactive ncurses interface
+          • Size: ~1 MB
+          • Usage: sudo iftop -i eth0 (requires root)
+          
+        command: |
+          read -p "Install iftop? (Y/n): " -r
+          echo
+          if [[ ! $REPLY =~ ^[Nn]$ ]]; then
+            echo "iftop" >> /tmp/clipilot_selected_net_tools.txt
+            echo "YES"
+          else
+            echo "NO"
+          fi
+        next: ask_iperf3
+
+      ask_iperf3:
+        type: instruction
+        message: |
+          
+          ⚡ iperf3
+          ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+          • Network performance testing tool
+          • Measure bandwidth, latency, jitter
+          • TCP and UDP testing
+          • Client-server architecture for testing
+          • Size: ~2 MB
+          • Usage: iperf3 -s (server) or iperf3 -c host (client)
+          
+        command: |
+          read -p "Install iperf3? (Y/n): " -r
+          echo
+          if [[ ! $REPLY =~ ^[Nn]$ ]]; then
+            echo "iperf3" >> /tmp/clipilot_selected_net_tools.txt
+            echo "YES"
+          else
+            echo "NO"
+          fi
+        next: ask_traceroute
+
+      ask_traceroute:
+        type: instruction
+        message: |
+          
+          🛣️  traceroute
+          ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+          • Trace the route packets take to a destination
+          • Identify network hops and latency
+          • Diagnose routing issues
+          • Essential network diagnostic tool
+          • Size: ~1 MB
+          • Usage: traceroute google.com
+          
+        command: |
+          read -p "Install traceroute? (Y/n): " -r
+          echo
+          if [[ ! $REPLY =~ ^[Nn]$ ]]; then
+            echo "traceroute" >> /tmp/clipilot_selected_net_tools.txt
+            echo "YES"
+          else
+            echo "NO"
+          fi
+        next: confirm_selections
+
+      confirm_selections:
+        type: action
+        message: "Reviewing selections..."
+        command: |
+          SELECTED=$(cat /tmp/clipilot_selected_net_tools.txt | grep -v "NONE" | sort | uniq)
+          
+          if [ -z "$SELECTED" ]; then
+            echo "NO_TOOLS_SELECTED"
+          else
+            echo ""
+            echo "✓ Selected tools for installation:"
+            echo "$SELECTED" | while read tool; do
+              case "$tool" in
+                nmap) echo "  • nmap (network scanner)" ;;
+                netcat) echo "  • netcat (networking utility)" ;;
+                socat) echo "  • socat (advanced netcat)" ;;
+                tcpdump) echo "  • tcpdump (packet analyzer)" ;;
+                ngrep) echo "  • ngrep (network grep)" ;;
+                iftop) echo "  • iftop (bandwidth monitor)" ;;
+                iperf3) echo "  • iperf3 (performance test)" ;;
+                traceroute) echo "  • traceroute (route tracer)" ;;
+              esac
+            done
+            echo ""
+            echo "⚠️  Note: Some tools require sudo/root privileges to use."
+            echo ""
+            echo "TOOLS_SELECTED"
+          fi
+        next: branch_selections
+
+      branch_selections:
+        type: branch
+        message: "Processing selections..."
+        based_on: last_output
+        branches:
+          NO_TOOLS_SELECTED:
+            next: installation_cancelled
+          TOOLS_SELECTED:
+            next: detect_package_manager
+          default:
+            next: installation_cancelled
+
+      installation_cancelled:
+        type: terminal
+        message: |
+          
+          ⚠️  No tools selected for installation.
+          
+          You can install network/security tools later by running:
+            clipilot run network_security_tools_install
+
+      detect_package_manager:
+        type: action
+        message: "Detecting package manager..."
+        command: |
+          if [ -n "$TERMUX_VERSION" ] || [ -d "$PREFIX" ]; then
+            echo "TERMUX"
+          elif command -v apt-get >/dev/null 2>&1; then
+            echo "APT"
+          elif command -v dnf >/dev/null 2>&1; then
+            echo "DNF"
+          elif command -v yum >/dev/null 2>&1; then
+            echo "YUM"
+          elif command -v pacman >/dev/null 2>&1; then
+            echo "PACMAN"
+          elif command -v brew >/dev/null 2>&1; then
+            echo "BREW"
+          else
+            echo "UNKNOWN"
+          fi
+        next: branch_package_manager
+
+      branch_package_manager:
+        type: branch
+        message: "Selecting installation method..."
+        based_on: last_output
+        branches:
+          TERMUX:
+            next: install_termux
+          APT:
+            next: install_apt
+          DNF:
+            next: install_dnf
+          YUM:
+            next: install_yum
+          PACMAN:
+            next: install_pacman
+          BREW:
+            next: install_brew
+          default:
+            next: install_unsupported
+
+      install_termux:
+        type: action
+        message: "Installing selected tools..."
+        command: |
+          echo "Installing network & security tools for Termux..."
+          echo ""
+          
+          SELECTED=$(cat /tmp/clipilot_selected_net_tools.txt | grep -v "NONE" | sort | uniq)
+          
+          echo "$SELECTED" | while read tool; do
+            case "$tool" in
+              nmap)
+                echo "📦 Installing nmap..."
+                pkg install -y nmap
+                ;;
+              netcat)
+                echo "📦 Installing netcat..."
+                pkg install -y netcat
+                ;;
+              socat)
+                echo "📦 Installing socat..."
+                pkg install -y socat
+                ;;
+              tcpdump)
+                echo "📦 Installing tcpdump..."
+                pkg install -y tcpdump
+                ;;
+              ngrep)
+                echo "📦 Installing ngrep..."
+                pkg install -y ngrep
+                ;;
+              iftop)
+                echo "📦 Installing iftop..."
+                pkg install -y iftop
+                ;;
+              iperf3)
+                echo "📦 Installing iperf3..."
+                pkg install -y iperf3
+                ;;
+              traceroute)
+                echo "📦 Installing traceroute..."
+                pkg install -y inetutils
+                ;;
+            esac
+            echo ""
+          done
+          
+          rm -f /tmp/clipilot_selected_net_tools.txt
+          echo "✅ Selected tools installed successfully!"
+        next: show_summary
+
+      install_apt:
+        type: action
+        message: "Installing selected tools..."
+        command: |
+          echo "Installing network & security tools (Debian/Ubuntu)..."
+          echo ""
+          
+          sudo apt-get update
+          echo ""
+          
+          SELECTED=$(cat /tmp/clipilot_selected_net_tools.txt | grep -v "NONE" | sort | uniq)
+          
+          echo "$SELECTED" | while read tool; do
+            case "$tool" in
+              nmap)
+                echo "📦 Installing nmap..."
+                sudo apt-get install -y nmap
+                ;;
+              netcat)
+                echo "📦 Installing netcat..."
+                sudo apt-get install -y netcat-openbsd
+                ;;
+              socat)
+                echo "📦 Installing socat..."
+                sudo apt-get install -y socat
+                ;;
+              tcpdump)
+                echo "📦 Installing tcpdump..."
+                sudo apt-get install -y tcpdump
+                ;;
+              ngrep)
+                echo "📦 Installing ngrep..."
+                sudo apt-get install -y ngrep
+                ;;
+              iftop)
+                echo "📦 Installing iftop..."
+                sudo apt-get install -y iftop
+                ;;
+              iperf3)
+                echo "📦 Installing iperf3..."
+                sudo apt-get install -y iperf3
+                ;;
+              traceroute)
+                echo "📦 Installing traceroute..."
+                sudo apt-get install -y traceroute
+                ;;
+            esac
+            echo ""
+          done
+          
+          rm -f /tmp/clipilot_selected_net_tools.txt
+          echo "✅ Selected tools installed successfully!"
+        next: show_summary
+
+      install_dnf:
+        type: action
+        message: "Installing selected tools..."
+        command: |
+          echo "Installing network & security tools (Fedora/RHEL)..."
+          echo ""
+          
+          SELECTED=$(cat /tmp/clipilot_selected_net_tools.txt | grep -v "NONE" | sort | uniq)
+          
+          echo "$SELECTED" | while read tool; do
+            case "$tool" in
+              nmap)
+                echo "📦 Installing nmap..."
+                sudo dnf install -y nmap
+                ;;
+              netcat)
+                echo "📦 Installing netcat..."
+                sudo dnf install -y nc
+                ;;
+              socat)
+                echo "📦 Installing socat..."
+                sudo dnf install -y socat
+                ;;
+              tcpdump)
+                echo "📦 Installing tcpdump..."
+                sudo dnf install -y tcpdump
+                ;;
+              ngrep)
+                echo "📦 Installing ngrep..."
+                sudo dnf install -y ngrep
+                ;;
+              iftop)
+                echo "📦 Installing iftop..."
+                sudo dnf install -y iftop
+                ;;
+              iperf3)
+                echo "📦 Installing iperf3..."
+                sudo dnf install -y iperf3
+                ;;
+              traceroute)
+                echo "📦 Installing traceroute..."
+                sudo dnf install -y traceroute
+                ;;
+            esac
+            echo ""
+          done
+          
+          rm -f /tmp/clipilot_selected_net_tools.txt
+          echo "✅ Selected tools installed successfully!"
+        next: show_summary
+
+      install_yum:
+        type: action
+        message: "Installing selected tools..."
+        command: |
+          echo "Installing network & security tools (CentOS/RHEL)..."
+          echo ""
+          
+          SELECTED=$(cat /tmp/clipilot_selected_net_tools.txt | grep -v "NONE" | sort | uniq)
+          
+          echo "$SELECTED" | while read tool; do
+            case "$tool" in
+              nmap)
+                echo "📦 Installing nmap..."
+                sudo yum install -y nmap
+                ;;
+              netcat)
+                echo "📦 Installing netcat..."
+                sudo yum install -y nc
+                ;;
+              socat)
+                echo "📦 Installing socat..."
+                sudo yum install -y socat
+                ;;
+              tcpdump)
+                echo "📦 Installing tcpdump..."
+                sudo yum install -y tcpdump
+                ;;
+              ngrep)
+                echo "📦 Installing ngrep..."
+                sudo yum install -y ngrep 2>/dev/null || echo "  ngrep not available in repos"
+                ;;
+              iftop)
+                echo "📦 Installing iftop..."
+                sudo yum install -y iftop
+                ;;
+              iperf3)
+                echo "📦 Installing iperf3..."
+                sudo yum install -y iperf3
+                ;;
+              traceroute)
+                echo "📦 Installing traceroute..."
+                sudo yum install -y traceroute
+                ;;
+            esac
+            echo ""
+          done
+          
+          rm -f /tmp/clipilot_selected_net_tools.txt
+          echo "✅ Selected tools installed successfully!"
+        next: show_summary
+
+      install_pacman:
+        type: action
+        message: "Installing selected tools..."
+        command: |
+          echo "Installing network & security tools (Arch Linux)..."
+          echo ""
+          
+          SELECTED=$(cat /tmp/clipilot_selected_net_tools.txt | grep -v "NONE" | sort | uniq)
+          
+          echo "$SELECTED" | while read tool; do
+            case "$tool" in
+              nmap)
+                echo "📦 Installing nmap..."
+                sudo pacman -S --noconfirm nmap
+                ;;
+              netcat)
+                echo "📦 Installing netcat..."
+                sudo pacman -S --noconfirm gnu-netcat
+                ;;
+              socat)
+                echo "📦 Installing socat..."
+                sudo pacman -S --noconfirm socat
+                ;;
+              tcpdump)
+                echo "📦 Installing tcpdump..."
+                sudo pacman -S --noconfirm tcpdump
+                ;;
+              ngrep)
+                echo "📦 Installing ngrep..."
+                sudo pacman -S --noconfirm ngrep
+                ;;
+              iftop)
+                echo "📦 Installing iftop..."
+                sudo pacman -S --noconfirm iftop
+                ;;
+              iperf3)
+                echo "📦 Installing iperf3..."
+                sudo pacman -S --noconfirm iperf3
+                ;;
+              traceroute)
+                echo "📦 Installing traceroute..."
+                sudo pacman -S --noconfirm traceroute
+                ;;
+            esac
+            echo ""
+          done
+          
+          rm -f /tmp/clipilot_selected_net_tools.txt
+          echo "✅ Selected tools installed successfully!"
+        next: show_summary
+
+      install_brew:
+        type: action
+        message: "Installing selected tools..."
+        command: |
+          echo "Installing network & security tools (macOS)..."
+          echo ""
+          
+          SELECTED=$(cat /tmp/clipilot_selected_net_tools.txt | grep -v "NONE" | sort | uniq)
+          
+          echo "$SELECTED" | while read tool; do
+            case "$tool" in
+              nmap)
+                echo "📦 Installing nmap..."
+                brew install nmap
+                ;;
+              netcat)
+                echo "📦 Installing netcat..."
+                brew install netcat
+                ;;
+              socat)
+                echo "📦 Installing socat..."
+                brew install socat
+                ;;
+              tcpdump)
+                echo "📦 Installing tcpdump..."
+                echo "  tcpdump comes pre-installed on macOS"
+                ;;
+              ngrep)
+                echo "📦 Installing ngrep..."
+                brew install ngrep
+                ;;
+              iftop)
+                echo "📦 Installing iftop..."
+                brew install iftop
+                ;;
+              iperf3)
+                echo "📦 Installing iperf3..."
+                brew install iperf3
+                ;;
+              traceroute)
+                echo "📦 Installing traceroute..."
+                echo "  traceroute comes pre-installed on macOS"
+                ;;
+            esac
+            echo ""
+          done
+          
+          rm -f /tmp/clipilot_selected_net_tools.txt
+          echo "✅ Selected tools installed successfully!"
+        next: show_summary
+
+      install_unsupported:
+        type: terminal
+        message: |
+          
+          ❌ Unsupported package manager
+          
+          Please install these tools manually using your system's package manager.
+          
+          Tool websites:
+          • nmap: https://nmap.org/
+          • netcat: http://netcat.sourceforge.net/
+          • socat: http://www.dest-unreach.org/socat/
+          • tcpdump: https://www.tcpdump.org/
+          • ngrep: https://github.com/jpr5/ngrep
+          • iftop: http://www.ex-parrot.com/~pdw/iftop/
+          • iperf3: https://software.es.net/iperf/
+
+      show_summary:
+        type: terminal
+        message: |
+          
+          ==========================================
+            Network & Security Tools Installed!
+          ==========================================
+          
+          Installed tools:
+            • nmap: $(command -v nmap >/dev/null 2>&1 && echo "✅ $(nmap --version | head -1)" || echo "❌ not installed")
+            • netcat: $(command -v nc >/dev/null 2>&1 && echo "✅ installed" || echo "❌ not installed")
+            • socat: $(command -v socat >/dev/null 2>&1 && echo "✅ installed" || echo "❌ not installed")
+            • tcpdump: $(command -v tcpdump >/dev/null 2>&1 && echo "✅ installed" || echo "❌ not installed")
+            • ngrep: $(command -v ngrep >/dev/null 2>&1 && echo "✅ installed" || echo "❌ not installed")
+            • iftop: $(command -v iftop >/dev/null 2>&1 && echo "✅ installed" || echo "❌ not installed")
+            • iperf3: $(command -v iperf3 >/dev/null 2>&1 && echo "✅ installed" || echo "❌ not installed")
+            • traceroute: $(command -v traceroute >/dev/null 2>&1 && echo "✅ installed" || echo "❌ not installed")
+          
+          ⚠️  Important Notes:
+            • Many of these tools require root/sudo privileges
+            • Some tools may need additional permissions on Android/Termux
+            • Use these tools responsibly and only on networks you own
+          
+          Quick examples:
+            • nmap -sV 192.168.1.1        - Scan host and detect services
+            • nc -l 8080                  - Listen on port 8080
+            • socat TCP-L:8080,fork -     - TCP relay on port 8080
+            • sudo tcpdump -i eth0        - Capture packets on eth0
+            • sudo ngrep -q 'GET'         - Grep for GET in packets
+            • sudo iftop -i eth0          - Monitor bandwidth on eth0
+            • iperf3 -s                   - Start iperf3 server
+            • traceroute google.com       - Trace route to Google
+          
+          Common use cases:
+            🔍 Network Discovery: nmap -sn 192.168.1.0/24
+            🔌 Test Port: nc -zv host 80
+            📊 Bandwidth Test: iperf3 -c server
+            🐛 Debug Traffic: sudo tcpdump -i any port 80
+            📡 Monitor Network: sudo iftop
+          
+          🔐 Remember: Use these tools ethically and legally!
+
+metadata:
+  author: TheMobileProf
+  license: MIT

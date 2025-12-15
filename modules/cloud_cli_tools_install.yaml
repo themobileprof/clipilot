@@ -1,0 +1,957 @@
+name: cloud_cli_tools_install
+id: org.themobileprof.cloud_cli_tools_install
+version: 1.0.0
+description: Install cloud provider CLI tools (AWS CLI, Google Cloud SDK, Azure CLI, Terraform, kubectl) with Termux architecture detection
+tags: [installer, composite, cloud, devops, devops-ops, termux-compatible]
+provides:
+  - cloud_cli_tools_installed
+requires:
+  - check_command_exists
+size_kb: 20
+
+flows:
+  main:
+    start: check_existing
+    steps:
+      check_existing:
+        type: action
+        message: "Checking installed cloud CLI tools..."
+        command: |
+          echo "☁️  Cloud CLI Tools Installation"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo ""
+          echo "Checking current installation status:"
+          
+          if command -v aws >/dev/null 2>&1; then
+            echo "  ✅ AWS CLI: $(aws --version 2>&1 | head -1)"
+          else
+            echo "  ❌ AWS CLI: not installed"
+          fi
+          
+          if command -v gcloud >/dev/null 2>&1; then
+            echo "  ✅ Google Cloud SDK: $(gcloud --version 2>&1 | head -1)"
+          else
+            echo "  ❌ Google Cloud SDK: not installed"
+          fi
+          
+          if command -v az >/dev/null 2>&1; then
+            echo "  ✅ Azure CLI: $(az --version 2>&1 | head -1)"
+          else
+            echo "  ❌ Azure CLI: not installed"
+          fi
+          
+          if command -v terraform >/dev/null 2>&1; then
+            echo "  ✅ Terraform: $(terraform --version 2>&1 | head -1)"
+          else
+            echo "  ❌ Terraform: not installed"
+          fi
+          
+          if command -v kubectl >/dev/null 2>&1; then
+            echo "  ✅ kubectl: $(kubectl version --client 2>&1 | head -1)"
+          else
+            echo "  ❌ kubectl: not installed"
+          fi
+          
+          if command -v doctl >/dev/null 2>&1; then
+            echo "  ✅ DigitalOcean CLI: $(doctl version 2>&1 | head -1)"
+          else
+            echo "  ❌ DigitalOcean CLI: not installed"
+          fi
+          
+          echo ""
+        next: detect_environment
+
+      detect_environment:
+        type: action
+        message: "Detecting environment and architecture..."
+        command: |
+          if [ -n "$TERMUX_VERSION" ] || [ -d "$PREFIX" ]; then
+            ARCH=$(uname -m)
+            case "$ARCH" in
+              aarch64|arm64)
+                echo "TERMUX_ARM64"
+                ;;
+              armv7l|armv8l|arm)
+                echo "TERMUX_ARM32"
+                ;;
+              x86_64|amd64)
+                echo "TERMUX_X86_64"
+                ;;
+              i686|i386)
+                echo "TERMUX_X86"
+                ;;
+              *)
+                echo "TERMUX_UNKNOWN"
+                ;;
+            esac
+          else
+            echo "STANDARD"
+          fi
+        next: branch_environment
+
+      branch_environment:
+        type: branch
+        message: "Configuring for environment..."
+        based_on: last_output
+        branches:
+          TERMUX_ARM64:
+            next: explain_process_termux_arm64
+          TERMUX_ARM32:
+            next: explain_process_termux_arm32
+          TERMUX_X86_64:
+            next: explain_process_termux_x86_64
+          TERMUX_X86:
+            next: explain_process_termux_x86
+          TERMUX_UNKNOWN:
+            next: explain_process_termux_unknown
+          STANDARD:
+            next: explain_process_standard
+          default:
+            next: explain_process_standard
+
+      explain_process_termux_arm64:
+        type: action
+        message: "Starting installation wizard for Termux (ARM64)..."
+        command: |
+          echo "☁️  Cloud CLI Tools Installation Wizard (Termux ARM64)"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo ""
+          echo "📱 Termux ARM64 Environment Detected (64-bit)"
+          echo "   Architecture: $(uname -m)"
+          echo ""
+          echo "⚠️  Termux Cloud CLI Compatibility:"
+          echo "  • AWS CLI: ✅ Available via pip (Python required)"
+          echo "  • Google Cloud SDK: ✅ Available via custom install"
+          echo "  • Azure CLI: ⚠️  Limited support via pip"
+          echo "  • Terraform: ✅ Available (ARM64 binaries)"
+          echo "  • kubectl: ✅ Available (ARM64 binaries)"
+          echo "  • DigitalOcean CLI: ✅ Available (ARM64 binaries)"
+          echo ""
+          echo "You will be asked about each tool individually."
+          echo ""
+          
+          # Initialize selections
+          echo "NONE" > /tmp/clipilot_selected_cloud_tools.txt
+          echo "TERMUX_ARM64" > /tmp/clipilot_cloud_env.txt
+        next: ask_awscli
+
+      explain_process_termux_arm32:
+        type: action
+        message: "Starting installation wizard for Termux (ARM32)..."
+        command: |
+          echo "☁️  Cloud CLI Tools Installation Wizard (Termux ARM32)"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo ""
+          echo "📱 Termux ARM32 Environment Detected (32-bit)"
+          echo "   Architecture: $(uname -m)"
+          echo ""
+          echo "⚠️  Termux Cloud CLI Compatibility (32-bit):"
+          echo "  • AWS CLI: ✅ Available via pip (Python required)"
+          echo "  • Google Cloud SDK: ⚠️  Limited 32-bit support"
+          echo "  • Azure CLI: ⚠️  Limited support via pip"
+          echo "  • Terraform: ⚠️  No official ARM32 binaries"
+          echo "  • kubectl: ⚠️  Limited ARM32 support"
+          echo "  • DigitalOcean CLI: ⚠️  No official ARM32 binaries"
+          echo ""
+          echo "📌 Note: 32-bit support is limited. Consider web consoles."
+          echo "You will be asked about each tool individually."
+          echo ""
+          
+          # Initialize selections
+          echo "NONE" > /tmp/clipilot_selected_cloud_tools.txt
+          echo "TERMUX_ARM32" > /tmp/clipilot_cloud_env.txt
+        next: ask_awscli
+
+      explain_process_termux_x86_64:
+        type: action
+        message: "Starting installation wizard for Termux (x86_64)..."
+        command: |
+          echo "☁️  Cloud CLI Tools Installation Wizard (Termux x86_64)"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo ""
+          echo "📱 Termux x86_64 Environment Detected"
+          echo "   Architecture: $(uname -m)"
+          echo ""
+          echo "⚠️  Termux Cloud CLI Compatibility:"
+          echo "  • AWS CLI: ✅ Available via pip"
+          echo "  • Google Cloud SDK: ✅ Available"
+          echo "  • Azure CLI: ⚠️  Limited support"
+          echo "  • Terraform: ✅ Available (x86_64 binaries)"
+          echo "  • kubectl: ✅ Available (x86_64 binaries)"
+          echo "  • DigitalOcean CLI: ✅ Available (x86_64 binaries)"
+          echo ""
+          
+          # Initialize selections
+          echo "NONE" > /tmp/clipilot_selected_cloud_tools.txt
+          echo "TERMUX_X86_64" > /tmp/clipilot_cloud_env.txt
+        next: ask_awscli
+
+      explain_process_termux_x86:
+        type: action
+        message: "Starting installation wizard for Termux (x86)..."
+        command: |
+          echo "☁️  Cloud CLI Tools Installation Wizard (Termux x86)"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo ""
+          echo "📱 Termux x86 Environment Detected (32-bit)"
+          echo "   Architecture: $(uname -m)"
+          echo ""
+          echo "⚠️  Limited 32-bit support for most cloud tools."
+          echo "Consider using web-based cloud consoles instead."
+          echo ""
+          
+          # Initialize selections
+          echo "NONE" > /tmp/clipilot_selected_cloud_tools.txt
+          echo "TERMUX_X86" > /tmp/clipilot_cloud_env.txt
+        next: ask_awscli
+
+      explain_process_termux_unknown:
+        type: action
+        message: "Starting installation wizard for Termux (unknown arch)..."
+        command: |
+          echo "☁️  Cloud CLI Tools Installation Wizard (Termux)"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo ""
+          echo "📱 Termux Environment Detected"
+          echo "   Architecture: $(uname -m) (unknown)"
+          echo ""
+          echo "⚠️  Unknown architecture - installation may fail."
+          echo ""
+          
+          # Initialize selections
+          echo "NONE" > /tmp/clipilot_selected_cloud_tools.txt
+          echo "TERMUX_UNKNOWN" > /tmp/clipilot_cloud_env.txt
+        next: ask_awscli
+
+      explain_process_standard:
+        type: action
+        message: "Starting installation wizard..."
+        command: |
+          echo "☁️  Cloud CLI Tools Installation Wizard"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo ""
+          echo "💻 Standard Linux Environment"
+          echo ""
+          echo "You will be asked about each tool individually."
+          echo "Tools will be downloaded directly from official sources."
+          echo ""
+          
+          # Initialize selections
+          echo "NONE" > /tmp/clipilot_selected_cloud_tools.txt
+          echo "STANDARD" > /tmp/clipilot_cloud_env.txt
+        next: ask_awscli
+
+      ask_awscli:
+        type: instruction
+        message: |
+          
+          ☁️  AWS CLI
+          ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+          • Official command-line interface for Amazon Web Services
+          • Manage EC2, S3, Lambda, RDS, and 200+ AWS services
+          • Supports profiles, regions, output formats (JSON/table/text)
+          • Essential for AWS automation and DevOps
+          • Size: ~50 MB (via pip)
+          • Usage: aws s3 ls, aws ec2 describe-instances
+          
+        command: |
+          ENV=$(cat /tmp/clipilot_cloud_env.txt)
+          
+          case "$ENV" in
+            TERMUX_ARM64|TERMUX_X86_64)
+              echo "  Installation: via pip (Python package)"
+              ;;
+            TERMUX_ARM32|TERMUX_X86)
+              echo "  Installation: via pip (32-bit, may be slow)"
+              ;;
+          esac
+          
+          read -p "Install AWS CLI? (Y/n): " -r
+          echo
+          if [[ ! $REPLY =~ ^[Nn]$ ]]; then
+            echo "awscli" >> /tmp/clipilot_selected_cloud_tools.txt
+            echo "YES"
+          else
+            echo "NO"
+          fi
+        next: ask_gcloud
+
+      ask_gcloud:
+        type: instruction
+        message: |
+          
+          🌐 Google Cloud SDK (gcloud)
+          ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+          • Official CLI for Google Cloud Platform
+          • Manage Compute Engine, Cloud Storage, BigQuery, etc.
+          • Includes gcloud, gsutil, bq commands
+          • Interactive installation and configuration
+          • Size: ~100 MB
+          • Usage: gcloud compute instances list
+          
+        command: |
+          ENV=$(cat /tmp/clipilot_cloud_env.txt)
+          
+          case "$ENV" in
+            TERMUX_ARM64|TERMUX_X86_64)
+              echo "  Installation: via custom script"
+              ;;
+            TERMUX_ARM32|TERMUX_X86)
+              echo "  ⚠️  Warning: Limited 32-bit support"
+              ;;
+          esac
+          
+          read -p "Install Google Cloud SDK? (Y/n): " -r
+          echo
+          if [[ ! $REPLY =~ ^[Nn]$ ]]; then
+            echo "gcloud" >> /tmp/clipilot_selected_cloud_tools.txt
+            echo "YES"
+          else
+            echo "NO"
+          fi
+        next: ask_azcli
+
+      ask_azcli:
+        type: instruction
+        message: |
+          
+          🔷 Azure CLI (az)
+          ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+          • Official command-line interface for Microsoft Azure
+          • Manage VMs, App Services, Storage, Databases
+          • Cross-platform Python-based tool
+          • Interactive and scriptable
+          • Size: ~60 MB (via pip)
+          • Usage: az vm list, az storage account create
+          
+        command: |
+          ENV=$(cat /tmp/clipilot_cloud_env.txt)
+          
+          case "$ENV" in
+            TERMUX_*)
+              echo "  ⚠️  Termux: Limited support, installing via pip"
+              ;;
+          esac
+          
+          read -p "Install Azure CLI? (Y/n): " -r
+          echo
+          if [[ ! $REPLY =~ ^[Nn]$ ]]; then
+            echo "azcli" >> /tmp/clipilot_selected_cloud_tools.txt
+            echo "YES"
+          else
+            echo "NO"
+          fi
+        next: ask_terraform
+
+      ask_terraform:
+        type: instruction
+        message: |
+          
+          🏗️  Terraform
+          ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+          • Infrastructure as Code (IaC) tool by HashiCorp
+          • Provision and manage cloud resources declaratively
+          • Supports AWS, Azure, GCP, and 3000+ providers
+          • Version control your infrastructure
+          • Size: ~60 MB
+          • Usage: terraform init, terraform apply
+          
+        command: |
+          ENV=$(cat /tmp/clipilot_cloud_env.txt)
+          
+          case "$ENV" in
+            TERMUX_ARM64|TERMUX_X86_64)
+              echo "  Installation: Official binary download"
+              ;;
+            TERMUX_ARM32|TERMUX_X86)
+              echo "  ⚠️  Warning: No official 32-bit ARM binaries"
+              ;;
+          esac
+          
+          read -p "Install Terraform? (Y/n): " -r
+          echo
+          if [[ ! $REPLY =~ ^[Nn]$ ]]; then
+            echo "terraform" >> /tmp/clipilot_selected_cloud_tools.txt
+            echo "YES"
+          else
+            echo "NO"
+          fi
+        next: ask_kubectl
+
+      ask_kubectl:
+        type: instruction
+        message: |
+          
+          ☸️  kubectl
+          ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+          • Kubernetes command-line tool
+          • Deploy and manage containerized applications
+          • Control Kubernetes clusters (local or cloud)
+          • Essential for container orchestration
+          • Size: ~50 MB
+          • Usage: kubectl get pods, kubectl apply -f deployment.yaml
+          
+        command: |
+          ENV=$(cat /tmp/clipilot_cloud_env.txt)
+          
+          case "$ENV" in
+            TERMUX_ARM64|TERMUX_X86_64)
+              echo "  Installation: Official binary download"
+              ;;
+            TERMUX_ARM32|TERMUX_X86)
+              echo "  ⚠️  Warning: Limited 32-bit support"
+              ;;
+          esac
+          
+          read -p "Install kubectl? (Y/n): " -r
+          echo
+          if [[ ! $REPLY =~ ^[Nn]$ ]]; then
+            echo "kubectl" >> /tmp/clipilot_selected_cloud_tools.txt
+            echo "YES"
+          else
+            echo "NO"
+          fi
+        next: ask_doctl
+
+      ask_doctl:
+        type: instruction
+        message: |
+          
+          🌊 DigitalOcean CLI (doctl)
+          ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+          • Official CLI for DigitalOcean cloud platform
+          • Manage Droplets, Kubernetes, Databases, Spaces
+          • Simple and developer-friendly interface
+          • Open-source Go-based tool
+          • Size: ~20 MB
+          • Usage: doctl compute droplet list
+          
+        command: |
+          ENV=$(cat /tmp/clipilot_cloud_env.txt)
+          
+          case "$ENV" in
+            TERMUX_ARM64|TERMUX_X86_64)
+              echo "  Installation: Official binary download"
+              ;;
+            TERMUX_ARM32|TERMUX_X86)
+              echo "  ⚠️  Warning: No official 32-bit binaries"
+              ;;
+          esac
+          
+          read -p "Install DigitalOcean CLI? (Y/n): " -r
+          echo
+          if [[ ! $REPLY =~ ^[Nn]$ ]]; then
+            echo "doctl" >> /tmp/clipilot_selected_cloud_tools.txt
+            echo "YES"
+          else
+            echo "NO"
+          fi
+        next: confirm_selections
+
+      confirm_selections:
+        type: action
+        message: "Reviewing selections..."
+        command: |
+          SELECTED=$(cat /tmp/clipilot_selected_cloud_tools.txt | grep -v "NONE" | sort | uniq)
+          ENV=$(cat /tmp/clipilot_cloud_env.txt)
+          
+          if [ -z "$SELECTED" ]; then
+            echo "NO_TOOLS_SELECTED"
+          else
+            echo ""
+            echo "✓ Selected cloud CLI tools for installation:"
+            echo "$SELECTED" | while read tool; do
+              case "$tool" in
+                awscli) echo "  • AWS CLI (awscli)" ;;
+                gcloud) echo "  • Google Cloud SDK (gcloud)" ;;
+                azcli) echo "  • Azure CLI (az)" ;;
+                terraform) echo "  • Terraform" ;;
+                kubectl) echo "  • kubectl (Kubernetes)" ;;
+                doctl) echo "  • DigitalOcean CLI (doctl)" ;;
+              esac
+            done
+            echo ""
+            
+            case "$ENV" in
+              TERMUX_ARM32|TERMUX_X86)
+                echo "⚠️  32-bit Warning: Some tools may have limited support"
+                echo ""
+                ;;
+            esac
+            
+            echo "TOOLS_SELECTED"
+          fi
+        next: branch_selections
+
+      branch_selections:
+        type: branch
+        message: "Processing selections..."
+        based_on: last_output
+        branches:
+          NO_TOOLS_SELECTED:
+            next: installation_cancelled
+          TOOLS_SELECTED:
+            next: check_prerequisites
+          default:
+            next: installation_cancelled
+
+      installation_cancelled:
+        type: terminal
+        message: |
+          
+          ⚠️  No cloud CLI tools selected for installation.
+          
+          You can install cloud tools later by running:
+            clipilot run cloud_cli_tools_install
+
+      check_prerequisites:
+        type: action
+        message: "Checking prerequisites..."
+        command: |
+          ENV=$(cat /tmp/clipilot_cloud_env.txt)
+          SELECTED=$(cat /tmp/clipilot_selected_cloud_tools.txt | grep -v "NONE")
+          
+          # Check if Python is needed
+          if echo "$SELECTED" | grep -qE "awscli|azcli"; then
+            if ! command -v python3 >/dev/null 2>&1; then
+              echo ""
+              echo "⚠️  Python 3 is required for AWS CLI and Azure CLI"
+              echo ""
+              if [ "$ENV" != "STANDARD" ]; then
+                echo "Installing Python via pkg..."
+                pkg install -y python
+              else
+                echo "Please install Python 3 first:"
+                echo "  Debian/Ubuntu: sudo apt-get install python3 python3-pip"
+                echo "  Fedora/RHEL: sudo dnf install python3 python3-pip"
+                echo ""
+              fi
+            fi
+          fi
+          
+          # Check pip
+          if echo "$SELECTED" | grep -qE "awscli|azcli"; then
+            if ! command -v pip3 >/dev/null 2>&1 && ! command -v pip >/dev/null 2>&1; then
+              echo ""
+              echo "Installing pip..."
+              if [ "$ENV" != "STANDARD" ]; then
+                pkg install -y python-pip
+              fi
+            fi
+          fi
+          
+          echo "Prerequisites checked"
+        next: detect_package_manager
+
+      detect_package_manager:
+        type: action
+        message: "Detecting package manager..."
+        command: |
+          cat /tmp/clipilot_cloud_env.txt
+        next: branch_package_manager
+
+      branch_package_manager:
+        type: branch
+        message: "Selecting installation method..."
+        based_on: last_output
+        branches:
+          TERMUX_ARM64:
+            next: install_termux_arm64
+          TERMUX_ARM32:
+            next: install_termux_arm32
+          TERMUX_X86_64:
+            next: install_termux_x86_64
+          TERMUX_X86:
+            next: install_termux_x86
+          TERMUX_UNKNOWN:
+            next: install_termux_unknown
+          STANDARD:
+            next: install_standard
+          default:
+            next: install_standard
+
+      install_termux_arm64:
+        type: action
+        message: "Installing selected cloud CLI tools for Termux ARM64..."
+        command: |
+          echo "Installing cloud CLI tools for Termux (ARM64)..."
+          echo ""
+          
+          SELECTED=$(cat /tmp/clipilot_selected_cloud_tools.txt | grep -v "NONE" | sort | uniq)
+          
+          echo "$SELECTED" | while read tool; do
+            case "$tool" in
+              awscli)
+                echo "📦 Installing AWS CLI via pip..."
+                pip install --upgrade awscli
+                echo "  Configure with: aws configure"
+                ;;
+              gcloud)
+                echo "📦 Installing Google Cloud SDK..."
+                cd $HOME
+                curl https://sdk.cloud.google.com | bash
+                echo "  Restart shell and run: gcloud init"
+                ;;
+              azcli)
+                echo "📦 Installing Azure CLI via pip..."
+                pip install azure-cli
+                echo "  Login with: az login"
+                ;;
+              terraform)
+                echo "📦 Installing Terraform (ARM64)..."
+                TERRAFORM_VERSION="1.6.6"
+                cd $TMPDIR
+                wget "https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_arm64.zip"
+                unzip -o "terraform_${TERRAFORM_VERSION}_linux_arm64.zip"
+                mv terraform $PREFIX/bin/
+                chmod +x $PREFIX/bin/terraform
+                rm "terraform_${TERRAFORM_VERSION}_linux_arm64.zip"
+                ;;
+              kubectl)
+                echo "📦 Installing kubectl (ARM64)..."
+                cd $TMPDIR
+                curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/arm64/kubectl"
+                chmod +x kubectl
+                mv kubectl $PREFIX/bin/
+                ;;
+              doctl)
+                echo "📦 Installing DigitalOcean CLI (ARM64)..."
+                cd $TMPDIR
+                DOCTL_VERSION="1.104.0"
+                wget "https://github.com/digitalocean/doctl/releases/download/v${DOCTL_VERSION}/doctl-${DOCTL_VERSION}-linux-arm64.tar.gz"
+                tar xf "doctl-${DOCTL_VERSION}-linux-arm64.tar.gz"
+                mv doctl $PREFIX/bin/
+                chmod +x $PREFIX/bin/doctl
+                rm "doctl-${DOCTL_VERSION}-linux-arm64.tar.gz"
+                ;;
+            esac
+            echo ""
+          done
+          
+          rm -f /tmp/clipilot_selected_cloud_tools.txt
+          rm -f /tmp/clipilot_cloud_env.txt
+          echo "✅ Selected cloud CLI tools installed successfully!"
+        next: show_summary
+
+      install_termux_arm32:
+        type: action
+        message: "Installing selected cloud CLI tools for Termux ARM32..."
+        command: |
+          echo "Installing cloud CLI tools for Termux (ARM32)..."
+          echo ""
+          echo "⚠️  Note: 32-bit support is limited for many cloud tools"
+          echo ""
+          
+          SELECTED=$(cat /tmp/clipilot_selected_cloud_tools.txt | grep -v "NONE" | sort | uniq)
+          
+          echo "$SELECTED" | while read tool; do
+            case "$tool" in
+              awscli)
+                echo "📦 Installing AWS CLI via pip (32-bit)..."
+                pip install --upgrade awscli
+                echo "  Configure with: aws configure"
+                ;;
+              gcloud)
+                echo "⚠️  Google Cloud SDK: Limited 32-bit support"
+                echo "  Consider using web console: https://console.cloud.google.com"
+                ;;
+              azcli)
+                echo "📦 Installing Azure CLI via pip (32-bit)..."
+                pip install azure-cli
+                echo "  Login with: az login"
+                ;;
+              terraform)
+                echo "⚠️  Terraform: No official ARM32 binaries available"
+                echo "  Consider building from source or using web console"
+                ;;
+              kubectl)
+                echo "⚠️  kubectl: Limited ARM32 support"
+                echo "  Consider using web console"
+                ;;
+              doctl)
+                echo "⚠️  DigitalOcean CLI: No official ARM32 binaries"
+                echo "  Consider using web console: https://cloud.digitalocean.com"
+                ;;
+            esac
+            echo ""
+          done
+          
+          rm -f /tmp/clipilot_selected_cloud_tools.txt
+          rm -f /tmp/clipilot_cloud_env.txt
+          echo "⚠️  Installation completed with limitations"
+        next: show_summary
+
+      install_termux_x86_64:
+        type: action
+        message: "Installing selected cloud CLI tools for Termux x86_64..."
+        command: |
+          echo "Installing cloud CLI tools for Termux (x86_64)..."
+          echo ""
+          
+          SELECTED=$(cat /tmp/clipilot_selected_cloud_tools.txt | grep -v "NONE" | sort | uniq)
+          
+          echo "$SELECTED" | while read tool; do
+            case "$tool" in
+              awscli)
+                echo "📦 Installing AWS CLI via pip..."
+                pip install --upgrade awscli
+                ;;
+              gcloud)
+                echo "📦 Installing Google Cloud SDK..."
+                cd $HOME
+                curl https://sdk.cloud.google.com | bash
+                ;;
+              azcli)
+                echo "📦 Installing Azure CLI via pip..."
+                pip install azure-cli
+                ;;
+              terraform)
+                echo "📦 Installing Terraform (x86_64)..."
+                TERRAFORM_VERSION="1.6.6"
+                cd $TMPDIR
+                wget "https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_amd64.zip"
+                unzip -o "terraform_${TERRAFORM_VERSION}_linux_amd64.zip"
+                mv terraform $PREFIX/bin/
+                chmod +x $PREFIX/bin/terraform
+                rm "terraform_${TERRAFORM_VERSION}_linux_amd64.zip"
+                ;;
+              kubectl)
+                echo "📦 Installing kubectl (x86_64)..."
+                cd $TMPDIR
+                curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+                chmod +x kubectl
+                mv kubectl $PREFIX/bin/
+                ;;
+              doctl)
+                echo "📦 Installing DigitalOcean CLI (x86_64)..."
+                cd $TMPDIR
+                DOCTL_VERSION="1.104.0"
+                wget "https://github.com/digitalocean/doctl/releases/download/v${DOCTL_VERSION}/doctl-${DOCTL_VERSION}-linux-amd64.tar.gz"
+                tar xf "doctl-${DOCTL_VERSION}-linux-amd64.tar.gz"
+                mv doctl $PREFIX/bin/
+                chmod +x $PREFIX/bin/doctl
+                rm "doctl-${DOCTL_VERSION}-linux-amd64.tar.gz"
+                ;;
+            esac
+            echo ""
+          done
+          
+          rm -f /tmp/clipilot_selected_cloud_tools.txt
+          rm -f /tmp/clipilot_cloud_env.txt
+          echo "✅ Selected cloud CLI tools installed successfully!"
+        next: show_summary
+
+      install_termux_x86:
+        type: action
+        message: "Installing selected cloud CLI tools for Termux x86..."
+        command: |
+          echo "Installing cloud CLI tools for Termux (x86 32-bit)..."
+          echo ""
+          echo "⚠️  Note: 32-bit x86 support is very limited"
+          echo ""
+          
+          SELECTED=$(cat /tmp/clipilot_selected_cloud_tools.txt | grep -v "NONE" | sort | uniq)
+          
+          echo "$SELECTED" | while read tool; do
+            case "$tool" in
+              awscli)
+                echo "📦 Installing AWS CLI via pip..."
+                pip install --upgrade awscli
+                ;;
+              *)
+                echo "⚠️  $tool: No 32-bit x86 support"
+                echo "  Consider using web consoles"
+                ;;
+            esac
+            echo ""
+          done
+          
+          rm -f /tmp/clipilot_selected_cloud_tools.txt
+          rm -f /tmp/clipilot_cloud_env.txt
+          echo "⚠️  Installation completed with limitations"
+        next: show_summary
+
+      install_termux_unknown:
+        type: action
+        message: "Attempting installation on unknown architecture..."
+        command: |
+          echo "⚠️  Unknown Termux architecture: $(uname -m)"
+          echo ""
+          echo "Only Python-based tools will be attempted..."
+          echo ""
+          
+          SELECTED=$(cat /tmp/clipilot_selected_cloud_tools.txt | grep -v "NONE" | sort | uniq)
+          
+          echo "$SELECTED" | while read tool; do
+            case "$tool" in
+              awscli)
+                echo "📦 Installing AWS CLI via pip..."
+                pip install --upgrade awscli
+                ;;
+              azcli)
+                echo "📦 Installing Azure CLI via pip..."
+                pip install azure-cli
+                ;;
+              *)
+                echo "⚠️  $tool: Cannot install on unknown architecture"
+                ;;
+            esac
+            echo ""
+          done
+          
+          rm -f /tmp/clipilot_selected_cloud_tools.txt
+          rm -f /tmp/clipilot_cloud_env.txt
+          echo "⚠️  Installation completed with limitations"
+        next: show_summary
+
+      install_standard:
+        type: action
+        message: "Installing selected cloud CLI tools..."
+        command: |
+          echo "Installing cloud CLI tools (Standard Linux)..."
+          echo ""
+          
+          SELECTED=$(cat /tmp/clipilot_selected_cloud_tools.txt | grep -v "NONE" | sort | uniq)
+          
+          echo "$SELECTED" | while read tool; do
+            case "$tool" in
+              awscli)
+                echo "📦 Installing AWS CLI..."
+                if command -v pip3 >/dev/null 2>&1; then
+                  pip3 install --user --upgrade awscli
+                elif command -v pip >/dev/null 2>&1; then
+                  pip install --user --upgrade awscli
+                else
+                  echo "  Install manually: https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html"
+                fi
+                ;;
+              gcloud)
+                echo "📦 Installing Google Cloud SDK..."
+                cd $HOME
+                curl https://sdk.cloud.google.com | bash
+                exec -l $SHELL
+                ;;
+              azcli)
+                echo "📦 Installing Azure CLI..."
+                curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
+                ;;
+              terraform)
+                echo "📦 Installing Terraform..."
+                TERRAFORM_VERSION="1.6.6"
+                ARCH=$(uname -m)
+                case "$ARCH" in
+                  x86_64) TERRAFORM_ARCH="amd64" ;;
+                  aarch64|arm64) TERRAFORM_ARCH="arm64" ;;
+                  *) TERRAFORM_ARCH="amd64" ;;
+                esac
+                cd /tmp
+                wget "https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_${TERRAFORM_ARCH}.zip"
+                unzip -o "terraform_${TERRAFORM_VERSION}_linux_${TERRAFORM_ARCH}.zip"
+                sudo mv terraform /usr/local/bin/
+                sudo chmod +x /usr/local/bin/terraform
+                rm "terraform_${TERRAFORM_VERSION}_linux_${TERRAFORM_ARCH}.zip"
+                ;;
+              kubectl)
+                echo "📦 Installing kubectl..."
+                curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+                sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
+                rm kubectl
+                ;;
+              doctl)
+                echo "📦 Installing DigitalOcean CLI..."
+                cd /tmp
+                DOCTL_VERSION="1.104.0"
+                ARCH=$(uname -m)
+                case "$ARCH" in
+                  x86_64) DOCTL_ARCH="amd64" ;;
+                  aarch64|arm64) DOCTL_ARCH="arm64" ;;
+                  *) DOCTL_ARCH="amd64" ;;
+                esac
+                wget "https://github.com/digitalocean/doctl/releases/download/v${DOCTL_VERSION}/doctl-${DOCTL_VERSION}-linux-${DOCTL_ARCH}.tar.gz"
+                tar xf "doctl-${DOCTL_VERSION}-linux-${DOCTL_ARCH}.tar.gz"
+                sudo mv doctl /usr/local/bin/
+                sudo chmod +x /usr/local/bin/doctl
+                rm "doctl-${DOCTL_VERSION}-linux-${DOCTL_ARCH}.tar.gz"
+                ;;
+            esac
+            echo ""
+          done
+          
+          rm -f /tmp/clipilot_selected_cloud_tools.txt
+          rm -f /tmp/clipilot_cloud_env.txt
+          echo "✅ Selected cloud CLI tools installed successfully!"
+        next: show_summary
+
+      show_summary:
+        type: terminal
+        message: |
+          
+          ==========================================
+            Cloud CLI Tools Installed!
+          ==========================================
+          
+          Installed tools:
+            • AWS CLI: $(command -v aws >/dev/null 2>&1 && echo "✅ $(aws --version 2>&1)" || echo "❌ not installed")
+            • Google Cloud SDK: $(command -v gcloud >/dev/null 2>&1 && echo "✅ $(gcloud --version 2>&1 | head -1)" || echo "❌ not installed")
+            • Azure CLI: $(command -v az >/dev/null 2>&1 && echo "✅ $(az --version 2>&1 | head -1)" || echo "❌ not installed")
+            • Terraform: $(command -v terraform >/dev/null 2>&1 && echo "✅ $(terraform --version 2>&1 | head -1)" || echo "❌ not installed")
+            • kubectl: $(command -v kubectl >/dev/null 2>&1 && echo "✅ $(kubectl version --client 2>&1 | head -1)" || echo "❌ not installed")
+            • DigitalOcean CLI: $(command -v doctl >/dev/null 2>&1 && echo "✅ $(doctl version 2>&1)" || echo "❌ not installed")
+          
+          Configuration steps:
+            ☁️  AWS CLI:
+              1. Run: aws configure
+              2. Enter Access Key ID and Secret Access Key
+              3. Set default region (e.g., us-east-1)
+              4. Test: aws s3 ls
+          
+            🌐 Google Cloud SDK:
+              1. Restart your shell or run: source ~/.bashrc
+              2. Run: gcloud init
+              3. Login and select project
+              4. Test: gcloud compute instances list
+          
+            🔷 Azure CLI:
+              1. Run: az login
+              2. Follow browser authentication
+              3. Test: az account list
+          
+            🏗️  Terraform:
+              1. Create a .tf file with infrastructure code
+              2. Run: terraform init
+              3. Plan: terraform plan
+              4. Apply: terraform apply
+          
+            ☸️  kubectl:
+              1. Configure kubeconfig (~/.kube/config)
+              2. Or set KUBECONFIG environment variable
+              3. Test: kubectl cluster-info
+          
+            🌊 DigitalOcean CLI:
+              1. Create API token at: https://cloud.digitalocean.com/account/api/tokens
+              2. Run: doctl auth init
+              3. Test: doctl compute droplet list
+          
+          Quick examples:
+            • AWS: aws ec2 describe-instances --region us-east-1
+            • GCP: gcloud compute instances list --project my-project
+            • Azure: az vm list --resource-group my-rg
+            • Terraform: terraform plan -var-file="prod.tfvars"
+            • kubectl: kubectl get pods --all-namespaces
+            • DO: doctl compute droplet create mydroplet --size s-1vcpu-1gb
+          
+          Documentation:
+            • AWS CLI: https://docs.aws.amazon.com/cli/
+            • gcloud: https://cloud.google.com/sdk/gcloud
+            • Azure CLI: https://docs.microsoft.com/cli/azure/
+            • Terraform: https://www.terraform.io/docs
+            • kubectl: https://kubernetes.io/docs/reference/kubectl/
+            • doctl: https://docs.digitalocean.com/reference/doctl/
+          
+          🔐 Security Tip:
+             Store credentials securely! Use IAM roles, service accounts,
+             or credential helpers instead of hardcoding credentials.
+
+metadata:
+  author: TheMobileProf
+  license: MIT

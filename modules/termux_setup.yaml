@@ -1,8 +1,8 @@
 name: termux_setup
 id: org.themobileprof.termux_setup
 version: 1.0.0
-description: Initial setup and configuration for Termux environment on Android
-tags: [installer, development, devops-ops, composite, termux]
+description: Initial setup and configuration for Termux environment on Android phones and tablets - essential tools and SSH setup
+tags: [installer, development, devops-ops, composite, termux, android, phone, mobile, setup]
 provides:
   - termux_configured
 requires:

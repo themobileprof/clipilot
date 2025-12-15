@@ -1,0 +1,798 @@
+name: modern_cli_tools_install
+id: org.themobileprof.modern_cli_tools_install
+version: 1.0.0
+description: Install modern CLI tools (bat, eza, fd, ripgrep, fzf, tldr, htop) with individual selection
+tags: [installer, composite, system-ops, development]
+provides:
+  - modern_cli_tools_installed
+requires:
+  - check_command_exists
+size_kb: 12
+
+flows:
+  main:
+    start: check_existing
+    steps:
+      check_existing:
+        type: action
+        message: "Checking installed modern CLI tools..."
+        command: |
+          echo "🚀 Modern CLI Tools Installation"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo ""
+          echo "Checking current installation status:"
+          
+          if command -v bat >/dev/null 2>&1 || command -v batcat >/dev/null 2>&1; then
+            echo "  ✅ bat: $(bat --version 2>&1 | head -1 || batcat --version 2>&1 | head -1)"
+          else
+            echo "  ❌ bat: not installed"
+          fi
+          
+          if command -v eza >/dev/null 2>&1 || command -v exa >/dev/null 2>&1; then
+            echo "  ✅ eza/exa: $(eza --version 2>&1 | head -1 || exa --version 2>&1 | head -1)"
+          else
+            echo "  ❌ eza/exa: not installed"
+          fi
+          
+          if command -v fd >/dev/null 2>&1; then
+            echo "  ✅ fd: $(fd --version 2>&1 | head -1)"
+          else
+            echo "  ❌ fd: not installed"
+          fi
+          
+          if command -v rg >/dev/null 2>&1; then
+            echo "  ✅ ripgrep: $(rg --version 2>&1 | head -1)"
+          else
+            echo "  ❌ ripgrep: not installed"
+          fi
+          
+          if command -v fzf >/dev/null 2>&1; then
+            echo "  ✅ fzf: $(fzf --version 2>&1)"
+          else
+            echo "  ❌ fzf: not installed"
+          fi
+          
+          if command -v tldr >/dev/null 2>&1; then
+            echo "  ✅ tldr: $(tldr --version 2>&1 | head -1)"
+          else
+            echo "  ❌ tldr: not installed"
+          fi
+          
+          if command -v htop >/dev/null 2>&1; then
+            echo "  ✅ htop: $(htop --version 2>&1 | head -1)"
+          else
+            echo "  ❌ htop: not installed"
+          fi
+          
+          if command -v btop >/dev/null 2>&1; then
+            echo "  ✅ btop: installed"
+          else
+            echo "  ❌ btop: not installed"
+          fi
+          
+          echo ""
+        next: explain_process
+
+      explain_process:
+        type: action
+        message: "Starting installation wizard..."
+        command: |
+          echo "🎨 Modern CLI Tools Installation Wizard"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo ""
+          echo "These are modern alternatives to classic Unix tools."
+          echo "You will be asked about each tool individually."
+          echo ""
+          
+          # Initialize selections
+          echo "NONE" > /tmp/clipilot_selected_cli_tools.txt
+        next: ask_bat
+
+      ask_bat:
+        type: instruction
+        message: |
+          
+          🦇 bat
+          ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+          • Modern replacement for 'cat' with syntax highlighting
+          • Shows line numbers and git changes
+          • Automatic paging for large files
+          • Supports 200+ programming languages
+          • Size: ~3 MB
+          • Usage: bat file.py (instead of cat file.py)
+          
+        command: |
+          read -p "Install bat? (Y/n): " -r
+          echo
+          if [[ ! $REPLY =~ ^[Nn]$ ]]; then
+            echo "bat" >> /tmp/clipilot_selected_cli_tools.txt
+            echo "YES"
+          else
+            echo "NO"
+          fi
+        next: ask_eza
+
+      ask_eza:
+        type: instruction
+        message: |
+          
+          📁 eza (modern ls)
+          ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+          • Modern replacement for 'ls' with colors and icons
+          • Tree view, git status integration
+          • Better permission display
+          • Faster than traditional ls
+          • Size: ~2 MB
+          • Usage: eza -l (or alias ls='eza')
+          
+        command: |
+          read -p "Install eza? (Y/n): " -r
+          echo
+          if [[ ! $REPLY =~ ^[Nn]$ ]]; then
+            echo "eza" >> /tmp/clipilot_selected_cli_tools.txt
+            echo "YES"
+          else
+            echo "NO"
+          fi
+        next: ask_fd
+
+      ask_fd:
+        type: instruction
+        message: |
+          
+          🔍 fd
+          ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+          • Modern replacement for 'find' command
+          • Simpler syntax, much faster
+          • Respects .gitignore by default
+          • Colored output
+          • Size: ~2 MB
+          • Usage: fd pattern (instead of find . -name pattern)
+          
+        command: |
+          read -p "Install fd? (Y/n): " -r
+          echo
+          if [[ ! $REPLY =~ ^[Nn]$ ]]; then
+            echo "fd" >> /tmp/clipilot_selected_cli_tools.txt
+            echo "YES"
+          else
+            echo "NO"
+          fi
+        next: ask_ripgrep
+
+      ask_ripgrep:
+        type: instruction
+        message: |
+          
+          🔎 ripgrep (rg)
+          ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+          • Modern replacement for 'grep' - extremely fast
+          • Respects .gitignore automatically
+          • Recursive by default
+          • Colored output, multi-line search
+          • Size: ~3 MB
+          • Usage: rg "pattern" (instead of grep -r "pattern")
+          
+        command: |
+          read -p "Install ripgrep? (Y/n): " -r
+          echo
+          if [[ ! $REPLY =~ ^[Nn]$ ]]; then
+            echo "ripgrep" >> /tmp/clipilot_selected_cli_tools.txt
+            echo "YES"
+          else
+            echo "NO"
+          fi
+        next: ask_fzf
+
+      ask_fzf:
+        type: instruction
+        message: |
+          
+          🎯 fzf
+          ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+          • Fuzzy finder for command line
+          • Interactive filter for any list
+          • Ctrl+R history search, file search
+          • Integrates with vim, shell commands
+          • Size: ~1 MB
+          • Usage: command | fzf, or Ctrl+R for history
+          
+        command: |
+          read -p "Install fzf? (Y/n): " -r
+          echo
+          if [[ ! $REPLY =~ ^[Nn]$ ]]; then
+            echo "fzf" >> /tmp/clipilot_selected_cli_tools.txt
+            echo "YES"
+          else
+            echo "NO"
+          fi
+        next: ask_tldr
+
+      ask_tldr:
+        type: instruction
+        message: |
+          
+          📖 tldr
+          ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+          • Simplified man pages with practical examples
+          • Community-driven documentation
+          • Quick reference for common commands
+          • Much easier to read than man pages
+          • Size: ~5 MB
+          • Usage: tldr tar (instead of man tar)
+          
+        command: |
+          read -p "Install tldr? (Y/n): " -r
+          echo
+          if [[ ! $REPLY =~ ^[Nn]$ ]]; then
+            echo "tldr" >> /tmp/clipilot_selected_cli_tools.txt
+            echo "YES"
+          else
+            echo "NO"
+          fi
+        next: ask_htop
+
+      ask_htop:
+        type: instruction
+        message: |
+          
+          📊 htop
+          ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+          • Interactive process viewer (better than top)
+          • Colored display, mouse support
+          • Tree view of processes
+          • Easy to kill/nice processes
+          • Size: ~1 MB
+          • Usage: htop (instead of top)
+          
+        command: |
+          read -p "Install htop? (Y/n): " -r
+          echo
+          if [[ ! $REPLY =~ ^[Nn]$ ]]; then
+            echo "htop" >> /tmp/clipilot_selected_cli_tools.txt
+            echo "YES"
+          else
+            echo "NO"
+          fi
+        next: ask_btop
+
+      ask_btop:
+        type: instruction
+        message: |
+          
+          🎨 btop
+          ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+          • Modern resource monitor (better than htop)
+          • Beautiful UI with graphs
+          • CPU, memory, disk, network monitoring
+          • Mouse support, customizable themes
+          • Size: ~5 MB
+          • Usage: btop
+          
+        command: |
+          read -p "Install btop? (Y/n): " -r
+          echo
+          if [[ ! $REPLY =~ ^[Nn]$ ]]; then
+            echo "btop" >> /tmp/clipilot_selected_cli_tools.txt
+            echo "YES"
+          else
+            echo "NO"
+          fi
+        next: confirm_selections
+
+      confirm_selections:
+        type: action
+        message: "Reviewing selections..."
+        command: |
+          SELECTED=$(cat /tmp/clipilot_selected_cli_tools.txt | grep -v "NONE" | sort | uniq)
+          
+          if [ -z "$SELECTED" ]; then
+            echo "NO_TOOLS_SELECTED"
+          else
+            echo ""
+            echo "✓ Selected tools for installation:"
+            echo "$SELECTED" | while read tool; do
+              case "$tool" in
+                bat) echo "  • bat (better cat)" ;;
+                eza) echo "  • eza (better ls)" ;;
+                fd) echo "  • fd (better find)" ;;
+                ripgrep) echo "  • ripgrep (better grep)" ;;
+                fzf) echo "  • fzf (fuzzy finder)" ;;
+                tldr) echo "  • tldr (simplified man)" ;;
+                htop) echo "  • htop (process viewer)" ;;
+                btop) echo "  • btop (resource monitor)" ;;
+              esac
+            done
+            echo ""
+            echo "TOOLS_SELECTED"
+          fi
+        next: branch_selections
+
+      branch_selections:
+        type: branch
+        message: "Processing selections..."
+        based_on: last_output
+        branches:
+          NO_TOOLS_SELECTED:
+            next: installation_cancelled
+          TOOLS_SELECTED:
+            next: detect_package_manager
+          default:
+            next: installation_cancelled
+
+      installation_cancelled:
+        type: terminal
+        message: |
+          
+          ⚠️  No tools selected for installation.
+          
+          You can install modern CLI tools later by running:
+            clipilot run modern_cli_tools_install
+
+      detect_package_manager:
+        type: action
+        message: "Detecting package manager..."
+        command: |
+          if [ -n "$TERMUX_VERSION" ] || [ -d "$PREFIX" ]; then
+            echo "TERMUX"
+          elif command -v apt-get >/dev/null 2>&1; then
+            echo "APT"
+          elif command -v dnf >/dev/null 2>&1; then
+            echo "DNF"
+          elif command -v yum >/dev/null 2>&1; then
+            echo "YUM"
+          elif command -v pacman >/dev/null 2>&1; then
+            echo "PACMAN"
+          elif command -v brew >/dev/null 2>&1; then
+            echo "BREW"
+          else
+            echo "UNKNOWN"
+          fi
+        next: branch_package_manager
+
+      branch_package_manager:
+        type: branch
+        message: "Selecting installation method..."
+        based_on: last_output
+        branches:
+          TERMUX:
+            next: install_termux
+          APT:
+            next: install_apt
+          DNF:
+            next: install_dnf
+          YUM:
+            next: install_yum
+          PACMAN:
+            next: install_pacman
+          BREW:
+            next: install_brew
+          default:
+            next: install_unsupported
+
+      install_termux:
+        type: action
+        message: "Installing selected tools..."
+        command: |
+          echo "Installing modern CLI tools for Termux..."
+          echo ""
+          
+          SELECTED=$(cat /tmp/clipilot_selected_cli_tools.txt | grep -v "NONE" | sort | uniq)
+          
+          echo "$SELECTED" | while read tool; do
+            case "$tool" in
+              bat)
+                echo "📦 Installing bat..."
+                pkg install -y bat
+                ;;
+              eza)
+                echo "📦 Installing eza..."
+                pkg install -y eza 2>/dev/null || pkg install -y exa
+                ;;
+              fd)
+                echo "📦 Installing fd..."
+                pkg install -y fd
+                ;;
+              ripgrep)
+                echo "📦 Installing ripgrep..."
+                pkg install -y ripgrep
+                ;;
+              fzf)
+                echo "📦 Installing fzf..."
+                pkg install -y fzf
+                ;;
+              tldr)
+                echo "📦 Installing tldr..."
+                pkg install -y tldr
+                ;;
+              htop)
+                echo "📦 Installing htop..."
+                pkg install -y htop
+                ;;
+              btop)
+                echo "📦 Installing btop..."
+                pkg install -y btop
+                ;;
+            esac
+            echo ""
+          done
+          
+          rm -f /tmp/clipilot_selected_cli_tools.txt
+          echo "✅ Selected tools installed successfully!"
+        next: setup_aliases
+
+      install_apt:
+        type: action
+        message: "Installing selected tools..."
+        command: |
+          echo "Installing modern CLI tools (Debian/Ubuntu)..."
+          echo ""
+          
+          sudo apt-get update
+          echo ""
+          
+          SELECTED=$(cat /tmp/clipilot_selected_cli_tools.txt | grep -v "NONE" | sort | uniq)
+          
+          echo "$SELECTED" | while read tool; do
+            case "$tool" in
+              bat)
+                echo "📦 Installing bat..."
+                sudo apt-get install -y bat
+                ;;
+              eza)
+                echo "📦 Installing eza..."
+                if ! sudo apt-get install -y eza 2>/dev/null; then
+                  echo "  Installing from cargo..."
+                  command -v cargo >/dev/null 2>&1 && cargo install eza || echo "  Skipping eza (requires cargo)"
+                fi
+                ;;
+              fd)
+                echo "📦 Installing fd..."
+                sudo apt-get install -y fd-find
+                ;;
+              ripgrep)
+                echo "📦 Installing ripgrep..."
+                sudo apt-get install -y ripgrep
+                ;;
+              fzf)
+                echo "📦 Installing fzf..."
+                sudo apt-get install -y fzf
+                ;;
+              tldr)
+                echo "📦 Installing tldr..."
+                sudo apt-get install -y tldr 2>/dev/null || pip3 install tldr 2>/dev/null || echo "  Skipping tldr"
+                ;;
+              htop)
+                echo "📦 Installing htop..."
+                sudo apt-get install -y htop
+                ;;
+              btop)
+                echo "📦 Installing btop..."
+                sudo apt-get install -y btop 2>/dev/null || echo "  btop not available in repos"
+                ;;
+            esac
+            echo ""
+          done
+          
+          rm -f /tmp/clipilot_selected_cli_tools.txt
+          echo "✅ Selected tools installed successfully!"
+        next: setup_aliases
+
+      install_dnf:
+        type: action
+        message: "Installing selected tools..."
+        command: |
+          echo "Installing modern CLI tools (Fedora/RHEL)..."
+          echo ""
+          
+          SELECTED=$(cat /tmp/clipilot_selected_cli_tools.txt | grep -v "NONE" | sort | uniq)
+          
+          echo "$SELECTED" | while read tool; do
+            case "$tool" in
+              bat)
+                echo "📦 Installing bat..."
+                sudo dnf install -y bat
+                ;;
+              eza)
+                echo "📦 Installing eza..."
+                sudo dnf install -y eza 2>/dev/null || cargo install eza 2>/dev/null || echo "  Skipping eza"
+                ;;
+              fd)
+                echo "📦 Installing fd..."
+                sudo dnf install -y fd-find
+                ;;
+              ripgrep)
+                echo "📦 Installing ripgrep..."
+                sudo dnf install -y ripgrep
+                ;;
+              fzf)
+                echo "📦 Installing fzf..."
+                sudo dnf install -y fzf
+                ;;
+              tldr)
+                echo "📦 Installing tldr..."
+                sudo dnf install -y tldr 2>/dev/null || pip3 install tldr 2>/dev/null || echo "  Skipping tldr"
+                ;;
+              htop)
+                echo "📦 Installing htop..."
+                sudo dnf install -y htop
+                ;;
+              btop)
+                echo "📦 Installing btop..."
+                sudo dnf install -y btop
+                ;;
+            esac
+            echo ""
+          done
+          
+          rm -f /tmp/clipilot_selected_cli_tools.txt
+          echo "✅ Selected tools installed successfully!"
+        next: setup_aliases
+
+      install_yum:
+        type: action
+        message: "Installing selected tools..."
+        command: |
+          echo "Installing modern CLI tools (CentOS/RHEL)..."
+          echo ""
+          
+          SELECTED=$(cat /tmp/clipilot_selected_cli_tools.txt | grep -v "NONE" | sort | uniq)
+          
+          echo "$SELECTED" | while read tool; do
+            case "$tool" in
+              bat)
+                echo "📦 Installing bat..."
+                sudo yum install -y bat 2>/dev/null || cargo install bat 2>/dev/null || echo "  Skipping bat"
+                ;;
+              eza)
+                echo "📦 Installing eza..."
+                cargo install eza 2>/dev/null || echo "  Skipping eza (requires cargo)"
+                ;;
+              fd)
+                echo "📦 Installing fd..."
+                sudo yum install -y fd-find 2>/dev/null || cargo install fd-find 2>/dev/null || echo "  Skipping fd"
+                ;;
+              ripgrep)
+                echo "📦 Installing ripgrep..."
+                sudo yum install -y ripgrep
+                ;;
+              fzf)
+                echo "📦 Installing fzf..."
+                sudo yum install -y fzf 2>/dev/null || echo "  Skipping fzf"
+                ;;
+              tldr)
+                echo "📦 Installing tldr..."
+                pip3 install tldr 2>/dev/null || echo "  Skipping tldr"
+                ;;
+              htop)
+                echo "📦 Installing htop..."
+                sudo yum install -y htop
+                ;;
+              btop)
+                echo "📦 Installing btop..."
+                sudo yum install -y btop 2>/dev/null || echo "  Skipping btop"
+                ;;
+            esac
+            echo ""
+          done
+          
+          rm -f /tmp/clipilot_selected_cli_tools.txt
+          echo "✅ Selected tools installed successfully!"
+        next: setup_aliases
+
+      install_pacman:
+        type: action
+        message: "Installing selected tools..."
+        command: |
+          echo "Installing modern CLI tools (Arch Linux)..."
+          echo ""
+          
+          SELECTED=$(cat /tmp/clipilot_selected_cli_tools.txt | grep -v "NONE" | sort | uniq)
+          
+          echo "$SELECTED" | while read tool; do
+            case "$tool" in
+              bat)
+                echo "📦 Installing bat..."
+                sudo pacman -S --noconfirm bat
+                ;;
+              eza)
+                echo "📦 Installing eza..."
+                sudo pacman -S --noconfirm eza
+                ;;
+              fd)
+                echo "📦 Installing fd..."
+                sudo pacman -S --noconfirm fd
+                ;;
+              ripgrep)
+                echo "📦 Installing ripgrep..."
+                sudo pacman -S --noconfirm ripgrep
+                ;;
+              fzf)
+                echo "📦 Installing fzf..."
+                sudo pacman -S --noconfirm fzf
+                ;;
+              tldr)
+                echo "📦 Installing tldr..."
+                sudo pacman -S --noconfirm tldr
+                ;;
+              htop)
+                echo "📦 Installing htop..."
+                sudo pacman -S --noconfirm htop
+                ;;
+              btop)
+                echo "📦 Installing btop..."
+                sudo pacman -S --noconfirm btop
+                ;;
+            esac
+            echo ""
+          done
+          
+          rm -f /tmp/clipilot_selected_cli_tools.txt
+          echo "✅ Selected tools installed successfully!"
+        next: setup_aliases
+
+      install_brew:
+        type: action
+        message: "Installing selected tools..."
+        command: |
+          echo "Installing modern CLI tools (macOS)..."
+          echo ""
+          
+          SELECTED=$(cat /tmp/clipilot_selected_cli_tools.txt | grep -v "NONE" | sort | uniq)
+          
+          echo "$SELECTED" | while read tool; do
+            case "$tool" in
+              bat)
+                echo "📦 Installing bat..."
+                brew install bat
+                ;;
+              eza)
+                echo "📦 Installing eza..."
+                brew install eza
+                ;;
+              fd)
+                echo "📦 Installing fd..."
+                brew install fd
+                ;;
+              ripgrep)
+                echo "📦 Installing ripgrep..."
+                brew install ripgrep
+                ;;
+              fzf)
+                echo "📦 Installing fzf..."
+                brew install fzf
+                ;;
+              tldr)
+                echo "📦 Installing tldr..."
+                brew install tldr
+                ;;
+              htop)
+                echo "📦 Installing htop..."
+                brew install htop
+                ;;
+              btop)
+                echo "📦 Installing btop..."
+                brew install btop
+                ;;
+            esac
+            echo ""
+          done
+          
+          rm -f /tmp/clipilot_selected_cli_tools.txt
+          echo "✅ Selected tools installed successfully!"
+        next: setup_aliases
+
+      install_unsupported:
+        type: terminal
+        message: |
+          
+          ❌ Unsupported package manager
+          
+          You can install these tools manually or using cargo:
+          
+          cargo install bat eza fd-find ripgrep
+          
+          Visit these sites for installation instructions:
+          • bat: https://github.com/sharkdp/bat
+          • eza: https://github.com/eza-community/eza
+          • fd: https://github.com/sharkdp/fd
+          • ripgrep: https://github.com/BurntSushi/ripgrep
+          • fzf: https://github.com/junegunn/fzf
+          • tldr: https://github.com/tldr-pages/tldr
+
+      setup_aliases:
+        type: action
+        message: "Setting up convenient aliases..."
+        command: |
+          SHELL_RC=""
+          if [ -f "$HOME/.zshrc" ]; then
+            SHELL_RC="$HOME/.zshrc"
+          elif [ -f "$HOME/.bashrc" ]; then
+            SHELL_RC="$HOME/.bashrc"
+          fi
+          
+          if [ -n "$SHELL_RC" ]; then
+            echo ""
+            echo "📝 Adding aliases to $SHELL_RC..."
+            
+            # Check if aliases section exists
+            if ! grep -q "# Modern CLI tools aliases" "$SHELL_RC"; then
+              cat >> "$SHELL_RC" << 'ALIAS_BLOCK'
+          
+          # Modern CLI tools aliases
+          if command -v bat >/dev/null 2>&1; then
+            alias cat='bat'
+          elif command -v batcat >/dev/null 2>&1; then
+            alias cat='batcat'
+          fi
+          
+          if command -v eza >/dev/null 2>&1; then
+            alias ls='eza --icons'
+            alias ll='eza -l --icons --git'
+            alias la='eza -la --icons --git'
+            alias lt='eza --tree --icons'
+          elif command -v exa >/dev/null 2>&1; then
+            alias ls='exa --icons'
+            alias ll='exa -l --icons --git'
+            alias la='exa -la --icons --git'
+            alias lt='exa --tree --icons'
+          fi
+          
+          if command -v fd >/dev/null 2>&1; then
+            alias find='fd'
+          fi
+          
+          if command -v rg >/dev/null 2>&1; then
+            alias grep='rg'
+          fi
+          ALIAS_BLOCK
+              echo "  ✅ Aliases added"
+            else
+              echo "  ✅ Aliases already configured"
+            fi
+          fi
+        next: show_summary
+
+      show_summary:
+        type: terminal
+        message: |
+          
+          ==========================================
+            Modern CLI Tools Installed!
+          ==========================================
+          
+          Installed tools:
+            • bat: $(command -v bat >/dev/null 2>&1 && echo "✅ $(bat --version | head -1)" || echo "❌ not installed")
+            • eza: $(command -v eza >/dev/null 2>&1 && echo "✅ installed" || echo "❌ not installed")
+            • fd: $(command -v fd >/dev/null 2>&1 && echo "✅ $(fd --version | head -1)" || echo "❌ not installed")
+            • ripgrep: $(command -v rg >/dev/null 2>&1 && echo "✅ $(rg --version | head -1)" || echo "❌ not installed")
+            • fzf: $(command -v fzf >/dev/null 2>&1 && echo "✅ $(fzf --version)" || echo "❌ not installed")
+            • tldr: $(command -v tldr >/dev/null 2>&1 && echo "✅ installed" || echo "❌ not installed")
+            • htop: $(command -v htop >/dev/null 2>&1 && echo "✅ installed" || echo "❌ not installed")
+            • btop: $(command -v btop >/dev/null 2>&1 && echo "✅ installed" || echo "❌ not installed")
+          
+          Aliases configured (restart shell or run 'source ~/.bashrc'):
+            • cat → bat (syntax highlighted cat)
+            • ls → eza (colorful ls with icons)
+            • ll → eza -l (detailed list)
+            • la → eza -la (all files)
+            • lt → eza --tree (tree view)
+            • find → fd (faster find)
+            • grep → rg (faster grep)
+          
+          Quick examples:
+            • bat README.md        - View file with highlighting
+            • eza -l              - List files with details
+            • fd pattern          - Find files matching pattern
+            • rg "search term"    - Search in files recursively
+            • fzf                 - Interactive fuzzy finder
+            • Ctrl+R              - Fuzzy history search (with fzf)
+            • tldr tar            - Quick examples for tar
+            • htop                - Interactive process viewer
+            • btop                - Beautiful system monitor
+          
+          🎉 Enjoy your modern CLI experience!
+
+metadata:
+  author: TheMobileProf
+  license: MIT

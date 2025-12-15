@@ -1,0 +1,543 @@
+name: setup_development_environment
+id: org.themobileprof.setup_development_environment
+version: 1.0.0
+description: Comprehensive development environment setup wizard for developers - installs dev tools, modern CLI tools, database clients, network/security tools, and cloud CLI tools on any system including Android/Termux
+tags: [installer, composite, development, devops-ops, wizard, meta-module, environment, setup, complete, all-in-one]
+provides:
+  - development_environment_setup
+requires:
+  - check_command_exists
+size_kb: 5
+
+flows:
+  main:
+    start: welcome
+    steps:
+      welcome:
+        type: action
+        message: "Welcome to the Development Environment Setup Wizard..."
+        command: |
+          clear
+          echo "╔═══════════════════════════════════════════════════════════╗"
+          echo "║                                                           ║"
+          echo "║      🚀 Development Environment Setup Wizard 🚀          ║"
+          echo "║                                                           ║"
+          echo "╚═══════════════════════════════════════════════════════════╝"
+          echo ""
+          echo "This wizard will help you set up a complete development"
+          echo "environment by optionally installing:"
+          echo ""
+          echo "  📦 Development Tools"
+          echo "     • Python, Node.js, Go, Make, C/C++ Compiler"
+          echo ""
+          echo "  ⚡ Modern CLI Tools"
+          echo "     • bat, eza, fd, ripgrep, fzf, tldr, htop, btop"
+          echo ""
+          echo "  🗄️  Database Clients"
+          echo "     • PostgreSQL, MySQL/MariaDB, MongoDB, Redis, SQLite"
+          echo ""
+          echo "  🔐 Network & Security Tools"
+          echo "     • nmap, netcat, socat, tcpdump, ngrep, iftop, iperf3"
+          echo ""
+          echo "  ☁️  Cloud CLI Tools"
+          echo "     • AWS CLI, Google Cloud SDK, Azure CLI, Terraform, kubectl"
+          echo ""
+          echo "You'll be asked which categories you want to install."
+          echo "Each tool within a category has individual selection."
+          echo ""
+          
+          # Detect environment
+          if [ -n "$TERMUX_VERSION" ] || [ -d "$PREFIX" ]; then
+            echo "📱 Termux Environment Detected"
+            echo "   Architecture: $(uname -m)"
+            echo ""
+          fi
+          
+          # Initialize tracking
+          echo "NONE" > /tmp/clipilot_setup_categories.txt
+        next: ask_dev_tools
+
+      ask_dev_tools:
+        type: instruction
+        message: |
+          
+          ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+          📦 Development Tools
+          ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+          
+          Essential programming language runtimes and build tools:
+          • Python - scripting, web dev, data science, ML/AI
+          • Node.js - JavaScript runtime, npm package manager
+          • Go - fast compiled language for servers and CLIs
+          • Make - build automation tool
+          • C/C++ Compiler - native code compilation
+          
+          Each tool will be individually selectable.
+          Total size: ~275 MB (if all selected)
+          
+        command: |
+          read -p "Install Development Tools? (Y/n): " -r
+          echo
+          if [[ ! $REPLY =~ ^[Nn]$ ]]; then
+            echo "dev_tools" >> /tmp/clipilot_setup_categories.txt
+            echo "YES"
+          else
+            echo "NO"
+          fi
+        next: ask_modern_cli
+
+      ask_modern_cli:
+        type: instruction
+        message: |
+          
+          ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+          ⚡ Modern CLI Tools
+          ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+          
+          Modern replacements for classic Unix tools:
+          • bat - syntax-highlighted cat with line numbers
+          • eza - colorful ls with icons and git status
+          • fd - simple and fast find alternative
+          • ripgrep - extremely fast grep replacement
+          • fzf - fuzzy finder for command history
+          • tldr - simplified man pages with examples
+          • htop - interactive process viewer
+          • btop - beautiful resource monitor
+          
+          Each tool will be individually selectable.
+          Total size: ~22 MB (if all selected)
+          
+        command: |
+          read -p "Install Modern CLI Tools? (Y/n): " -r
+          echo
+          if [[ ! $REPLY =~ ^[Nn]$ ]]; then
+            echo "modern_cli" >> /tmp/clipilot_setup_categories.txt
+            echo "YES"
+          else
+            echo "NO"
+          fi
+        next: ask_database_clients
+
+      ask_database_clients:
+        type: instruction
+        message: |
+          
+          ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+          🗄️  Database Clients
+          ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+          
+          Command-line clients for popular databases:
+          • PostgreSQL (psql) - open-source relational database
+          • MySQL/MariaDB - industry standard SQL database
+          • MongoDB (mongosh) - NoSQL document database
+          • Redis (redis-cli) - in-memory key-value store
+          • SQLite - lightweight embedded SQL database
+          
+          Each client will be individually selectable.
+          Total size: ~147 MB (if all selected)
+          
+        command: |
+          ENV=""
+          if [ -n "$TERMUX_VERSION" ] || [ -d "$PREFIX" ]; then
+            ENV=" (Note: Some include servers in Termux)"
+          fi
+          echo "$ENV"
+          
+          read -p "Install Database Clients? (Y/n): " -r
+          echo
+          if [[ ! $REPLY =~ ^[Nn]$ ]]; then
+            echo "database_clients" >> /tmp/clipilot_setup_categories.txt
+            echo "YES"
+          else
+            echo "NO"
+          fi
+        next: ask_network_security
+
+      ask_network_security:
+        type: instruction
+        message: |
+          
+          ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+          🔐 Network & Security Tools
+          ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+          
+          Network diagnostics and security tools:
+          • nmap - network scanner and security auditing
+          • netcat - networking Swiss Army knife
+          • socat - advanced netcat replacement
+          • tcpdump - packet analyzer/sniffer
+          • ngrep - network packet grep
+          • iftop - bandwidth monitor
+          • iperf3 - network performance testing
+          • traceroute - route tracer
+          
+          Each tool will be individually selectable.
+          Total size: ~25 MB (if all selected)
+          ⚠️  Note: Most tools require sudo/root privileges
+          
+        command: |
+          read -p "Install Network & Security Tools? (Y/n): " -r
+          echo
+          if [[ ! $REPLY =~ ^[Nn]$ ]]; then
+            echo "network_security" >> /tmp/clipilot_setup_categories.txt
+            echo "YES"
+          else
+            echo "NO"
+          fi
+        next: ask_cloud_cli
+
+      ask_cloud_cli:
+        type: instruction
+        message: |
+          
+          ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+          ☁️  Cloud CLI Tools
+          ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+          
+          Command-line tools for cloud platforms:
+          • AWS CLI - Amazon Web Services management
+          • Google Cloud SDK (gcloud) - GCP management
+          • Azure CLI (az) - Microsoft Azure management
+          • Terraform - Infrastructure as Code tool
+          • kubectl - Kubernetes cluster management
+          • DigitalOcean CLI (doctl) - DO management
+          
+          Each tool will be individually selectable.
+          Total size: ~330 MB (if all selected)
+          
+        command: |
+          ENV=""
+          if [ -n "$TERMUX_VERSION" ] || [ -d "$PREFIX" ]; then
+            ARCH=$(uname -m)
+            case "$ARCH" in
+              aarch64|arm64)
+                ENV=" (Termux ARM64: Full support)"
+                ;;
+              armv7l|armv8l|arm)
+                ENV=" (⚠️  Termux ARM32: Limited support)"
+                ;;
+              *)
+                ENV=" (Termux: Architecture $(uname -m))"
+                ;;
+            esac
+          fi
+          echo "$ENV"
+          
+          read -p "Install Cloud CLI Tools? (Y/n): " -r
+          echo
+          if [[ ! $REPLY =~ ^[Nn]$ ]]; then
+            echo "cloud_cli" >> /tmp/clipilot_setup_categories.txt
+            echo "YES"
+          else
+            echo "NO"
+          fi
+        next: confirm_categories
+
+      confirm_categories:
+        type: action
+        message: "Reviewing selections..."
+        command: |
+          SELECTED=$(cat /tmp/clipilot_setup_categories.txt | grep -v "NONE" | sort | uniq)
+          
+          if [ -z "$SELECTED" ]; then
+            echo "NO_CATEGORIES_SELECTED"
+          else
+            echo ""
+            echo "╔═══════════════════════════════════════════════════════════╗"
+            echo "║           Installation Summary                            ║"
+            echo "╚═══════════════════════════════════════════════════════════╝"
+            echo ""
+            echo "Selected categories for installation:"
+            echo ""
+            echo "$SELECTED" | while read category; do
+              case "$category" in
+                dev_tools)
+                  echo "  ✓ Development Tools"
+                  echo "    → Python, Node.js, Go, Make, C/C++ Compiler"
+                  ;;
+                modern_cli)
+                  echo "  ✓ Modern CLI Tools"
+                  echo "    → bat, eza, fd, ripgrep, fzf, tldr, htop, btop"
+                  ;;
+                database_clients)
+                  echo "  ✓ Database Clients"
+                  echo "    → PostgreSQL, MySQL, MongoDB, Redis, SQLite"
+                  ;;
+                network_security)
+                  echo "  ✓ Network & Security Tools"
+                  echo "    → nmap, netcat, tcpdump, iftop, iperf3, etc."
+                  ;;
+                cloud_cli)
+                  echo "  ✓ Cloud CLI Tools"
+                  echo "    → AWS CLI, gcloud, Azure CLI, Terraform, kubectl"
+                  ;;
+              esac
+              echo ""
+            done
+            
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo "Each category will run its own wizard for individual"
+            echo "tool selection. You can skip tools you don't need."
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo ""
+            echo "CATEGORIES_SELECTED"
+          fi
+        next: branch_confirmation
+
+      branch_confirmation:
+        type: branch
+        message: "Processing selections..."
+        based_on: last_output
+        branches:
+          NO_CATEGORIES_SELECTED:
+            next: installation_cancelled
+          CATEGORIES_SELECTED:
+            next: start_installations
+          default:
+            next: installation_cancelled
+
+      installation_cancelled:
+        type: terminal
+        message: |
+          
+          ⚠️  No categories selected for installation.
+          
+          You can run individual installers later:
+            • clipilot run dev_tools_install
+            • clipilot run modern_cli_tools_install
+            • clipilot run database_clients_install
+            • clipilot run network_security_tools_install
+            • clipilot run cloud_cli_tools_install
+          
+          Or run this wizard again:
+            • clipilot run setup_development_environment
+
+      start_installations:
+        type: action
+        message: "Starting installation process..."
+        command: |
+          echo ""
+          echo "╔═══════════════════════════════════════════════════════════╗"
+          echo "║          Starting Installation Process                    ║"
+          echo "╚═══════════════════════════════════════════════════════════╝"
+          echo ""
+          echo "Each selected category will now run its installation wizard."
+          echo "You'll be able to select individual tools within each category."
+          echo ""
+          sleep 2
+        next: check_dev_tools
+
+      check_dev_tools:
+        type: action
+        message: "Checking if Development Tools category was selected..."
+        command: |
+          if grep -q "dev_tools" /tmp/clipilot_setup_categories.txt; then
+            echo "INSTALL_DEV_TOOLS"
+          else
+            echo "SKIP"
+          fi
+        next: branch_dev_tools
+
+      branch_dev_tools:
+        type: branch
+        message: "Processing Development Tools..."
+        based_on: last_output
+        branches:
+          INSTALL_DEV_TOOLS:
+            next: install_dev_tools
+          default:
+            next: check_modern_cli
+
+      install_dev_tools:
+        type: action
+        message: "Running Development Tools installation wizard..."
+        command: |
+          echo ""
+          echo "═══════════════════════════════════════════════════════════"
+          echo "  Category 1: Development Tools"
+          echo "═══════════════════════════════════════════════════════════"
+          echo ""
+          clipilot run dev_tools_install
+          echo ""
+        next: check_modern_cli
+
+      check_modern_cli:
+        type: action
+        message: "Checking if Modern CLI Tools category was selected..."
+        command: |
+          if grep -q "modern_cli" /tmp/clipilot_setup_categories.txt; then
+            echo "INSTALL_MODERN_CLI"
+          else
+            echo "SKIP"
+          fi
+        next: branch_modern_cli
+
+      branch_modern_cli:
+        type: branch
+        message: "Processing Modern CLI Tools..."
+        based_on: last_output
+        branches:
+          INSTALL_MODERN_CLI:
+            next: install_modern_cli
+          default:
+            next: check_database_clients
+
+      install_modern_cli:
+        type: action
+        message: "Running Modern CLI Tools installation wizard..."
+        command: |
+          echo ""
+          echo "═══════════════════════════════════════════════════════════"
+          echo "  Category 2: Modern CLI Tools"
+          echo "═══════════════════════════════════════════════════════════"
+          echo ""
+          clipilot run modern_cli_tools_install
+          echo ""
+        next: check_database_clients
+
+      check_database_clients:
+        type: action
+        message: "Checking if Database Clients category was selected..."
+        command: |
+          if grep -q "database_clients" /tmp/clipilot_setup_categories.txt; then
+            echo "INSTALL_DATABASE_CLIENTS"
+          else
+            echo "SKIP"
+          fi
+        next: branch_database_clients
+
+      branch_database_clients:
+        type: branch
+        message: "Processing Database Clients..."
+        based_on: last_output
+        branches:
+          INSTALL_DATABASE_CLIENTS:
+            next: install_database_clients
+          default:
+            next: check_network_security
+
+      install_database_clients:
+        type: action
+        message: "Running Database Clients installation wizard..."
+        command: |
+          echo ""
+          echo "═══════════════════════════════════════════════════════════"
+          echo "  Category 3: Database Clients"
+          echo "═══════════════════════════════════════════════════════════"
+          echo ""
+          clipilot run database_clients_install
+          echo ""
+        next: check_network_security
+
+      check_network_security:
+        type: action
+        message: "Checking if Network & Security Tools category was selected..."
+        command: |
+          if grep -q "network_security" /tmp/clipilot_setup_categories.txt; then
+            echo "INSTALL_NETWORK_SECURITY"
+          else
+            echo "SKIP"
+          fi
+        next: branch_network_security
+
+      branch_network_security:
+        type: branch
+        message: "Processing Network & Security Tools..."
+        based_on: last_output
+        branches:
+          INSTALL_NETWORK_SECURITY:
+            next: install_network_security
+          default:
+            next: check_cloud_cli
+
+      install_network_security:
+        type: action
+        message: "Running Network & Security Tools installation wizard..."
+        command: |
+          echo ""
+          echo "═══════════════════════════════════════════════════════════"
+          echo "  Category 4: Network & Security Tools"
+          echo "═══════════════════════════════════════════════════════════"
+          echo ""
+          clipilot run network_security_tools_install
+          echo ""
+        next: check_cloud_cli
+
+      check_cloud_cli:
+        type: action
+        message: "Checking if Cloud CLI Tools category was selected..."
+        command: |
+          if grep -q "cloud_cli" /tmp/clipilot_setup_categories.txt; then
+            echo "INSTALL_CLOUD_CLI"
+          else
+            echo "SKIP"
+          fi
+        next: branch_cloud_cli
+
+      branch_cloud_cli:
+        type: branch
+        message: "Processing Cloud CLI Tools..."
+        based_on: last_output
+        branches:
+          INSTALL_CLOUD_CLI:
+            next: install_cloud_cli
+          default:
+            next: cleanup_and_summary
+
+      install_cloud_cli:
+        type: action
+        message: "Running Cloud CLI Tools installation wizard..."
+        command: |
+          echo ""
+          echo "═══════════════════════════════════════════════════════════"
+          echo "  Category 5: Cloud CLI Tools"
+          echo "═══════════════════════════════════════════════════════════"
+          echo ""
+          clipilot run cloud_cli_tools_install
+          echo ""
+        next: cleanup_and_summary
+
+      cleanup_and_summary:
+        type: terminal
+        message: |
+          
+          ╔═══════════════════════════════════════════════════════════╗
+          ║                                                           ║
+          ║        ✅ Development Environment Setup Complete!        ║
+          ║                                                           ║
+          ╚═══════════════════════════════════════════════════════════╝
+          
+          All selected categories have been processed!
+          
+          What was installed:
+          $(cat /tmp/clipilot_setup_categories.txt | grep -v "NONE" | while read category; do
+            case "$category" in
+              dev_tools) echo "  ✓ Development Tools" ;;
+              modern_cli) echo "  ✓ Modern CLI Tools" ;;
+              database_clients) echo "  ✓ Database Clients" ;;
+              network_security) echo "  ✓ Network & Security Tools" ;;
+              cloud_cli) echo "  ✓ Cloud CLI Tools" ;;
+            esac
+          done)
+          
+          $(rm -f /tmp/clipilot_setup_categories.txt)
+          
+          ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+          
+          🎉 Your development environment is ready!
+          
+          Next steps:
+          • Configure cloud CLI tools with authentication
+          • Set up database connections
+          • Explore the new modern CLI tools
+          • Check installed versions: clipilot run get_system_info
+          
+          Need to install more tools later?
+          Run individual installers or this wizard again:
+            clipilot run setup_development_environment
+          
+          Happy coding! 🚀
+
+metadata:
+  author: TheMobileProf
+  license: MIT
