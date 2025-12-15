@@ -36,6 +36,13 @@ fi
 echo -e "${YELLOW}Installing to: ${INSTALL_DIR}${NC}"
 echo ""
 
+# Detect Termux environment
+IS_TERMUX=false
+if [ -n "$TERMUX_VERSION" ] || [ -n "$PREFIX" ]; then
+    IS_TERMUX=true
+    echo -e "${YELLOW}📱 Termux environment detected${NC}"
+fi
+
 # Detect architecture
 ARCH=$(uname -m)
 case $ARCH in
@@ -45,12 +52,18 @@ case $ARCH in
     aarch64|arm64)
         ARCH="arm64"
         ;;
-    armv7l)
+    armv7l|armv8l)
         ARCH="armv7"
         ;;
     *)
-        echo -e "${RED}Unsupported architecture: $ARCH${NC}"
-        exit 1
+        echo -e "${YELLOW}⚠️  Unknown architecture: $ARCH${NC}"
+        if [ "$IS_TERMUX" = true ]; then
+            echo "Attempting to use ARM64 binary..."
+            ARCH="arm64"
+        else
+            echo -e "${RED}Unsupported architecture: $ARCH${NC}"
+            exit 1
+        fi
         ;;
 esac
 
@@ -88,30 +101,76 @@ if [ -z "$DOWNLOAD_URL" ]; then
     if ! command -v go &> /dev/null; then
         echo -e "${RED}Error: Go is required to build from source${NC}"
         echo ""
-        echo "Option 1: Install Go"
-        echo "  https://golang.org/dl/"
-        echo ""
-        echo "Option 2: Wait for binaries to be published"
-        echo "  https://github.com/${REPO_OWNER}/${REPO_NAME}/releases"
-        echo ""
-        echo "Option 3: Build manually in the repo directory:"
-        echo "  git clone https://github.com/${REPO_OWNER}/${REPO_NAME}.git"
-        echo "  cd ${REPO_NAME}"
-        echo "  go build -o clipilot ./cmd/clipilot"
-        echo "  sudo mv clipilot /usr/local/bin/"
+        
+        if [ "$IS_TERMUX" = true ]; then
+            echo "📱 Termux Installation Instructions:"
+            echo ""
+            echo "1. Install Go in Termux:"
+            echo "   pkg update && pkg install golang git"
+            echo ""
+            echo "2. Then run this installer again:"
+            echo "   bash <(curl -fsSL https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}/main/install.sh)"
+            echo ""
+            echo "Or install manually:"
+            echo "   git clone https://github.com/${REPO_OWNER}/${REPO_NAME}.git"
+            echo "   cd ${REPO_NAME}"
+            echo "   go build -o clipilot ./cmd/clipilot"
+            echo "   mv clipilot \$PREFIX/bin/"
+        else
+            echo "Option 1: Install Go"
+            echo "  https://golang.org/dl/"
+            echo ""
+            echo "Option 2: Wait for binaries to be published"
+            echo "  https://github.com/${REPO_OWNER}/${REPO_NAME}/releases"
+            echo ""
+            echo "Option 3: Build manually in the repo directory:"
+            echo "  git clone https://github.com/${REPO_OWNER}/${REPO_NAME}.git"
+            echo "  cd ${REPO_NAME}"
+            echo "  go build -o clipilot ./cmd/clipilot"
+            echo "  sudo mv clipilot /usr/local/bin/"
+        fi
         exit 1
     fi
     
     # Clone and build
     TMP_DIR=$(mktemp -d)
     echo "Cloning repository..."
-    git clone --depth 1 "https://github.com/${REPO_OWNER}/${REPO_NAME}.git" "$TMP_DIR" 2>&1
+    git clone --depth 1 "https://github.com/${REPO_OWNER}/${REPO_NAME}.git" "$TMP_DIR" 2>&1 || {
+        echo -e "${RED}Error: Failed to clone repository${NC}"
+        exit 1
+    }
     cd "$TMP_DIR"
+    
+    # For Termux, ensure we have necessary build tools
+    if [ "$IS_TERMUX" = true ]; then
+        echo "Checking Termux build dependencies..."
+        if ! pkg list-installed 2>/dev/null | grep -q "^clang"; then
+            echo "Installing clang (required for CGO/SQLite)..."
+            pkg install -y clang 2>/dev/null || echo "  Warning: clang installation may have failed"
+        fi
+    fi
+    
     echo "Downloading dependencies..."
-    go mod download
-    echo "Building binary..."
-    go build -ldflags="-s -w" -o clipilot ./cmd/clipilot
-    mv clipilot "${INSTALL_DIR}/clipilot"
+    go mod download || {
+        echo -e "${RED}Error: Failed to download Go dependencies${NC}"
+        exit 1
+    }
+    
+    echo "Building binary (this may take a few minutes)..."
+    CGO_ENABLED=1 go build -ldflags="-s -w" -o clipilot ./cmd/clipilot || {
+        echo -e "${RED}Error: Build failed${NC}"
+        if [ "$IS_TERMUX" = true ]; then
+            echo ""
+            echo "Termux build requirements:"
+            echo "  pkg install golang git clang"
+        fi
+        exit 1
+    }
+    
+    mv clipilot "${INSTALL_DIR}/clipilot" || {
+        echo -e "${RED}Error: Failed to move binary to ${INSTALL_DIR}${NC}"
+        exit 1
+    }
     
     # Copy modules from cloned repo
     CLONED_MODULES_DIR="$TMP_DIR/modules"

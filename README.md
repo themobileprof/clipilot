@@ -120,6 +120,31 @@ cp modules/*.yaml ~/.clipilot/modules/
 clipilot --init --load=~/.clipilot/modules
 ```
 
+#### 📱 Termux Installation (Android)
+
+CLIPilot works great on Android devices via Termux! The installer automatically downloads the right binary for your device:
+
+```bash
+# One-line install (downloads pre-built binary)
+curl -fsSL https://raw.githubusercontent.com/themobileprof/clipilot/main/install.sh | bash
+```
+
+The installer will:
+- Auto-detect your architecture (ARM64/ARM32/x86_64)
+- Download the appropriate pre-built binary
+- Install to `$PREFIX/bin`
+- Set up modules and database
+
+**Most users won't need to build from source!** The installer only falls back to building if no pre-built binary is available.
+
+**Termux Notes:**
+- ARM64 (64-bit) devices work best
+- ARM32 (32-bit) devices may have limited cloud CLI tool support
+- Pre-built binaries available for ARM64, ARM32, x86_64
+- Use `termux_setup` module for initial Termux configuration
+
+📱 **For detailed Termux setup, troubleshooting, and tips, see [docs/TERMUX.md](docs/TERMUX.md)**
+
 ### First Run
 
 ```bash
