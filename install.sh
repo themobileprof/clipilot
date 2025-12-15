@@ -226,6 +226,51 @@ else
 fi
 echo -e "${GREEN}✓ Modules downloaded${NC}"
 
+# Verify binary works before initializing
+echo ""
+echo "🔍 Verifying binary..."
+if ! "${INSTALL_DIR}/clipilot" --version &>/dev/null; then
+    echo -e "${RED}✗ Binary verification failed${NC}"
+    
+    if [ "$IS_TERMUX" = true ]; then
+        echo ""
+        echo "The downloaded binary is not compatible with your device."
+        echo "This usually means:"
+        echo "  • Wrong architecture detected"
+        echo "  • Your device architecture: $(uname -m)"
+        echo ""
+        echo "Installing Go and building from source..."
+        echo ""
+        
+        # Install Go if not present
+        if ! command -v go &> /dev/null; then
+            echo "Installing Go and build dependencies..."
+            pkg update
+            pkg install -y golang git clang
+        fi
+        
+        # Build from source
+        TMP_DIR=$(mktemp -d)
+        cd "$TMP_DIR"
+        git clone --depth 1 "https://github.com/${REPO_OWNER}/${REPO_NAME}.git" . || exit 1
+        go mod download || exit 1
+        CGO_ENABLED=1 go build -ldflags="-s -w" -o clipilot ./cmd/clipilot || exit 1
+        mv clipilot "${INSTALL_DIR}/clipilot"
+        chmod +x "${INSTALL_DIR}/clipilot"
+        cd - > /dev/null
+        rm -rf "$TMP_DIR"
+        
+        echo -e "${GREEN}✓ Built from source${NC}"
+    else
+        echo "Please try building from source:"
+        echo "  git clone https://github.com/${REPO_OWNER}/${REPO_NAME}.git"
+        echo "  cd ${REPO_NAME}"
+        echo "  go build -o clipilot ./cmd/clipilot"
+        exit 1
+    fi
+fi
+echo -e "${GREEN}✓ Binary verified${NC}"
+
 # Initialize database
 echo ""
 echo "🗄️  Initializing database..."

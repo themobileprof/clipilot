@@ -49,7 +49,7 @@ func NewREPL(db *sql.DB) *REPL {
 // Start begins the interactive REPL loop
 func (repl *REPL) Start() error {
 	fmt.Println("CLIPilot v1.0.0 - Lightweight CLI Assistant")
-	fmt.Println("Type 'help' for available commands, 'exit' to quit\n")
+	fmt.Println("Type 'help' for available commands, 'exit' to quit")
 
 	reader := bufio.NewReader(os.Stdin)
 
@@ -118,7 +118,7 @@ func (repl *REPL) handleCommand(input string) error {
 
 // showHelp displays help information
 func (repl *REPL) showHelp() error {
-	fmt.Println(`
+	fmt.Print(`
 Available Commands:
   help                    - Show this help message
   search <query>          - Search for modules matching query
@@ -416,7 +416,7 @@ func (repl *REPL) showSettings() error {
 	}
 	defer rows.Close()
 
-	fmt.Println("\nCurrent Settings:\n")
+	fmt.Println("\nCurrent Settings:")
 	for rows.Next() {
 		var key, value, description string
 		if err := rows.Scan(&key, &value, &description); err != nil {
@@ -445,7 +445,7 @@ func (repl *REPL) showLogs() error {
 	}
 	defer rows.Close()
 
-	fmt.Println("\nRecent Executions:\n")
+	fmt.Println("\nRecent Executions:")
 	for rows.Next() {
 		var ts int64
 		var module, status, method string

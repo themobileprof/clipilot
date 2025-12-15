@@ -83,7 +83,7 @@ func (c *Client) SyncRegistry() error {
 	if resp.StatusCode != http.StatusOK {
 		errMsg := fmt.Sprintf("registry returned status %d", resp.StatusCode)
 		c.updateSyncStatus("failed", errMsg, 0)
-		return fmt.Errorf(errMsg)
+		return fmt.Errorf("%s", errMsg)
 	}
 
 	// Parse response
