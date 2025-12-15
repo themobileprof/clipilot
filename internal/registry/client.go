@@ -147,7 +147,11 @@ func (c *Client) SyncRegistry() error {
 				continue
 			}
 			cached++
+		} else if err != nil {
+			// Database error - skip this module
+			continue
 		}
+		// else: module is already installed, don't update
 		// If installed, don't overwrite local version
 	}
 
@@ -197,7 +201,7 @@ func (c *Client) GetSyncStatus() (*SyncStatus, error) {
 	}
 
 	// Try to count cached modules (may fail if schema not updated)
-	c.db.QueryRow(`
+	_ = c.db.QueryRow(`
 		SELECT COUNT(*) FROM modules WHERE installed = 0 AND registry_id IS NOT NULL
 	`).Scan(&cachedModules)
 	// Ignore error - column may not exist in old schema
