@@ -20,28 +20,36 @@ echo "  CLIPilot Installation Script"
 echo "========================================"
 echo ""
 
-# Detect installation directory
-if [ -w "/usr/local/bin" ]; then
-    INSTALL_DIR="/usr/local/bin"
-elif [ -n "$PREFIX" ]; then
-    # Termux support
-    INSTALL_DIR="$PREFIX/bin"
-elif [ -d "$HOME/.local/bin" ]; then
-    INSTALL_DIR="$HOME/.local/bin"
-else
-    INSTALL_DIR="$HOME/bin"
-    mkdir -p "$INSTALL_DIR"
-fi
-
-echo -e "${YELLOW}Installing to: ${INSTALL_DIR}${NC}"
-echo ""
-
-# Detect Termux environment
+# Detect Termux environment early
 IS_TERMUX=false
 if [ -n "$TERMUX_VERSION" ] || [ -n "$PREFIX" ]; then
     IS_TERMUX=true
     echo -e "${YELLOW}📱 Termux environment detected${NC}"
+    echo -e "${GREEN}Termux is a first-class platform for CLIPilot!${NC}"
+    echo ""
 fi
+
+# Detect installation directory
+if [ "$IS_TERMUX" = true ]; then
+    INSTALL_DIR="$PREFIX/bin"
+    CONFIG_DIR="$HOME/.clipilot"
+elif [ -w "/usr/local/bin" ]; then
+    INSTALL_DIR="/usr/local/bin"
+    CONFIG_DIR="$HOME/.clipilot"
+elif [ -d "$HOME/.local/bin" ]; then
+    INSTALL_DIR="$HOME/.local/bin"
+    CONFIG_DIR="$HOME/.clipilot"
+else
+    INSTALL_DIR="$HOME/bin"
+    CONFIG_DIR="$HOME/.clipilot"
+    mkdir -p "$INSTALL_DIR"
+fi
+
+echo -e "${YELLOW}Installing to: ${INSTALL_DIR}${NC}"
+if [ "$IS_TERMUX" = true ]; then
+    echo -e "${GREEN}Config directory: ${CONFIG_DIR}${NC}"
+fi
+echo ""
 
 # Detect architecture
 ARCH=$(uname -m)
@@ -73,29 +81,38 @@ BINARY_NAME="clipilot-${OS}-${ARCH}"
 echo "Detected platform: ${OS}-${ARCH}"
 echo ""
 
-# Get latest release info
-echo "📥 Fetching latest release..."
-RELEASE_DATA=""
-if command -v curl &> /dev/null; then
-    RELEASE_DATA=$(curl -fsSL "$GITHUB_API" 2>/dev/null || echo "")
-elif command -v wget &> /dev/null; then
-    RELEASE_DATA=$(wget -qO- "$GITHUB_API" 2>/dev/null || echo "")
+# For Termux, prefer building from source for maximum compatibility
+if [ "$IS_TERMUX" = true ]; then
+    echo -e "${YELLOW}📱 Building from source for optimal Termux compatibility...${NC}"
+    BUILD_FROM_SOURCE=true
 else
-    echo -e "${RED}Error: curl or wget is required for installation${NC}"
-    exit 1
+    BUILD_FROM_SOURCE=false
+    # Get latest release info
+    echo "📥 Fetching latest release..."
+    RELEASE_DATA=""
+    if command -v curl &> /dev/null; then
+        RELEASE_DATA=$(curl -fsSL "$GITHUB_API" 2>/dev/null || echo "")
+    elif command -v wget &> /dev/null; then
+        RELEASE_DATA=$(wget -qO- "$GITHUB_API" 2>/dev/null || echo "")
+    else
+        echo -e "${RED}Error: curl or wget is required for installation${NC}"
+        exit 1
+    fi
+
+    # Check if release exists and has binaries
+    DOWNLOAD_URL=""
+    if [ -n "$RELEASE_DATA" ] && ! echo "$RELEASE_DATA" | grep -q "Not Found"; then
+        # Extract download URL for the binary
+        DOWNLOAD_URL=$(echo "$RELEASE_DATA" | grep "browser_download_url.*${BINARY_NAME}.tar.gz\"" | cut -d '"' -f 4)
+    fi
 fi
 
-# Check if release exists and has binaries
-DOWNLOAD_URL=""
-if [ -n "$RELEASE_DATA" ] && ! echo "$RELEASE_DATA" | grep -q "Not Found"; then
-    # Extract download URL for the binary
-    DOWNLOAD_URL=$(echo "$RELEASE_DATA" | grep "browser_download_url.*${BINARY_NAME}.tar.gz\"" | cut -d '"' -f 4)
-fi
-
-if [ -z "$DOWNLOAD_URL" ]; then
-    echo -e "${YELLOW}⚠️  No pre-built binary found for ${OS}-${ARCH}${NC}"
-    echo "Building from source instead..."
-    echo ""
+if [ "$BUILD_FROM_SOURCE" = true ] || [ -z "$DOWNLOAD_URL" ]; then
+    if [ "$IS_TERMUX" != true ]; then
+        echo -e "${YELLOW}⚠️  No pre-built binary found for ${OS}-${ARCH}${NC}"
+        echo "Building from source instead..."
+        echo ""
+    fi
     
     # Check if Go is installed
     if ! command -v go &> /dev/null; then
@@ -144,9 +161,19 @@ if [ -z "$DOWNLOAD_URL" ]; then
     # For Termux, ensure we have necessary build tools
     if [ "$IS_TERMUX" = true ]; then
         echo "Checking Termux build dependencies..."
-        if ! pkg list-installed 2>/dev/null | grep -q "^clang"; then
-            echo "Installing clang (required for CGO/SQLite)..."
-            pkg install -y clang 2>/dev/null || echo "  Warning: clang installation may have failed"
+        MISSING_DEPS=""
+        
+        if ! command -v clang &> /dev/null; then
+            MISSING_DEPS="$MISSING_DEPS clang"
+        fi
+        
+        if [ -n "$MISSING_DEPS" ]; then
+            echo -e "${YELLOW}Installing required dependencies:$MISSING_DEPS${NC}"
+            pkg update -y 2>&1 | grep -v "dpkg: warning" || true
+            pkg install -y $MISSING_DEPS 2>&1 | grep -v "dpkg: warning" || true
+            echo -e "${GREEN}✓ Dependencies installed${NC}"
+        else
+            echo -e "${GREEN}✓ All dependencies present${NC}"
         fi
     fi
     
@@ -156,13 +183,22 @@ if [ -z "$DOWNLOAD_URL" ]; then
         exit 1
     }
     
-    echo "Building binary (this may take a few minutes)..."
+    if [ "$IS_TERMUX" = true ]; then
+        echo -e "${YELLOW}Building binary for Termux (this may take 2-5 minutes)...${NC}"
+        echo "Tip: Keep your device plugged in and screen awake for faster builds"
+    else
+        echo "Building binary (this may take a few minutes)..."
+    fi
+    
     CGO_ENABLED=1 go build -ldflags="-s -w" -o clipilot ./cmd/clipilot || {
         echo -e "${RED}Error: Build failed${NC}"
         if [ "$IS_TERMUX" = true ]; then
             echo ""
-            echo "Termux build requirements:"
-            echo "  pkg install golang git clang"
+            echo -e "${YELLOW}Termux troubleshooting:${NC}"
+            echo "1. Ensure you have enough storage space (at least 500MB free)"
+            echo "2. Install required packages: pkg install golang git clang"
+            echo "3. Try clearing Go cache: go clean -cache -modcache"
+            echo "4. Check for package updates: pkg update && pkg upgrade"
         fi
         exit 1
     }
@@ -209,9 +245,14 @@ MODULES=("detect_os.yaml" "git_setup.yaml" "docker_install.yaml")
 
 # Check if we have a cloned repo with modules
 if [ -n "$CLONED_MODULES_DIR" ] && [ -d "$CLONED_MODULES_DIR" ]; then
-    echo "Using modules from cloned repository..."
-    cp "$CLONED_MODULES_DIR"/*.yaml "${CONFIG_DIR}/modules/"
+    echo "Copying all modules from repository..."
+    MODULE_COUNT=$(ls -1 "$CLONED_MODULES_DIR"/*.yaml 2>/dev/null | wc -l)
+    cp "$CLONED_MODULES_DIR"/*.yaml "${CONFIG_DIR}/modules/" 2>/dev/null || true
     rm -rf "$TMP_DIR"
+    echo -e "${GREEN}✓ $MODULE_COUNT modules installed${NC}"
+    if [ "$IS_TERMUX" = true ]; then
+        echo -e "${GREEN}✓ All modules are Termux-compatible!${NC}"
+    fi
 else
     # Download from GitHub
     for module in "${MODULES[@]}"; do
@@ -223,8 +264,8 @@ else
         fi
     done
     rm -rf "$TMP_DIR"
+    echo -e "${GREEN}✓ Modules downloaded${NC}"
 fi
-echo -e "${GREEN}✓ Modules downloaded${NC}"
 
 # Verify binary works before initializing
 echo ""
@@ -253,6 +294,12 @@ if ! "${INSTALL_DIR}/clipilot" --version &>/dev/null; then
         TMP_DIR=$(mktemp -d)
         cd "$TMP_DIR"
         git clone --depth 1 "https://github.com/${REPO_OWNER}/${REPO_NAME}.git" . || exit 1
+        
+        # Copy modules before building
+        echo "Copying modules..."
+        mkdir -p "$CONFIG_DIR/modules"
+        cp modules/*.yaml "$CONFIG_DIR/modules/" 2>/dev/null || true
+        
         go mod download || exit 1
         CGO_ENABLED=1 go build -ldflags="-s -w" -o clipilot ./cmd/clipilot || exit 1
         mv clipilot "${INSTALL_DIR}/clipilot"
@@ -261,6 +308,7 @@ if ! "${INSTALL_DIR}/clipilot" --version &>/dev/null; then
         rm -rf "$TMP_DIR"
         
         echo -e "${GREEN}✓ Built from source${NC}"
+        echo -e "${GREEN}✓ Modules copied${NC}"
     else
         echo "Please try building from source:"
         echo "  git clone https://github.com/${REPO_OWNER}/${REPO_NAME}.git"
@@ -316,14 +364,42 @@ echo "========================================"
 echo -e "${GREEN}✓ CLIPilot installed successfully!${NC}"
 echo "========================================"
 echo ""
-echo "Quick Start:"
-echo "  clipilot              - Start interactive mode"
-echo "  clipilot help         - Show available commands"
-echo "  clipilot search git   - Search for modules"
-echo "  clipilot run git_setup - Run a specific module"
-echo ""
+
+if [ "$IS_TERMUX" = true ]; then
+    echo -e "${GREEN}📱 Termux-Optimized Installation Complete!${NC}"
+    echo ""
+    echo "🎯 Recommended first steps for Termux:"
+    echo "  clipilot run termux_setup     - Complete Termux environment setup"
+    echo "  clipilot run setup_development_environment - Install dev tools"
+    echo ""
+    echo "💡 Quick Start:"
+    echo "  clipilot                      - Start interactive mode"
+    echo "  clipilot search phone         - Find phone-related modules"
+    echo "  clipilot run <module>         - Run a specific module"
+    echo ""
+    echo "📚 Popular Termux modules available:"
+    echo "  • termux_setup - Configure Termux environment"
+    echo "  • git_setup - Install and configure Git"
+    echo "  • python_dev_setup - Python development environment"
+    echo "  • nodejs_setup - Node.js development environment"
+    echo "  • database_clients_install - Database tools"
+    echo "  • modern_cli_tools_install - Modern CLI utilities"
+    echo ""
+    echo "💾 Storage tip: Run 'termux-setup-storage' to access phone storage"
+else
+    echo "Quick Start:"
+    echo "  clipilot              - Start interactive mode"
+    echo "  clipilot help         - Show available commands"
+    echo "  clipilot search git   - Search for modules"
+    echo "  clipilot run git_setup - Run a specific module"
+    echo ""
+fi
+
 echo "For more information, visit:"
 echo "  https://github.com/${REPO_OWNER}/${REPO_NAME}"
+if [ "$IS_TERMUX" = true ]; then
+    echo "  Termux guide: https://github.com/${REPO_OWNER}/${REPO_NAME}/blob/main/docs/TERMUX.md"
+fi
 echo ""
 
 # Offer to start CLIPilot interactively

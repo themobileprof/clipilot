@@ -48,7 +48,14 @@ func NewREPL(db *sql.DB) *REPL {
 
 // Start begins the interactive REPL loop
 func (repl *REPL) Start() error {
+	// Detect Termux environment
+	isTermux := os.Getenv("TERMUX_VERSION") != "" || os.Getenv("PREFIX") != ""
+
 	fmt.Println("CLIPilot v1.0.0 - Lightweight CLI Assistant")
+	if isTermux {
+		fmt.Println("📱 Running on Termux - All modules are optimized for your device!")
+		fmt.Println("💡 Try: 'run termux_setup' or 'search phone'")
+	}
 	fmt.Println("Type 'help' for available commands, 'exit' to quit")
 
 	reader := bufio.NewReader(os.Stdin)

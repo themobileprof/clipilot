@@ -1,46 +1,63 @@
-# CLIPilot on Termux (Android)
+# 📱 CLIPilot on Termux (Android)
 
-This guide covers installing and using CLIPilot on Android devices via Termux.
+**CLIPilot is designed with Termux as a first-class platform!** This guide covers everything you need to know about running CLIPilot on your Android device.
 
-## Why Termux?
+## 🌟 Why CLIPilot + Termux?
 
-Termux transforms your Android phone into a portable development environment. With CLIPilot on Termux, you can:
-- Set up a complete development environment on your phone
-- Install modern CLI tools (bat, eza, ripgrep, fzf)
-- Manage cloud infrastructure from your mobile device
-- Access database clients (PostgreSQL, MySQL, MongoDB, Redis)
-- Use network/security tools (nmap, tcpdump, iperf3)
+Transform your Android phone into a powerful portable development environment:
 
-## Installation
+- 🚀 **Complete Dev Environment**: Set up Git, Python, Node.js, databases - all on your phone
+- 🛠️ **Modern CLI Tools**: Install bat, eza, ripgrep, fzf, and 60+ other utilities
+- ☁️ **Cloud Management**: Manage AWS, GCP, Azure infrastructure from anywhere
+- 🗄️ **Database Clients**: PostgreSQL, MySQL, MongoDB, Redis - all in your pocket
+- 🔒 **Network Tools**: nmap, tcpdump, iperf3 for network diagnostics
+- 📦 **66+ Modules**: All modules are Termux-tested and optimized
+
+## 🎯 Quick Start
 
 ### Prerequisites
 
 1. **Install Termux** from F-Droid (recommended) or GitHub
-   - F-Droid: https://f-droid.org/en/packages/com.termux/
-   - GitHub: https://github.com/termux/termux-app/releases
-   - ⚠️ Do NOT use Google Play version (outdated and unsupported)
+   - 📥 F-Droid: https://f-droid.org/en/packages/com.termux/
+   - 📥 GitHub: https://github.com/termux/termux-app/releases
+   - ⚠️ **Do NOT use Google Play version** (outdated and unsupported)
 
-2. **Grant Storage Permission** (optional, for accessing Android files)
+2. **Grant Storage Permission** (recommended, for accessing Android files)
    ```bash
    termux-setup-storage
    ```
 
-### Quick Install (Recommended)
+### 🚀 One-Line Installation
 
-**One-line installer downloads the pre-built binary:**
+**The installer automatically builds from source for perfect Termux compatibility:**
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/themobileprof/clipilot/main/install.sh | bash
 ```
 
-The installer will:
-- Detect Termux environment and architecture (ARM64/ARM32/x86_64)
-- Download the appropriate pre-built binary
-- Install to `$PREFIX/bin`
-- Download and initialize modules
-- Automatically build from source only if no binary is available
+**What happens automatically:**
+- ✅ Detects your device architecture (ARM64/ARM32/x86_64)
+- ✅ Installs build dependencies (Go, git, clang) if needed
+- ✅ Builds CLIPilot natively on your device
+- ✅ Installs to `$PREFIX/bin` (already in PATH)
+- ✅ Copies all 66+ modules including Termux-optimized ones
+- ✅ Initializes database and configuration
 
-**That's it!** Most users won't need to build from source.
+**Installation time:** 2-5 minutes depending on your device
+
+**First steps after installation:**
+```bash
+# Configure your Termux environment
+clipilot run termux_setup
+
+# Install development tools
+clipilot run setup_development_environment
+
+# Find mobile-specific modules
+clipilot search phone
+clipilot search android
+clipilot search mobile
+```
 
 ### Manual Build (Fallback Only)
 

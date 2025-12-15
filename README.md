@@ -16,11 +16,12 @@ CLIPilot is an intelligent command-line assistant designed for developers and op
 
 ## ✨ Features
 
+- **📱 Termux-First Design**: Optimized for Android/Termux as a first-class platform
 - **🔌 Offline-First**: Works without internet connectivity using local keyword search and optional tiny LLM
 - **🎯 Hybrid Intent Detection**: 3-layer pipeline (keyword DB → local LLM → online LLM fallback)
 - **📦 Modular Architecture**: Download and install task modules on demand
 - **🔒 Safety-First**: All commands require explicit user confirmation before execution
-- **💾 Lightweight**: Core binary <20MB, optimized for 2-4GB RAM devices
+- **💾 Lightweight**: Core binary <20MB, optimized for 2-4GB RAM devices (perfect for phones)
 - **🗃️ SQLite Backend**: Fast local caching and state persistence (embedded, no installation needed)
 - **🔄 Flow Engine**: Deterministic multi-step workflows with branching and validation
 - **📱 Zero Dependencies**: SQLite is compiled into the binary - just download and run!
@@ -66,20 +67,47 @@ CLIPilot is an intelligent command-line assistant designed for developers and op
 
 ### Installation
 
-#### One-Line Install (Linux/macOS/Termux)
+#### 📱 Termux (Android) - Recommended for Mobile Devices
+
+CLIPilot is designed with Termux as a **first-class platform**! Installation is fully automated:
+
+```bash
+# One-line install (automatically builds from source for best compatibility)
+curl -fsSL https://raw.githubusercontent.com/themobileprof/clipilot/main/install.sh | bash
+```
+
+**What happens:**
+- ✅ Detects your device architecture automatically
+- ✅ Builds from source for perfect Termux compatibility
+- ✅ Auto-installs build dependencies (Go, git, clang)
+- ✅ Installs to `$PREFIX/bin` 
+- ✅ Copies **all 66+ modules** including Termux-optimized ones
+- ✅ Sets up database and configuration
+
+**First steps after install:**
+```bash
+clipilot run termux_setup                    # Configure Termux environment
+clipilot run setup_development_environment   # Install dev tools
+clipilot search phone                        # Find mobile-optimized modules
+```
+
+📚 **Full Termux guide:** [docs/TERMUX.md](docs/TERMUX.md)
+
+#### One-Line Install (Linux/macOS)
 ```bash
 curl -fsSL https://raw.githubusercontent.com/themobileprof/clipilot/main/install.sh | bash
 ```
 
 This script will:
 - Detect your platform (Linux/macOS, amd64/arm64/armv7)
-- Download the appropriate binary from latest GitHub Release
+- Download the appropriate pre-built binary from GitHub Release
 - Install it to `/usr/local/bin` (or `$HOME/.local/bin` if no sudo)
-- Download default modules (detect_os, git_setup, docker_install)
+- Download and install all available modules
 - Initialize the database
 - Set up configuration directory at `~/.clipilot`
 
 **Supported Platforms:**
+- **Termux/Android**: ARM64, ARM32, x86_64 (primary platform)
 - Linux: amd64 (x86_64), arm64 (aarch64), armv7
 - macOS: amd64 (Intel), arm64 (Apple Silicon)
 
@@ -120,30 +148,7 @@ cp modules/*.yaml ~/.clipilot/modules/
 clipilot --init --load=~/.clipilot/modules
 ```
 
-#### 📱 Termux Installation (Android)
 
-CLIPilot works great on Android devices via Termux! The installer automatically downloads the right binary for your device:
-
-```bash
-# One-line install (downloads pre-built binary)
-curl -fsSL https://raw.githubusercontent.com/themobileprof/clipilot/main/install.sh | bash
-```
-
-The installer will:
-- Auto-detect your architecture (ARM64/ARM32/x86_64)
-- Download the appropriate pre-built binary
-- Install to `$PREFIX/bin`
-- Set up modules and database
-
-**Most users won't need to build from source!** The installer only falls back to building if no pre-built binary is available.
-
-**Termux Notes:**
-- ARM64 (64-bit) devices work best
-- ARM32 (32-bit) devices may have limited cloud CLI tool support
-- Pre-built binaries available for ARM64, ARM32, x86_64
-- Use `termux_setup` module for initial Termux configuration
-
-📱 **For detailed Termux setup, troubleshooting, and tips, see [docs/TERMUX.md](docs/TERMUX.md)**
 
 ### First Run
 
