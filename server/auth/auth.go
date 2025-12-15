@@ -3,6 +3,7 @@ package auth
 import (
 	"crypto/rand"
 	"encoding/base64"
+	"fmt"
 	"net/http"
 	"sync"
 	"time"
@@ -125,7 +126,10 @@ func (m *Manager) GetUsername(r *http.Request) string {
 // generateToken creates a random session token
 func (m *Manager) generateToken() string {
 	b := make([]byte, 32)
-	rand.Read(b)
+	if _, err := rand.Read(b); err != nil {
+		// This should never fail, but fallback to timestamp-based token
+		return base64.URLEncoding.EncodeToString([]byte(fmt.Sprintf("%d", time.Now().UnixNano())))
+	}
 	return base64.URLEncoding.EncodeToString(b)
 }
 

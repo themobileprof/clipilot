@@ -50,7 +50,9 @@ func (l *Loader) ImportModule(module *models.Module) error {
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
-	defer tx.Rollback()
+	defer func() {
+		_ = tx.Rollback() // Ignore error as we might commit
+	}()
 
 	// Serialize module to JSON for storage
 	jsonContent, err := json.Marshal(module)

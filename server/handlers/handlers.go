@@ -580,7 +580,7 @@ func (h *Handlers) APIListModules(w http.ResponseWriter, r *http.Request) {
 	defer rows.Close()
 
 	w.Header().Set("Content-Type", "application/json")
-	w.Write([]byte("["))
+	_, _ = w.Write([]byte("["))
 
 	first := true
 	for rows.Next() {
@@ -591,7 +591,7 @@ func (h *Handlers) APIListModules(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if !first {
-			w.Write([]byte(","))
+			_, _ = w.Write([]byte(","))
 		}
 		first = false
 
@@ -599,7 +599,7 @@ func (h *Handlers) APIListModules(w http.ResponseWriter, r *http.Request) {
 			m.ID, m.Name, m.Version, m.Description, m.Author, tagsJSON, m.Downloads)
 	}
 
-	w.Write([]byte("]"))
+	_, _ = w.Write([]byte("]"))
 }
 
 func (h *Handlers) APIGetModule(w http.ResponseWriter, r *http.Request) {

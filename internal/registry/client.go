@@ -163,7 +163,7 @@ func (c *Client) SyncRegistry() error {
 
 // updateSyncStatus updates the registry cache metadata
 func (c *Client) updateSyncStatus(status, errorMsg string, totalModules int) {
-	c.db.Exec(`
+	_, _ = c.db.Exec(`
 		UPDATE registry_cache 
 		SET sync_status = ?,
 			sync_error = ?,
