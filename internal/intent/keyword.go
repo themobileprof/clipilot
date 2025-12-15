@@ -60,6 +60,7 @@ func (d *Detector) Detect(input string) (*models.IntentResult, error) {
 	if d.onlineEnabled {
 		// TODO: implement online LLM call
 		// return d.onlineLLM(input, result.Candidates)
+		_ = d.onlineEnabled // Suppress empty branch warning until implementation
 	}
 
 	// Return best candidate from keyword search with low confidence
