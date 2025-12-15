@@ -1,0 +1,257 @@
+name: termux_setup
+id: org.themobileprof.termux_setup
+version: 1.0.0
+description: Initial setup and configuration for Termux environment on Android
+tags: [installer, development, devops-ops, composite, termux]
+provides:
+  - termux_configured
+requires:
+  - check_command_exists
+size_kb: 15
+
+flows:
+  main:
+    start: check_termux
+    steps:
+      check_termux:
+        type: action
+        message: "Verifying Termux environment..."
+        command: |
+          if [ -z "$TERMUX_VERSION" ] && [ ! -d "$PREFIX" ]; then
+            echo "❌ This doesn't appear to be a Termux environment"
+            echo "TERMUX_VERSION: ${TERMUX_VERSION:-not set}"
+            echo "PREFIX: ${PREFIX:-not set}"
+            exit 1
+          fi
+          echo "✅ Termux environment detected (version: ${TERMUX_VERSION:-unknown})"
+        next: update_packages
+
+      update_packages:
+        type: action
+        message: "Updating package system..."
+        command: |
+          echo "Updating package repositories..."
+          pkg update -y
+          echo "Upgrading installed packages..."
+          pkg upgrade -y
+          echo "✅ Package system updated"
+        next: install_essential
+
+      install_essential:
+        type: action
+        message: "Installing essential packages..."
+        command: |
+          echo "Installing essential development and utility packages..."
+          pkg install -y \
+            coreutils curl wget git openssh \
+            termux-api termux-tools \
+            man nano vim \
+            zip unzip tar \
+            grep sed gawk jq
+          echo "✅ Essential packages installed"
+        next: setup_storage
+
+      setup_storage:
+        type: action
+        message: "Setting up Android storage access..."
+        command: |
+          if [ ! -d "$HOME/storage" ]; then
+            echo "Setting up storage access..."
+            termux-setup-storage
+            sleep 2
+            if [ -d "$HOME/storage" ]; then
+              echo "✅ Storage access configured"
+              echo "   Access Android storage at: $HOME/storage"
+            else
+              echo "⚠  Storage setup may require manual permission grant"
+              echo "   Please check Android permissions for Termux"
+            fi
+          else
+            echo "✅ Storage access already configured"
+          fi
+        next: configure_shell
+
+      configure_shell:
+        type: action
+        message: "Configuring bash environment..."
+        command: |
+          if [ ! -f "$HOME/.bashrc" ]; then
+            cat > "$HOME/.bashrc" << 'BASH_CONFIG'
+          # Termux bash configuration
+          export EDITOR=vim
+          export VISUAL=vim
+
+          # Useful aliases
+          alias ll='ls -lah'
+          alias la='ls -A'
+          alias l='ls -CF'
+          alias ..='cd ..'
+          alias ...='cd ../..'
+          alias update='pkg update && pkg upgrade'
+          alias cleanup='pkg autoclean && pkg clean'
+
+          # Better history
+          export HISTSIZE=10000
+          export HISTFILESIZE=20000
+          export HISTCONTROL=ignoredups:erasedups
+          shopt -s histappend
+
+          # Colorful prompt
+          PS1='\[\e[1;32m\]\u@termux\[\e[0m\]:\[\e[1;34m\]\w\[\e[0m\]\$ '
+
+          # Load clipilot if available
+          if [ -f "$HOME/.clipilot/clipilot.sh" ]; then
+              source "$HOME/.clipilot/clipilot.sh"
+          fi
+          BASH_CONFIG
+            echo "✅ Created .bashrc configuration"
+          else
+            echo "✅ .bashrc already exists"
+          fi
+          
+          if [ -n "$BASH_VERSION" ]; then
+            source "$HOME/.bashrc" 2>/dev/null || true
+          fi
+        next: setup_ssh
+
+      setup_ssh:
+        type: action
+        message: "Configuring SSH..."
+        command: |
+          if [ ! -d "$HOME/.ssh" ]; then
+            mkdir -p "$HOME/.ssh"
+            chmod 700 "$HOME/.ssh"
+            echo "✅ Created .ssh directory"
+          fi
+
+          if [ ! -f "$HOME/.ssh/id_rsa" ]; then
+            echo "Generating SSH key pair..."
+            ssh-keygen -t rsa -b 4096 -f "$HOME/.ssh/id_rsa" -N "" -C "termux@android"
+            echo "✅ SSH key pair generated"
+            echo "   Public key: $HOME/.ssh/id_rsa.pub"
+          else
+            echo "✅ SSH key pair already exists"
+          fi
+
+          if ! pgrep sshd > /dev/null 2>&1; then
+            sshd
+            echo "✅ SSH daemon started"
+            echo "   Connect with: ssh -p 8022 $(whoami)@localhost"
+          else
+            echo "✅ SSH daemon already running"
+          fi
+        next: ask_dev_tools
+
+      ask_dev_tools:
+        type: instruction
+        message: "Would you like to install development tools (Python, Node.js, Go, compilers)?"
+        command: |
+          read -p "Install development tools? (y/N): " -n 1 -r
+          echo
+          if [[ $REPLY =~ ^[Yy]$ ]]; then
+            echo "INSTALL_DEV_TOOLS"
+          else
+            echo "SKIP_DEV_TOOLS"
+          fi
+        next: branch_dev_tools
+
+      branch_dev_tools:
+        type: branch
+        message: "Processing choice..."
+        based_on: last_output
+        branches:
+          INSTALL_DEV_TOOLS:
+            next: install_dev_tools
+          SKIP_DEV_TOOLS:
+            next: setup_termux_api
+          default:
+            next: setup_termux_api
+
+      install_dev_tools:
+        type: action
+        message: "Installing development tools..."
+        command: |
+          echo "Installing common development tools..."
+          pkg install -y python nodejs golang make clang pkg-config
+          echo "✅ Development tools installed"
+          
+          echo ""
+          echo "Installed versions:"
+          python --version 2>&1 | head -1 || echo "  Python: not available"
+          node --version 2>&1 | head -1 || echo "  Node.js: not available"
+          go version 2>&1 | head -1 || echo "  Go: not available"
+        next: setup_termux_api
+
+      setup_termux_api:
+        type: action
+        message: "Checking Termux API..."
+        command: |
+          if command -v termux-battery-status >/dev/null 2>&1; then
+            echo "✅ Termux API is functional"
+            echo ""
+            echo "Available API commands:"
+            echo "  termux-battery-status    - Battery information"
+            echo "  termux-clipboard-get     - Get clipboard content"
+            echo "  termux-clipboard-set     - Set clipboard content"
+            echo "  termux-notification      - Show notifications"
+            echo "  termux-toast             - Show toast messages"
+            echo "  termux-vibrate           - Vibrate device"
+            echo "  termux-wifi-connectioninfo - WiFi information"
+            echo ""
+            echo "Note: Ensure Termux:API app is installed from same source as Termux"
+          else
+            echo "⚠  Termux API commands not responding"
+            echo "   Install Termux:API app from the same source as Termux"
+          fi
+        next: create_workspace
+
+      create_workspace:
+        type: action
+        message: "Creating workspace directories..."
+        command: |
+          mkdir -p "$HOME/projects"
+          mkdir -p "$HOME/scripts"
+          mkdir -p "$HOME/downloads"
+          mkdir -p "$HOME/backup"
+          
+          echo "✅ Workspace directories created:"
+          echo "   $HOME/projects   - For development projects"
+          echo "   $HOME/scripts    - For custom scripts"
+          echo "   $HOME/downloads  - For downloaded files"
+          echo "   $HOME/backup     - For backups"
+        next: show_summary
+
+      show_summary:
+        type: terminal
+        message: |
+          
+          ==========================================
+            Termux Setup Complete!
+          ==========================================
+          
+          Installed packages:
+            Total packages: $(pkg list-installed 2>/dev/null | wc -l)
+          
+          Environment:
+            Home: $HOME
+            Prefix: $PREFIX
+            Shell: $SHELL
+          
+          Quick tips:
+            • Run 'pkg search <name>' to find packages
+            • Run 'pkg install <name>' to install packages
+            • Run 'update' alias to update all packages
+            • Access Android storage at: $HOME/storage
+            • SSH into Termux: ssh -p 8022 $(whoami)@localhost
+          
+          Recommended next steps:
+            1. Grant storage permission if prompted
+            2. Install Termux:API app for Android integration
+            3. Install dev tools: clipilot run dev_tools_install
+            4. Configure Git: git config --global user.name 'Your Name'
+            5. Configure Git: git config --global user.email 'you@example.com'
+            6. Explore your new environment!
+
+metadata:
+  author: TheMobileProf
+  license: MIT

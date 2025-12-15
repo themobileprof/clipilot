@@ -1,0 +1,553 @@
+name: dev_tools_install
+id: org.themobileprof.dev_tools_install
+version: 1.0.0
+description: Install common development tools (Python, Node.js, Go, compilers) with individual selection
+tags: [installer, composite, development, devops-ops]
+provides:
+  - dev_tools_installed
+requires:
+  - check_command_exists
+size_kb: 10
+
+flows:
+  main:
+    start: check_existing
+    steps:
+      check_existing:
+        type: action
+        message: "Checking installed development tools..."
+        command: |
+          echo "🛠️  Development Tools Installation"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo ""
+          echo "Checking current installation status:"
+          
+          if command -v python3 >/dev/null 2>&1; then
+            echo "  ✅ Python: $(python3 --version 2>&1)"
+          else
+            echo "  ❌ Python: not installed"
+          fi
+          
+          if command -v node >/dev/null 2>&1; then
+            echo "  ✅ Node.js: $(node --version 2>&1)"
+          else
+            echo "  ❌ Node.js: not installed"
+          fi
+          
+          if command -v go >/dev/null 2>&1; then
+            echo "  ✅ Go: $(go version 2>&1 | cut -d' ' -f3)"
+          else
+            echo "  ❌ Go: not installed"
+          fi
+          
+          if command -v make >/dev/null 2>&1; then
+            echo "  ✅ Make: $(make --version 2>&1 | head -1)"
+          else
+            echo "  ❌ Make: not installed"
+          fi
+          
+          if command -v gcc >/dev/null 2>&1 || command -v clang >/dev/null 2>&1; then
+            if command -v gcc >/dev/null 2>&1; then
+              echo "  ✅ GCC: $(gcc --version 2>&1 | head -1 | cut -d' ' -f4)"
+            else
+              echo "  ✅ Clang: $(clang --version 2>&1 | head -1 | cut -d' ' -f3)"
+            fi
+          else
+            echo "  ❌ Compiler (GCC/Clang): not installed"
+          fi
+          
+          echo ""
+        next: explain_process
+
+      explain_process:
+        type: action
+        message: "Starting installation wizard..."
+        command: |
+          echo "📦 Development Tools Installation Wizard"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo ""
+          echo "You will be asked about each tool individually."
+          echo "Choose which tools you want to install."
+          echo ""
+          
+          # Initialize selections
+          echo "NONE" > /tmp/clipilot_selected_tools.txt
+        next: ask_python
+
+      ask_python:
+        type: instruction
+        message: |
+          
+          🐍 Python 3
+          ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+          • Popular general-purpose programming language
+          • Includes pip (package manager) and venv (virtual environments)
+          • Used for scripting, web development, data science, ML/AI
+          • Size: ~100 MB download, ~300 MB installed
+          
+        command: |
+          read -p "Install Python? (Y/n): " -r
+          echo
+          if [[ ! $REPLY =~ ^[Nn]$ ]]; then
+            echo "python" >> /tmp/clipilot_selected_tools.txt
+            echo "YES"
+          else
+            echo "NO"
+          fi
+        next: ask_nodejs
+
+      ask_nodejs:
+        type: instruction
+        message: |
+          
+          🟢 Node.js
+          ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+          • JavaScript runtime built on Chrome's V8 engine
+          • Includes npm (Node Package Manager)
+          • Used for web development, CLI tools, and JavaScript projects
+          • Size: ~50 MB download, ~200 MB installed
+          
+        command: |
+          read -p "Install Node.js? (Y/n): " -r
+          echo
+          if [[ ! $REPLY =~ ^[Nn]$ ]]; then
+            echo "nodejs" >> /tmp/clipilot_selected_tools.txt
+            echo "YES"
+          else
+            echo "NO"
+          fi
+        next: ask_golang
+
+      ask_golang:
+        type: instruction
+        message: |
+          
+          🐹 Go (Golang)
+          ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+          • Fast, statically-typed compiled language by Google
+          • Excellent for building servers, CLIs, and microservices
+          • Built-in concurrency and fast compilation
+          • Size: ~120 MB download, ~400 MB installed
+          
+        command: |
+          read -p "Install Go? (Y/n): " -r
+          echo
+          if [[ ! $REPLY =~ ^[Nn]$ ]]; then
+            echo "golang" >> /tmp/clipilot_selected_tools.txt
+            echo "YES"
+          else
+            echo "NO"
+          fi
+        next: ask_make
+
+      ask_make:
+        type: instruction
+        message: |
+          
+          🔨 Make
+          ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+          • Build automation tool
+          • Manages compilation and build processes
+          • Essential for many open-source projects
+          • Size: ~5 MB download, ~10 MB installed
+          
+        command: |
+          read -p "Install Make? (Y/n): " -r
+          echo
+          if [[ ! $REPLY =~ ^[Nn]$ ]]; then
+            echo "make" >> /tmp/clipilot_selected_tools.txt
+            echo "YES"
+          else
+            echo "NO"
+          fi
+        next: ask_compiler
+
+      ask_compiler:
+        type: instruction
+        message: |
+          
+          ⚙️  C/C++ Compiler (Clang/GCC)
+          ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+          • Compile C and C++ programs
+          • Required for building native extensions and Python packages
+          • Essential for system-level programming
+          • Size: ~100 MB download, ~400 MB installed
+          
+        command: |
+          read -p "Install C/C++ Compiler? (Y/n): " -r
+          echo
+          if [[ ! $REPLY =~ ^[Nn]$ ]]; then
+            echo "compiler" >> /tmp/clipilot_selected_tools.txt
+            echo "YES"
+          else
+            echo "NO"
+          fi
+        next: confirm_selections
+
+      confirm_selections:
+        type: action
+        message: "Reviewing selections..."
+        command: |
+          SELECTED=$(cat /tmp/clipilot_selected_tools.txt | grep -v "NONE" | sort | uniq)
+          
+          if [ -z "$SELECTED" ]; then
+            echo "NO_TOOLS_SELECTED"
+          else
+            echo ""
+            echo "✓ Selected tools for installation:"
+            echo "$SELECTED" | while read tool; do
+              case "$tool" in
+                python) echo "  • Python 3" ;;
+                nodejs) echo "  • Node.js" ;;
+                golang) echo "  • Go" ;;
+                make) echo "  • Make" ;;
+                compiler) echo "  • C/C++ Compiler" ;;
+              esac
+            done
+            echo ""
+            echo "TOOLS_SELECTED"
+          fi
+        next: branch_selections
+
+      branch_selections:
+        type: branch
+        message: "Processing selections..."
+        based_on: last_output
+        branches:
+          NO_TOOLS_SELECTED:
+            next: installation_cancelled
+          TOOLS_SELECTED:
+            next: detect_package_manager
+          default:
+            next: installation_cancelled
+
+      installation_cancelled:
+        type: terminal
+        message: |
+          
+          ⚠️  No tools selected for installation.
+          
+          You can install development tools later by running:
+            clipilot run dev_tools_install
+
+      detect_package_manager:
+        type: action
+        message: "Detecting package manager..."
+        command: |
+          if [ -n "$TERMUX_VERSION" ] || [ -d "$PREFIX" ]; then
+            echo "TERMUX"
+          elif command -v apt-get >/dev/null 2>&1; then
+            echo "APT"
+          elif command -v dnf >/dev/null 2>&1; then
+            echo "DNF"
+          elif command -v yum >/dev/null 2>&1; then
+            echo "YUM"
+          elif command -v pacman >/dev/null 2>&1; then
+            echo "PACMAN"
+          elif command -v brew >/dev/null 2>&1; then
+            echo "BREW"
+          else
+            echo "UNKNOWN"
+          fi
+        next: branch_package_manager
+
+      branch_package_manager:
+        type: branch
+        message: "Selecting installation method..."
+        based_on: last_output
+        branches:
+          TERMUX:
+            next: install_termux
+          APT:
+            next: install_apt
+          DNF:
+            next: install_dnf
+          YUM:
+            next: install_yum
+          PACMAN:
+            next: install_pacman
+          BREW:
+            next: install_brew
+          default:
+            next: install_unsupported
+
+      install_termux:
+        type: action
+        message: "Installing selected tools..."
+        command: |
+          echo "Installing development tools for Termux..."
+          echo ""
+          
+          SELECTED=$(cat /tmp/clipilot_selected_tools.txt | grep -v "NONE" | sort | uniq)
+          
+          echo "$SELECTED" | while read tool; do
+            case "$tool" in
+              python)
+                echo "📦 Installing Python..."
+                pkg install -y python
+                ;;
+              nodejs)
+                echo "📦 Installing Node.js..."
+                pkg install -y nodejs
+                ;;
+              golang)
+                echo "📦 Installing Go..."
+                pkg install -y golang
+                ;;
+              make)
+                echo "📦 Installing Make..."
+                pkg install -y make
+                ;;
+              compiler)
+                echo "📦 Installing Clang..."
+                pkg install -y clang pkg-config
+                ;;
+            esac
+            echo ""
+          done
+          
+          rm -f /tmp/clipilot_selected_tools.txt
+          echo "✅ Selected tools installed successfully!"
+        next: show_versions
+
+      install_apt:
+        type: action
+        message: "Installing selected tools..."
+        command: |
+          echo "Installing development tools (Debian/Ubuntu)..."
+          echo ""
+          
+          sudo apt-get update
+          echo ""
+          
+          SELECTED=$(cat /tmp/clipilot_selected_tools.txt | grep -v "NONE" | sort | uniq)
+          
+          echo "$SELECTED" | while read tool; do
+            case "$tool" in
+              python)
+                echo "📦 Installing Python..."
+                sudo apt-get install -y python3 python3-pip python3-venv python3-dev
+                ;;
+              nodejs)
+                echo "📦 Installing Node.js..."
+                sudo apt-get install -y nodejs npm
+                ;;
+              golang)
+                echo "📦 Installing Go..."
+                sudo apt-get install -y golang-go
+                ;;
+              make)
+                echo "📦 Installing Make..."
+                sudo apt-get install -y make
+                ;;
+              compiler)
+                echo "📦 Installing Build Essential..."
+                sudo apt-get install -y build-essential pkg-config
+                ;;
+            esac
+            echo ""
+          done
+          
+          rm -f /tmp/clipilot_selected_tools.txt
+          echo "✅ Selected tools installed successfully!"
+        next: show_versions
+
+      install_dnf:
+        type: action
+        message: "Installing selected tools..."
+        command: |
+          echo "Installing development tools (Fedora/RHEL)..."
+          echo ""
+          
+          SELECTED=$(cat /tmp/clipilot_selected_tools.txt | grep -v "NONE" | sort | uniq)
+          
+          echo "$SELECTED" | while read tool; do
+            case "$tool" in
+              python)
+                echo "📦 Installing Python..."
+                sudo dnf install -y python3 python3-pip python3-devel
+                ;;
+              nodejs)
+                echo "📦 Installing Node.js..."
+                sudo dnf install -y nodejs npm
+                ;;
+              golang)
+                echo "📦 Installing Go..."
+                sudo dnf install -y golang
+                ;;
+              make)
+                echo "📦 Installing Make..."
+                sudo dnf install -y make
+                ;;
+              compiler)
+                echo "📦 Installing GCC..."
+                sudo dnf install -y gcc gcc-c++ pkg-config
+                ;;
+            esac
+            echo ""
+          done
+          
+          rm -f /tmp/clipilot_selected_tools.txt
+          echo "✅ Selected tools installed successfully!"
+        next: show_versions
+
+      install_yum:
+        type: action
+        message: "Installing selected tools..."
+        command: |
+          echo "Installing development tools (CentOS/RHEL)..."
+          echo ""
+          
+          SELECTED=$(cat /tmp/clipilot_selected_tools.txt | grep -v "NONE" | sort | uniq)
+          
+          echo "$SELECTED" | while read tool; do
+            case "$tool" in
+              python)
+                echo "📦 Installing Python..."
+                sudo yum install -y python3 python3-pip python3-devel
+                ;;
+              nodejs)
+                echo "📦 Installing Node.js..."
+                sudo yum install -y nodejs npm
+                ;;
+              golang)
+                echo "📦 Installing Go..."
+                sudo yum install -y golang
+                ;;
+              make)
+                echo "📦 Installing Make..."
+                sudo yum install -y make
+                ;;
+              compiler)
+                echo "📦 Installing GCC..."
+                sudo yum install -y gcc gcc-c++ pkg-config
+                ;;
+            esac
+            echo ""
+          done
+          
+          rm -f /tmp/clipilot_selected_tools.txt
+          echo "✅ Selected tools installed successfully!"
+        next: show_versions
+
+      install_pacman:
+        type: action
+        message: "Installing selected tools..."
+        command: |
+          echo "Installing development tools (Arch Linux)..."
+          echo ""
+          
+          SELECTED=$(cat /tmp/clipilot_selected_tools.txt | grep -v "NONE" | sort | uniq)
+          
+          echo "$SELECTED" | while read tool; do
+            case "$tool" in
+              python)
+                echo "📦 Installing Python..."
+                sudo pacman -S --noconfirm python python-pip
+                ;;
+              nodejs)
+                echo "📦 Installing Node.js..."
+                sudo pacman -S --noconfirm nodejs npm
+                ;;
+              golang)
+                echo "📦 Installing Go..."
+                sudo pacman -S --noconfirm go
+                ;;
+              make)
+                echo "📦 Installing Make..."
+                sudo pacman -S --noconfirm make
+                ;;
+              compiler)
+                echo "📦 Installing Base-Devel..."
+                sudo pacman -S --noconfirm base-devel pkg-config
+                ;;
+            esac
+            echo ""
+          done
+          
+          rm -f /tmp/clipilot_selected_tools.txt
+          echo "✅ Selected tools installed successfully!"
+        next: show_versions
+
+      install_brew:
+        type: action
+        message: "Installing selected tools..."
+        command: |
+          echo "Installing development tools (macOS)..."
+          echo ""
+          
+          SELECTED=$(cat /tmp/clipilot_selected_tools.txt | grep -v "NONE" | sort | uniq)
+          
+          echo "$SELECTED" | while read tool; do
+            case "$tool" in
+              python)
+                echo "📦 Installing Python..."
+                brew install python
+                ;;
+              nodejs)
+                echo "📦 Installing Node.js..."
+                brew install node
+                ;;
+              golang)
+                echo "📦 Installing Go..."
+                brew install go
+                ;;
+              make)
+                echo "📦 Installing Make..."
+                brew install make
+                ;;
+              compiler)
+                echo "📦 Installing pkg-config..."
+                brew install pkg-config
+                ;;
+            esac
+            echo ""
+          done
+          
+          rm -f /tmp/clipilot_selected_tools.txt
+          echo "✅ Selected tools installed successfully!"
+        next: show_versions
+
+      install_unsupported:
+        type: terminal
+        message: |
+          
+          ❌ Unsupported package manager
+          
+          Could not detect a supported package manager.
+          Please install development tools manually:
+          
+          • Python 3: https://www.python.org/downloads/
+          • Node.js: https://nodejs.org/
+          • Go: https://golang.org/dl/
+          • Make and compilers: Install via your system's package manager
+
+      show_versions:
+        type: terminal
+        message: |
+          
+          ==========================================
+            Development Tools Installed!
+          ==========================================
+          
+          Installed versions:
+            • Python: $(python3 --version 2>&1 || echo "not installed")
+            • Node.js: $(node --version 2>&1 || echo "not installed")
+            • npm: $(npm --version 2>&1 || echo "not installed")
+            • Go: $(go version 2>&1 | cut -d' ' -f3 || echo "not installed")
+            • Make: $(make --version 2>&1 | head -1 | cut -d' ' -f3 || echo "not installed")
+            • Compiler: $(gcc --version 2>&1 | head -1 | cut -d' ' -f4 || clang --version 2>&1 | head -1 | cut -d' ' -f3 || echo "not installed")
+          
+          Quick start:
+            • Python: python3 --version
+            • Node.js: node --version
+            • Go: go version
+            • Create Python venv: python3 -m venv myenv
+            • Install npm packages: npm install -g <package>
+            • Run Go: go run main.go
+          
+          Happy coding! 🚀
+
+metadata:
+  author: TheMobileProf
+  license: MIT
