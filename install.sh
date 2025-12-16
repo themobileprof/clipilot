@@ -142,68 +142,43 @@ if [ -z "$DOWNLOAD_URL" ]; then
     
     # Clone and build
     TMP_DIR=$(mktemp -d)
-    echo "Cloning repository..."
-    git clone --depth 1 "https://github.com/${REPO_OWNER}/${REPO_NAME}.git" "$TMP_DIR" 2>&1 || {
-        echo -e "${RED}Error: Failed to clone repository${NC}"
+    echo "Building from source..."
+    git clone --depth 1 -q "https://github.com/${REPO_OWNER}/${REPO_NAME}.git" "$TMP_DIR" || {
+        echo -e "${RED}✗ Failed to clone repository${NC}"
         exit 1
     }
     cd "$TMP_DIR"
     
     # For Termux, ensure we have necessary build tools
     if [ "$IS_TERMUX" = true ]; then
-        echo "Checking Termux build dependencies..."
-        MISSING_DEPS=""
-        
         if ! command -v clang &> /dev/null; then
-            MISSING_DEPS="$MISSING_DEPS clang"
-        fi
-        
-        if [ -n "$MISSING_DEPS" ]; then
-            echo -e "${YELLOW}Installing required dependencies:$MISSING_DEPS${NC}"
-            pkg update -y 2>&1 | grep -v "dpkg: warning" || true
-            pkg install -y $MISSING_DEPS 2>&1 | grep -v "dpkg: warning" || true
-            echo -e "${GREEN}✓ Dependencies installed${NC}"
-        else
-            echo -e "${GREEN}✓ All dependencies present${NC}"
+            pkg update -y >/dev/null 2>&1
+            pkg install -y clang >/dev/null 2>&1
         fi
     fi
     
-    echo "Downloading dependencies..."
-    go mod download || {
-        echo -e "${RED}Error: Failed to download Go dependencies${NC}"
+    go mod download >/dev/null 2>&1 || {
+        echo -e "${RED}✗ Failed to download dependencies${NC}"
         exit 1
     }
     
     if [ "$IS_TERMUX" = true ]; then
-        echo -e "${YELLOW}Building binary for Termux (this may take 2-5 minutes)...${NC}"
-        echo "Tip: Keep your device plugged in and screen awake for faster builds"
-    else
-        echo "Building binary (this may take a few minutes)..."
+        echo "Compiling (2-5 minutes)..."
     fi
     
-    CGO_ENABLED=1 go build -ldflags="-s -w" -o clipilot ./cmd/clipilot || {
-        echo -e "${RED}Error: Build failed${NC}"
-        if [ "$IS_TERMUX" = true ]; then
-            echo ""
-            echo -e "${YELLOW}Termux troubleshooting:${NC}"
-            echo "1. Ensure you have enough storage space (at least 500MB free)"
-            echo "2. Install required packages: pkg install golang git clang"
-            echo "3. Try clearing Go cache: go clean -cache -modcache"
-            echo "4. Check for package updates: pkg update && pkg upgrade"
-        fi
+    CGO_ENABLED=0 go build -ldflags="-s -w" -o clipilot ./cmd/clipilot >/dev/null 2>&1 || {
+        echo -e "${RED}✗ Build failed. Try: pkg install golang git${NC}"
         exit 1
     }
     
     mv clipilot "${INSTALL_DIR}/clipilot" || {
-        echo -e "${RED}Error: Failed to move binary to ${INSTALL_DIR}${NC}"
+        echo -e "${RED}✗ Failed to install binary${NC}"
         exit 1
     }
     
     # Copy modules from cloned repo
     CLONED_MODULES_DIR="$TMP_DIR/modules"
     cd - > /dev/null
-    
-    echo -e "${GREEN}✓ Binary built and installed${NC}"
 else
     echo "Downloading from: $DOWNLOAD_URL"
 
@@ -230,54 +205,46 @@ mkdir -p "$CONFIG_DIR"
 mkdir -p "$CONFIG_DIR/modules"
 
 # Download default modules
-echo ""
-echo "📦 Downloading default modules..."
-MODULES=("detect_os.yaml" "git_setup.yaml" "docker_install.yaml")
-
-# Check if we have a cloned repo with modules
 if [ -n "$CLONED_MODULES_DIR" ] && [ -d "$CLONED_MODULES_DIR" ]; then
-    echo "Copying all modules from repository..."
-    MODULE_COUNT=$(ls -1 "$CLONED_MODULES_DIR"/*.yaml 2>/dev/null | wc -l)
     cp "$CLONED_MODULES_DIR"/*.yaml "${CONFIG_DIR}/modules/" 2>/dev/null || true
     rm -rf "$TMP_DIR"
-    echo -e "${GREEN}✓ $MODULE_COUNT modules installed${NC}"
-    if [ "$IS_TERMUX" = true ]; then
-        echo -e "${GREEN}✓ All modules are Termux-compatible!${NC}"
-    fi
+    MODULE_COUNT=$(ls -1 "${CONFIG_DIR}/modules/"*.yaml 2>/dev/null | wc -l)
+    echo -e "${GREEN}✓ Installed $MODULE_COUNT modules${NC}"
 else
-    # Download from GitHub
+    MODULES=("detect_os.yaml" "git_setup.yaml" "docker_install.yaml")
     for module in "${MODULES[@]}"; do
-        echo "  - $module"
         if command -v curl &> /dev/null; then
-            curl -fsSL "${MODULES_BASE_URL}/${module}" -o "${CONFIG_DIR}/modules/${module}" 2>/dev/null || echo "    (skipped)"
+            curl -fsSL "${MODULES_BASE_URL}/${module}" -o "${CONFIG_DIR}/modules/${module}" 2>/dev/null || true
         else
-            wget -q "${MODULES_BASE_URL}/${module}" -O "${CONFIG_DIR}/modules/${module}" 2>/dev/null || echo "    (skipped)"
+            wget -q "${MODULES_BASE_URL}/${module}" -O "${CONFIG_DIR}/modules/${module}" 2>/dev/null || true
         fi
     done
     rm -rf "$TMP_DIR"
-    echo -e "${GREEN}✓ Modules downloaded${NC}"
+    echo -e "${GREEN}✓ Installed modules${NC}"
 fi
 
 # Verify binary works before initializing
-echo ""
-echo "🔍 Verifying binary..."
-if ! "${INSTALL_DIR}/clipilot" --version &>/dev/null; then
+if ! "${INSTALL_DIR}/clipilot" --version >/dev/null 2>&1; then
     echo -e "${RED}✗ Binary verification failed${NC}"
     
+    # Show diagnostic information
+    echo ""
+    echo "Diagnostic information:"
+    echo "  OS: ${OS}"
+    echo "  Arch: ${ARCH}"
+    echo "  Binary: ${INSTALL_DIR}/clipilot"
+    echo "  File type: $(file "${INSTALL_DIR}/clipilot" 2>/dev/null || echo 'file command not available')"
+    echo ""
+    echo "Attempting to run binary with error output:"
+    "${INSTALL_DIR}/clipilot" --version 2>&1 | head -5
+    echo ""
+    
     if [ "$IS_TERMUX" = true ]; then
-        echo ""
-        echo "The downloaded binary is not compatible with your device."
-        echo "This usually means:"
-        echo "  • Wrong architecture detected"
-        echo "  • Your device architecture: $(uname -m)"
-        echo ""
-        echo "Installing Go and building from source..."
-        echo ""
+        echo "Building from source..."
         
         # Install Go if not present
         if ! command -v go &> /dev/null; then
-            echo "Installing Go and build dependencies..."
-            pkg update
+            pkg update >/dev/null 2>&1
             pkg install -y golang git clang
         fi
         
@@ -311,16 +278,11 @@ fi
 echo -e "${GREEN}✓ Binary verified${NC}"
 
 # Initialize database
-echo ""
-echo "🗄️  Initializing database..."
-"${INSTALL_DIR}/clipilot" --init --load="${CONFIG_DIR}/modules"
+"${INSTALL_DIR}/clipilot" --init --load="${CONFIG_DIR}/modules" >/dev/null 2>&1
 echo -e "${GREEN}✓ Database initialized${NC}"
 
 # Check if install dir is in PATH
-echo ""
 if [[ ":$PATH:" != *":${INSTALL_DIR}:"* ]]; then
-    echo -e "${YELLOW}⚠️  Adding ${INSTALL_DIR} to PATH...${NC}"
-    
     # Detect shell and add to appropriate RC file
     SHELL_RC=""
     if [ -n "$BASH_VERSION" ]; then
@@ -332,74 +294,32 @@ if [[ ":$PATH:" != *":${INSTALL_DIR}:"* ]]; then
     fi
     
     if [ -n "$SHELL_RC" ]; then
-        # Check if already in RC file
         if ! grep -q "export PATH.*${INSTALL_DIR}" "$SHELL_RC" 2>/dev/null; then
             echo "" >> "$SHELL_RC"
             echo "# Added by CLIPilot installer" >> "$SHELL_RC"
             echo "export PATH=\"\$PATH:${INSTALL_DIR}\"" >> "$SHELL_RC"
-            echo -e "${GREEN}✓ Added to $SHELL_RC${NC}"
-            echo "  Run: source $SHELL_RC"
         fi
-        # Add to current session
         export PATH="$PATH:${INSTALL_DIR}"
-    else
-        echo "Please add this to your shell config:"
-        echo "  export PATH=\"\$PATH:${INSTALL_DIR}\""
     fi
-else
-    echo -e "${GREEN}✓ Installation directory is in PATH${NC}"
 fi
 
 echo ""
-echo "========================================"
 echo -e "${GREEN}✓ CLIPilot installed successfully!${NC}"
-echo "========================================"
 echo ""
-
 if [ "$IS_TERMUX" = true ]; then
-    echo -e "${GREEN}📱 Termux-Optimized Installation Complete!${NC}"
-    echo ""
-    echo "🎯 Recommended first steps for Termux:"
-    echo "  clipilot run termux_setup     - Complete Termux environment setup"
-    echo "  clipilot run setup_development_environment - Install dev tools"
-    echo ""
-    echo "💡 Quick Start:"
-    echo "  clipilot                      - Start interactive mode"
-    echo "  clipilot search phone         - Find phone-related modules"
-    echo "  clipilot run <module>         - Run a specific module"
-    echo ""
-    echo "📚 Popular Termux modules available:"
-    echo "  • termux_setup - Configure Termux environment"
-    echo "  • git_setup - Install and configure Git"
-    echo "  • python_dev_setup - Python development environment"
-    echo "  • nodejs_setup - Node.js development environment"
-    echo "  • database_clients_install - Database tools"
-    echo "  • modern_cli_tools_install - Modern CLI utilities"
-    echo ""
-    echo "💾 Storage tip: Run 'termux-setup-storage' to access phone storage"
+    echo "Try: clipilot run termux_setup"
 else
-    echo "Quick Start:"
-    echo "  clipilot              - Start interactive mode"
-    echo "  clipilot help         - Show available commands"
-    echo "  clipilot search git   - Search for modules"
-    echo "  clipilot run git_setup - Run a specific module"
-    echo ""
-fi
-
-echo "For more information, visit:"
-echo "  https://github.com/${REPO_OWNER}/${REPO_NAME}"
-if [ "$IS_TERMUX" = true ]; then
-    echo "  Termux guide: https://github.com/${REPO_OWNER}/${REPO_NAME}/blob/main/docs/TERMUX.md"
+    echo "Try: clipilot"
 fi
 echo ""
 
-# Offer to start CLIPilot interactively
-echo -e "${YELLOW}Would you like to start CLIPilot now? [Y/n]:${NC} "
-read -r response
-response=${response,,}  # Convert to lowercase
-if [ -z "$response" ] || [ "$response" = "y" ] || [ "$response" = "yes" ]; then
-    echo ""
-    echo "Starting CLIPilot..."
-    echo ""
-    "${INSTALL_DIR}/clipilot"
+# Offer to start CLIPilot interactively (with proper prompt handling)
+if [ -t 0 ]; then
+    echo -n "Start CLIPilot now? [Y/n]: "
+    read -r response
+    response=${response,,}
+    if [ -z "$response" ] || [ "$response" = "y" ] || [ "$response" = "yes" ]; then
+        echo ""
+        "${INSTALL_DIR}/clipilot"
+    fi
 fi
