@@ -100,11 +100,14 @@ docker ps | grep clipilot
 docker logs clipilot-registry
 ```
 
-## Nginx Reverse Proxy Setup
+## Reverse Proxy Setup (Recommended)
 
-If using Nginx to serve on standard HTTPS port:
+**Let Nginx/Caddy handle external ports** - your app always runs on internal port 8080.
+
+### Option 1: Nginx (Most Common)
 
 ```nginx
+# /etc/nginx/sites-available/clipilot-registry
 server {
     listen 80;
     server_name registry.yourdomain.com;
@@ -115,15 +118,137 @@ server {
     listen 443 ssl http2;
     server_name registry.yourdomain.com;
 
+    # SSL certificates (use certbot for Let's Encrypt)
     ssl_certificate /etc/letsencrypt/live/registry.yourdomain.com/fullchain.pem;
     ssl_certificate_key /etc/letsencrypt/live/registry.yourdomain.com/privkey.pem;
+    
+    # Security headers
+    add_header Strict-Transport-Security "max-age=31536000" always;
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header X-Content-Type-Options "nosniff" always;
 
     location / {
-        proxy_pass http://localhost:8082;
+        # Proxy to Docker container by name (Docker DNS)
+        proxy_pass http://clipilot-registry:8080;
+        
+        # Or use container IP (get with: docker inspect clipilot-registry)
+        # proxy_pass http://172.17.0.2:8080;
+        
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
+        
+        # WebSocket support (if needed)
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+    }
+}
+```
+
+**Enable the site:**
+```bash
+sudo ln -s /etc/nginx/sites-available/clipilot-registry /etc/nginx/sites-enabled/
+sudo nginx -t
+sudo systemctl reload nginx
+
+# Get SSL certificate
+sudo certbot --nginx -d registry.yourdomain.com
+```
+
+### Option 2: Caddy (Automatic HTTPS)
+
+```caddyfile
+# /etc/caddy/Caddyfile
+registry.yourdomain.com {
+    reverse_proxy clipilot-registry:8080
+}
+```
+
+**That's it!** Caddy automatically handles:
+- HTTPS certificates (Let's Encrypt)
+- HTTP → HTTPS redirect
+- Certificate renewal
+
+```bash
+sudo systemctl reload caddy
+```
+
+### Option 3: Traefik (Docker-Native)
+
+```yaml
+# docker-compose.yml with Traefik
+version: '3.8'
+
+services:
+  traefik:
+    image: traefik:v2.10
+    command:
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      - "--certificatesresolvers.le.acme.email=you@example.com"
+      - "--certificatesresolvers.le.acme.storage=/letsencrypt/acme.json"
+      - "--certificatesresolvers.le.acme.httpchallenge.entrypoint=web"
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./letsencrypt:/letsencrypt
+
+  clipilot-registry:
+    image: themobileprof/clipilot-registry:latest
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.registry.rule=Host(`registry.yourdomain.com`)"
+      - "traefik.http.routers.registry.entrypoints=websecure"
+      - "traefik.http.routers.registry.tls.certresolver=le"
+      - "traefik.http.services.registry.loadbalancer.server.port=8080"
+    volumes:
+      - registry-data:/app/data
+    env_file:
+      - .env.production
+```
+
+## Why Use a Reverse Proxy?
+
+✅ **No port conflicts** - All apps run on their own internal ports  
+✅ **Single HTTPS endpoint** - Port 443 for all services  
+✅ **Automatic SSL** - Let's Encrypt integration  
+✅ **Load balancing** - Run multiple instances  
+✅ **Better security** - Apps don't need to be exposed  
+✅ **Easy routing** - Use subdomains/paths for multiple services  
+
+### Example: Multiple Services on One Server
+
+```nginx
+# registry.yourdomain.com → clipilot-registry:8080
+server {
+    listen 443 ssl http2;
+    server_name registry.yourdomain.com;
+    location / {
+        proxy_pass http://clipilot-registry:8080;
+    }
+}
+
+# api.yourdomain.com → your-backend:8000
+server {
+    listen 443 ssl http2;
+    server_name api.yourdomain.com;
+    location / {
+        proxy_pass http://themobileprof-backend:8080;
+    }
+}
+
+# app.yourdomain.com → your-frontend:8081
+server {
+    listen 443 ssl http2;
+    server_name app.yourdomain.com;
+    location / {
+        proxy_pass http://tmp-react-frontend:8081;
     }
 }
 ```

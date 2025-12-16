@@ -61,14 +61,19 @@ jobs:
             # Pull latest image
             docker pull ${{ secrets.DOCKER_USERNAME }}/clipilot-registry:latest
             
-            # Run new container
+            # Run new container (no port mapping - reverse proxy handles it)
             docker run -d \
               --name clipilot-registry \
               --restart unless-stopped \
-              -p 8082:8080 \
+              --network bridge \
               -v clipilot-registry-data:/app/data \
               --env-file /tmp/clipilot-registry.env \
               ${{ secrets.DOCKER_USERNAME }}/clipilot-registry:latest
+            
+            # Get container IP for reverse proxy
+            CONTAINER_IP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' clipilot-registry)
+            echo "Container IP: $CONTAINER_IP"
+            echo "Configure your reverse proxy to proxy_pass to http://$CONTAINER_IP:8080"
             
             # Clean up
             rm /tmp/clipilot-registry.env
