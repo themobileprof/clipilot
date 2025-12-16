@@ -56,11 +56,11 @@ func GetRegistryURL(db *sql.DB) (string, error) {
 	var url string
 	err := db.QueryRow("SELECT value FROM settings WHERE key = 'registry_url'").Scan(&url)
 	if err != nil {
-		// Check environment variable first, then fall back to localhost
+		// Check environment variable
 		if envURL := os.Getenv("REGISTRY_URL"); envURL != "" {
 			return envURL, nil
 		}
-		return "http://localhost:8080", nil // Default
+		return "", fmt.Errorf("registry URL not configured: set REGISTRY_URL environment variable or run 'clipilot settings set registry_url <url>'")
 	}
 	return url, nil
 }
