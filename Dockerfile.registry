@@ -1,19 +1,11 @@
 # Build stage
-FROM golang:1.21-alpine AS builder
+FROM golang:1.23-alpine AS builder
 
 WORKDIR /build
 
 # Copy go mod files
 COPY go.mod go.sum ./
-
-# Download dependencies with verbose output for debugging
-RUN set -ex && \
-    echo "=== Verifying go.mod and go.sum ===" && \
-    ls -la go.* && \
-    echo "=== Go version ===" && \
-    go version && \
-    echo "=== Downloading dependencies ===" && \
-    go mod download -x
+RUN go mod download
 
 # Copy source code
 COPY . .
