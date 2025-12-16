@@ -90,7 +90,8 @@ func main() {
 
 	// Start server
 	addr := ":" + port
-	fmt.Printf("✓ Server ready at http://localhost%s\n", addr)
+	baseURL := getEnv("BASE_URL", "http://localhost"+addr)
+	fmt.Printf("✓ Server ready at %s\n", baseURL)
 	fmt.Println("  - Home: /")
 	fmt.Println("  - Modules: /modules")
 	fmt.Println("  - Upload: /upload (requires login)")

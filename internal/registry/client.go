@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -55,6 +56,10 @@ func GetRegistryURL(db *sql.DB) (string, error) {
 	var url string
 	err := db.QueryRow("SELECT value FROM settings WHERE key = 'registry_url'").Scan(&url)
 	if err != nil {
+		// Check environment variable first, then fall back to localhost
+		if envURL := os.Getenv("REGISTRY_URL"); envURL != "" {
+			return envURL, nil
+		}
 		return "http://localhost:8080", nil // Default
 	}
 	return url, nil

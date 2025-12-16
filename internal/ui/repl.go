@@ -349,7 +349,12 @@ func (repl *REPL) installModule(moduleID string) error {
 	var registryURL string
 	err := repl.db.QueryRow("SELECT value FROM settings WHERE key = 'registry_url'").Scan(&registryURL)
 	if err != nil {
-		registryURL = "http://localhost:8080" // Default registry URL
+		// Check environment variable first, then fall back to localhost
+		if envURL := os.Getenv("REGISTRY_URL"); envURL != "" {
+			registryURL = envURL
+		} else {
+			registryURL = "http://localhost:8080" // Default registry URL
+		}
 	}
 
 	fmt.Printf("Downloading module %s from registry...\n", moduleID)
