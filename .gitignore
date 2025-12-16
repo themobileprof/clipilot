@@ -31,6 +31,7 @@ vendor/
 
 # Environment and secrets
 .env
+.env.production
 
 # Registry data
 data/
