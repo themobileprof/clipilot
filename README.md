@@ -454,9 +454,10 @@ clipilot modules install <module_id>
 go build -o registry ./cmd/registry
 
 # Run with admin credentials
-./registry --password=your_secure_password
+ADMIN_PASSWORD=your_secure_password ./registry
 
-# Access at http://localhost:8080
+# Access at http://localhost:8080 (development)
+# For production, set BASE_URL=https://your-domain.com
 ```
 
 See [docs/REGISTRY.md](docs/REGISTRY.md) for full documentation on:

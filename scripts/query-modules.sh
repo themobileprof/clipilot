@@ -1,9 +1,16 @@
 #!/bin/bash
 # Module Query Helper Script
 # Query modules by tags from the CLIPilot registry
+# Set REGISTRY_URL environment variable or it will fail
 
-REGISTRY_URL="${REGISTRY_URL:-http://localhost:8080}"
+REGISTRY_URL="${REGISTRY_URL:-}"
 COOKIES="${COOKIES:-/tmp/cookies.txt}"
+
+if [ -z "$REGISTRY_URL" ]; then
+    echo "Error: REGISTRY_URL environment variable is required"
+    echo "Example: export REGISTRY_URL=http://localhost:8080"
+    exit 1
+fi
 
 usage() {
     cat << EOF

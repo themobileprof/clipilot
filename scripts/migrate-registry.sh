@@ -29,15 +29,15 @@ CREATE TABLE IF NOT EXISTS registry_cache (
   updated_at INTEGER DEFAULT (strftime('%s', 'now'))
 );
 
--- Insert default registry settings
+-- Insert default registry settings (empty URL - must be configured)
 INSERT OR IGNORE INTO settings (key, value, value_type, description) VALUES
-  ('registry_url', 'http://localhost:8080', 'string', 'Module registry server URL'),
+  ('registry_url', '', 'string', 'Module registry server URL (required for registry features)'),
   ('auto_sync', 'false', 'boolean', 'Auto-sync registry on startup'),
   ('sync_interval', '86400', 'integer', 'Registry sync interval in seconds (24h)');
 
--- Initialize registry cache
+-- Initialize registry cache (empty URL - must be configured)
 INSERT OR IGNORE INTO registry_cache (id, registry_url, sync_status) VALUES
-  (1, 'http://localhost:8080', 'never');
+  (1, '', 'never');
 
 -- Update db_version
 UPDATE settings SET value = '2' WHERE key = 'db_version';

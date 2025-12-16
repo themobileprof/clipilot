@@ -1,9 +1,16 @@
 #!/bin/bash
 # Demonstration of Tag-Based Module Queries and Downloads
 # Shows the power of the enhanced tagging system
+# Set REGISTRY_URL environment variable or it will fail
 
-REGISTRY_URL="${REGISTRY_URL:-http://localhost:8080}"
+REGISTRY_URL="${REGISTRY_URL:-}"
 COOKIES="${COOKIES:-/tmp/cookies.txt}"
+
+if [ -z "$REGISTRY_URL" ]; then
+    echo "Error: REGISTRY_URL environment variable is required"
+    echo "Example: export REGISTRY_URL=http://localhost:8080"
+    exit 1
+fi
 
 echo "================================================"
 echo "CLIPilot Module Tag System Demonstration"

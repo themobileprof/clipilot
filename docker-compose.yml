@@ -13,11 +13,11 @@ services:
       - registry-data:/app/data
     environment:
       # Registry configuration
-      - REGISTRY_PORT=8080
-      - REGISTRY_ADMIN_USER=${ADMIN_USER:-admin}
-      - REGISTRY_ADMIN_PASS=${ADMIN_PASS:-changeme}
-      - REGISTRY_DB_PATH=/app/data/registry.db
-      - REGISTRY_UPLOAD_DIR=/app/data/uploads
+      - PORT=8080
+      - ADMIN_USER=${ADMIN_USER:-admin}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-changeme}
+      - DATA_DIR=/app/data
+      - BASE_URL=${BASE_URL:-http://localhost:8080}
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/health"]

@@ -38,8 +38,9 @@ Open your browser to `http://localhost:8080`
 ### 3. Install Modules from CLI
 
 ```bash
-# Set registry URL (optional, defaults to localhost:8080)
+# Set registry URL (required for registry features)
 clipilot settings set registry_url http://your-registry.com
+# Or use environment variable: export REGISTRY_URL=http://your-registry.com
 
 # Install a module by ID
 clipilot modules install 1
