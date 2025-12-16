@@ -351,11 +351,14 @@ docker pull themobileprof/clipilot-registry:latest
 
 docker run -d \
   --name clipilot-registry \
-  -p 8080:8080 \
+  -p 8082:8080 \
   -v registry-data:/app/data \
-  -e REGISTRY_ADMIN_USER=admin \
-  -e REGISTRY_ADMIN_PASS=your_password \
+  -e ADMIN_USER=admin \
+  -e ADMIN_PASSWORD=your_password \
+  -e BASE_URL=http://localhost:8082 \
   themobileprof/clipilot-registry:latest
+
+# Note: Using port 8082 to avoid conflicts. Change to any available port.
 ```
 
 ### Build Your Own
@@ -453,10 +456,10 @@ clipilot modules install <module_id>
 # Build the registry server
 go build -o registry ./cmd/registry
 
-# Run with admin credentials
-ADMIN_PASSWORD=your_secure_password ./registry
+# Run with admin credentials and custom port
+PORT=8082 ADMIN_PASSWORD=your_secure_password ./registry
 
-# Access at http://localhost:8080 (development)
+# Access at http://localhost:8082 (or your chosen port)
 # For production, set BASE_URL=https://your-domain.com
 ```
 

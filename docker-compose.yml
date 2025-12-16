@@ -7,7 +7,7 @@ services:
       dockerfile: Dockerfile.registry
     container_name: clipilot-registry
     ports:
-      - "8080:8080"
+      - "8082:8080"  # Map to 8082 to avoid conflicts with other services
     volumes:
       # Persist database and uploads
       - registry-data:/app/data
@@ -17,7 +17,7 @@ services:
       - ADMIN_USER=${ADMIN_USER:-admin}
       - ADMIN_PASSWORD=${ADMIN_PASSWORD:-changeme}
       - DATA_DIR=/app/data
-      - BASE_URL=${BASE_URL:-http://localhost:8080}
+      - BASE_URL=${BASE_URL:-http://localhost:8082}
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/health"]

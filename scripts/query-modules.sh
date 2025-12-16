@@ -8,7 +8,8 @@ COOKIES="${COOKIES:-/tmp/cookies.txt}"
 
 if [ -z "$REGISTRY_URL" ]; then
     echo "Error: REGISTRY_URL environment variable is required"
-    echo "Example: export REGISTRY_URL=http://localhost:8080"
+    echo "Example: export REGISTRY_URL=http://localhost:8082"
+    echo "         export REGISTRY_URL=https://registry.yourdomain.com"
     exit 1
 fi
 
@@ -42,7 +43,7 @@ Examples:
   $0 query file-ops atomic     # Atomic file operations
 
 Environment Variables:
-  REGISTRY_URL    Registry server URL (default: http://localhost:8080)
+  REGISTRY_URL    Registry server URL (required - no default)
   COOKIES         Cookie file for authentication (default: /tmp/cookies.txt)
 EOF
     exit 1

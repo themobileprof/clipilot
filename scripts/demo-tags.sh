@@ -8,7 +8,8 @@ COOKIES="${COOKIES:-/tmp/cookies.txt}"
 
 if [ -z "$REGISTRY_URL" ]; then
     echo "Error: REGISTRY_URL environment variable is required"
-    echo "Example: export REGISTRY_URL=http://localhost:8080"
+    echo "Example: export REGISTRY_URL=http://localhost:8082"
+    echo "         export REGISTRY_URL=https://registry.yourdomain.com"
     exit 1
 fi
 

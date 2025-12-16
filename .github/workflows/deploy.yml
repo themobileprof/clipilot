@@ -1,0 +1,79 @@
+name: Deploy Registry to Production
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+          - production
+          - staging
+
+jobs:
+  deploy:
+    name: Deploy to ${{ github.event.inputs.environment }}
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile.registry
+          push: true
+          tags: ${{ secrets.DOCKER_USERNAME }}/clipilot-registry:latest
+          platforms: linux/amd64,linux/arm64
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Deploy to server via SSH
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT || 22 }}
+          script: |
+            # Create .env file from secret
+            cat > /tmp/clipilot-registry.env << 'EOF'
+            ${{ secrets.ENV_FILE }}
+            EOF
+            
+            # Stop and remove old container
+            docker stop clipilot-registry 2>/dev/null || true
+            docker rm clipilot-registry 2>/dev/null || true
+            
+            # Pull latest image
+            docker pull ${{ secrets.DOCKER_USERNAME }}/clipilot-registry:latest
+            
+            # Run new container
+            docker run -d \
+              --name clipilot-registry \
+              --restart unless-stopped \
+              -p 8082:8080 \
+              -v clipilot-registry-data:/app/data \
+              --env-file /tmp/clipilot-registry.env \
+              ${{ secrets.DOCKER_USERNAME }}/clipilot-registry:latest
+            
+            # Clean up
+            rm /tmp/clipilot-registry.env
+            
+            # Show status
+            docker ps | grep clipilot-registry
+            
+            echo "✓ Deployment complete!"
