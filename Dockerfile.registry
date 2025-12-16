@@ -5,7 +5,15 @@ WORKDIR /build
 
 # Copy go mod files
 COPY go.mod go.sum ./
-RUN go mod download
+
+# Download dependencies with verbose output for debugging
+RUN set -ex && \
+    echo "=== Verifying go.mod and go.sum ===" && \
+    ls -la go.* && \
+    echo "=== Go version ===" && \
+    go version && \
+    echo "=== Downloading dependencies ===" && \
+    go mod download -x
 
 # Copy source code
 COPY . .
