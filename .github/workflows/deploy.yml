@@ -73,7 +73,8 @@ jobs:
             # Get container IP for reverse proxy
             CONTAINER_IP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' clipilot-registry)
             echo "Container IP: $CONTAINER_IP"
-            echo "Configure your reverse proxy to proxy_pass to http://$CONTAINER_IP:8080"
+            echo "Container can be accessed at: http://clipilot-registry:8080 (Docker DNS)"
+            echo "Or via IP: http://$CONTAINER_IP:8080"
             
             # Clean up
             rm /tmp/clipilot-registry.env
@@ -81,4 +82,10 @@ jobs:
             # Show status
             docker ps | grep clipilot-registry
             
+            echo ""
             echo "✓ Deployment complete!"
+            echo "✓ Container: clipilot-registry"
+            echo "✓ Internal: http://$CONTAINER_IP:8080 or http://clipilot-registry:8080"
+            echo ""
+            echo "Next: Configure Nginx to proxy to the container"
+            echo "See: docs/PRODUCTION_DEPLOYMENT.md for Nginx configuration"

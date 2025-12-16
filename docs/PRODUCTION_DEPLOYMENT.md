@@ -31,8 +31,8 @@ You need to configure these secrets in your GitHub repository:
    ADMIN_USER=admin
    ADMIN_PASSWORD=CHANGE_THIS_TO_SECURE_PASSWORD
    
-   BASE_URL=https://registry.yourdomain.com
-   REGISTRY_URL=https://registry.yourdomain.com
+   BASE_URL=https://clipilot.themobileprof.com
+   REGISTRY_URL=https://clipilot.themobileprof.com
    
    DATA_DIR=/app/data
    
@@ -110,17 +110,17 @@ docker logs clipilot-registry
 # /etc/nginx/sites-available/clipilot-registry
 server {
     listen 80;
-    server_name registry.yourdomain.com;
+    server_name clipilot.themobileprof.com;
     return 301 https://$server_name$request_uri;
 }
 
 server {
     listen 443 ssl http2;
-    server_name registry.yourdomain.com;
+    server_name clipilot.themobileprof.com;
 
     # SSL certificates (use certbot for Let's Encrypt)
-    ssl_certificate /etc/letsencrypt/live/registry.yourdomain.com/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/registry.yourdomain.com/privkey.pem;
+    ssl_certificate /etc/letsencrypt/live/clipilot.themobileprof.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/clipilot.themobileprof.com/privkey.pem;
     
     # Security headers
     add_header Strict-Transport-Security "max-age=31536000" always;
@@ -154,14 +154,14 @@ sudo nginx -t
 sudo systemctl reload nginx
 
 # Get SSL certificate
-sudo certbot --nginx -d registry.yourdomain.com
+sudo certbot --nginx -d clipilot.themobileprof.com
 ```
 
 ### Option 2: Caddy (Automatic HTTPS)
 
 ```caddyfile
 # /etc/caddy/Caddyfile
-registry.yourdomain.com {
+cligilot.themobileprof.com {
     reverse_proxy clipilot-registry:8080
 }
 ```
@@ -203,7 +203,7 @@ services:
     image: themobileprof/clipilot-registry:latest
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.registry.rule=Host(`registry.yourdomain.com`)"
+      - "traefik.http.routers.registry.rule=Host(`clipilot.themobileprof.com`)"
       - "traefik.http.routers.registry.entrypoints=websecure"
       - "traefik.http.routers.registry.tls.certresolver=le"
       - "traefik.http.services.registry.loadbalancer.server.port=8080"
@@ -225,28 +225,28 @@ services:
 ### Example: Multiple Services on One Server
 
 ```nginx
-# registry.yourdomain.com → clipilot-registry:8080
+# clipilot.themobileprof.com → clipilot-registry:8080
 server {
     listen 443 ssl http2;
-    server_name registry.yourdomain.com;
+    server_name clipilot.themobileprof.com;
     location / {
         proxy_pass http://clipilot-registry:8080;
     }
 }
 
-# api.yourdomain.com → your-backend:8000
+# api.themobileprof.com → your-backend:8000
 server {
     listen 443 ssl http2;
-    server_name api.yourdomain.com;
+    server_name api.themobileprof.com;
     location / {
         proxy_pass http://themobileprof-backend:8080;
     }
 }
 
-# app.yourdomain.com → your-frontend:8081
+# app.themobileprof.com → your-frontend:8081
 server {
     listen 443 ssl http2;
-    server_name app.yourdomain.com;
+    server_name app.themobileprof.com;
     location / {
         proxy_pass http://tmp-react-frontend:8081;
     }
@@ -259,18 +259,18 @@ After deployment, verify:
 
 ```bash
 # Check container is running
-curl https://registry.yourdomain.com/
+curl https://clipilot.themobileprof.com/
 
 # Check API
-curl https://registry.yourdomain.com/api/modules
+curl https://clipilot.themobileprof.com/api/modules
 
 # Test authentication
-curl -X POST https://registry.yourdomain.com/login \
+curl -X POST https://clipilot.themobileprof.com/login \
   -d "username=admin&password=your_password" \
   -c cookies.txt
 
 # Test upload (requires auth)
-curl -b cookies.txt -X POST https://registry.yourdomain.com/api/upload \
+curl -b cookies.txt -X POST https://clipilot.themobileprof.com/api/upload \
   -F "module=@test_module.yaml"
 ```
 
