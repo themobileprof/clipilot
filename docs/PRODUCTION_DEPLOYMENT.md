@@ -127,14 +127,23 @@ docker ps | grep clipilot
 docker logs clipilot-registry
 ```
 
-## Reverse Proxy Setup (Recommended)
+## Reverse Proxy Setup (Optional)
 
-**Let Nginx/Caddy handle external ports** - your app always runs on internal port 8080.
+The registry is now accessible directly on port 8082. You can optionally use Nginx for HTTPS and cleaner URLs.
 
-### Option 1: Nginx (Most Common)
+### Option 1: Direct Access (Simplest)
+
+Access directly via port 8082:
+```
+http://your-server-ip:8082
+```
+
+For HTTPS, use Nginx below.
+
+### Option 2: Nginx with HTTPS (Recommended for Production)
 
 ```nginx
-# /etc/nginx/sites-available/clipilot-registry
+# /etc/nginx/sites-available/clipilot.themobileprof.com.conf
 server {
     listen 80;
     server_name clipilot.themobileprof.com;
@@ -155,11 +164,8 @@ server {
     add_header X-Content-Type-Options "nosniff" always;
 
     location / {
-        # Proxy to Docker container by name (Docker DNS)
-        proxy_pass http://clipilot-registry:8080;
-        
-        # Or use container IP (get with: docker inspect clipilot-registry)
-        # proxy_pass http://172.17.0.2:8080;
+        # Proxy to localhost:8082 (where Docker exposes the container)
+        proxy_pass http://localhost:8082;
         
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
@@ -176,7 +182,7 @@ server {
 
 **Enable the site:**
 ```bash
-sudo ln -s /etc/nginx/sites-available/clipilot-registry /etc/nginx/sites-enabled/
+sudo ln -s /etc/nginx/sites-available/clipilot.themobileprof.com.conf /etc/nginx/sites-enabled/
 sudo nginx -t
 sudo systemctl reload nginx
 
@@ -184,12 +190,12 @@ sudo systemctl reload nginx
 sudo certbot --nginx -d clipilot.themobileprof.com
 ```
 
-### Option 2: Caddy (Automatic HTTPS)
+### Option 3: Caddy (Automatic HTTPS)
 
 ```caddyfile
 # /etc/caddy/Caddyfile
-cligilot.themobileprof.com {
-    reverse_proxy clipilot-registry:8080
+clipilot.themobileprof.com {
+    reverse_proxy localhost:8082
 }
 ```
 
@@ -202,7 +208,9 @@ cligilot.themobileprof.com {
 sudo systemctl reload caddy
 ```
 
-### Option 3: Traefik (Docker-Native)
+### Option 4: Traefik (Docker-Native)
+
+If you prefer Docker-native routing:
 
 ```yaml
 # docker-compose.yml with Traefik
@@ -228,12 +236,14 @@ services:
 
   clipilot-registry:
     image: themobileprof/clipilot-registry:latest
+    ports:
+      - "8082:8080"
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.registry.rule=Host(`clipilot.themobileprof.com`)"
       - "traefik.http.routers.registry.entrypoints=websecure"
       - "traefik.http.routers.registry.tls.certresolver=le"
-      - "traefik.http.services.registry.loadbalancer.server.port=8080"
+      - "traefik.http.services.registry.loadbalancer.server.port=8082"
     volumes:
       - registry-data:/app/data
     env_file:
@@ -242,40 +252,44 @@ services:
 
 ## Why Use a Reverse Proxy?
 
-✅ **No port conflicts** - All apps run on their own internal ports  
+✅ **HTTPS Support** - Free SSL certificates with Let's Encrypt  
+✅ **Clean URLs** - Use domain name instead of port numbers  
 ✅ **Single HTTPS endpoint** - Port 443 for all services  
-✅ **Automatic SSL** - Let's Encrypt integration  
-✅ **Load balancing** - Run multiple instances  
-✅ **Better security** - Apps don't need to be exposed  
+✅ **Better security** - Hide internal ports from public  
 ✅ **Easy routing** - Use subdomains/paths for multiple services  
+
+**Without Nginx:** `http://your-server-ip:8082`  
+**With Nginx:** `https://clipilot.themobileprof.com`
 
 ### Example: Multiple Services on One Server
 
+Each service exposed on its own port, proxied via Nginx with HTTPS:
+
 ```nginx
-# clipilot.themobileprof.com → clipilot-registry:8080
+# clipilot.themobileprof.com → localhost:8082 (registry)
 server {
     listen 443 ssl http2;
     server_name clipilot.themobileprof.com;
     location / {
-        proxy_pass http://clipilot-registry:8080;
+        proxy_pass http://localhost:8082;
     }
 }
 
-# api.themobileprof.com → your-backend:8000
+# api.themobileprof.com → localhost:8000 (your backend)
 server {
     listen 443 ssl http2;
     server_name api.themobileprof.com;
     location / {
-        proxy_pass http://themobileprof-backend:8080;
+        proxy_pass http://localhost:8000;
     }
 }
 
-# app.themobileprof.com → your-frontend:8081
+# app.themobileprof.com → localhost:8081 (your frontend)
 server {
     listen 443 ssl http2;
     server_name app.themobileprof.com;
     location / {
-        proxy_pass http://tmp-react-frontend:8081;
+        proxy_pass http://localhost:8081;
     }
 }
 ```

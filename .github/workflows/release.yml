@@ -173,11 +173,12 @@ jobs:
             # Fix volume permissions (distroless runs as uid 65532)
             docker run --rm -v clipilot-registry-data:/data alpine sh -c "chown -R 65532:65532 /data && chmod -R 755 /data"
             
-            # Run new container
+            # Run new container with port mapping
             docker run -d \
               --name clipilot-registry \
               --restart unless-stopped \
               --network bridge \
+              -p 8082:8080 \
               -v clipilot-registry-data:/app/data \
               --env-file /tmp/clipilot-registry.env \
               ${{ secrets.DOCKER_USERNAME }}/clipilot-registry:latest
@@ -194,6 +195,7 @@ jobs:
             CONTAINER_IP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' clipilot-registry)
             echo "✓ Deployed version ${{ steps.version.outputs.VERSION }}"
             echo "✓ Container IP: $CONTAINER_IP"
+            echo "✓ Accessible at: http://$(hostname -I | awk '{print $1}'):8082"
             
             # Cleanup
             rm /tmp/clipilot-registry.env

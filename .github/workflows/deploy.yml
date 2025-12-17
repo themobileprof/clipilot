@@ -78,11 +78,12 @@ jobs:
             # Fix volume permissions (distroless runs as uid 65532)
             docker run --rm -v clipilot-registry-data:/data alpine sh -c "chown -R 65532:65532 /data && chmod -R 755 /data"
             
-            # Run new container (no port mapping - reverse proxy handles it)
+            # Run new container with port mapping
             docker run -d \
               --name clipilot-registry \
               --restart unless-stopped \
               --network bridge \
+              -p 8082:8080 \
               -v clipilot-registry-data:/app/data \
               --env-file /tmp/clipilot-registry.env \
               ${{ secrets.DOCKER_USERNAME }}/clipilot-registry:latest
@@ -112,7 +113,8 @@ jobs:
             echo ""
             echo "✓ Deployment complete!"
             echo "✓ Container: clipilot-registry"
-            echo "✓ Internal: http://$CONTAINER_IP:8080 or http://clipilot-registry:8080"
+            echo "✓ Internal: http://$CONTAINER_IP:8080"
+            echo "✓ External: http://$(hostname -I | awk '{print $1}'):8082"
             echo ""
-            echo "Next: Configure Nginx to proxy to the container"
-            echo "See: docs/PRODUCTION_DEPLOYMENT.md for Nginx configuration"
+            echo "Access at: http://your-server-ip:8082"
+            echo "Or configure Nginx reverse proxy (see docs/PRODUCTION_DEPLOYMENT.md)"

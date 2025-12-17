@@ -1,0 +1,219 @@
+name: where_is_log
+version: "1.0.0"
+description: Locate log files for common services and show recent entries
+
+metadata:
+  author: CLIPilot Team
+  tags:
+    - logs
+    - troubleshooting
+    - debugging
+    - monitoring
+  os:
+    - linux
+    - darwin
+
+parameters:
+  - name: service
+    type: string
+    description: Service to find logs for (nginx, apache, mysql, syslog, docker, etc.)
+    required: true
+  
+  - name: lines
+    type: string
+    description: Number of recent log lines to show
+    required: false
+    default: "20"
+
+steps:
+  - name: Find and display logs
+    command: |
+      SERVICE="{{ .service }}"
+      LINES="{{ .lines }}"
+      
+      echo "=== Log Locations for $SERVICE ==="
+      echo ""
+      
+      case "${SERVICE,,}" in
+        nginx)
+          echo "Access logs:"
+          for log in /var/log/nginx/access.log /var/log/nginx/*/access.log; do
+            if [ -f "$log" ]; then
+              echo "  📄 $log"
+            fi
+          done
+          echo ""
+          echo "Error logs:"
+          for log in /var/log/nginx/error.log /var/log/nginx/*/error.log; do
+            if [ -f "$log" ]; then
+              echo "  📄 $log"
+              echo ""
+              echo "Recent errors:"
+              sudo tail -n "$LINES" "$log" 2>/dev/null || tail -n "$LINES" "$log" 2>/dev/null
+              break
+            fi
+          done
+          ;;
+          
+        apache|apache2|httpd)
+          echo "Access logs:"
+          for log in /var/log/apache2/access.log /var/log/httpd/access_log /var/log/apache2/*/access.log; do
+            if [ -f "$log" ]; then
+              echo "  📄 $log"
+            fi
+          done
+          echo ""
+          echo "Error logs:"
+          for log in /var/log/apache2/error.log /var/log/httpd/error_log /var/log/apache2/*/error.log; do
+            if [ -f "$log" ]; then
+              echo "  📄 $log"
+              echo ""
+              echo "Recent errors:"
+              sudo tail -n "$LINES" "$log" 2>/dev/null || tail -n "$LINES" "$log" 2>/dev/null
+              break
+            fi
+          done
+          ;;
+          
+        mysql|mariadb)
+          echo "Error log:"
+          for log in /var/log/mysql/error.log /var/log/mariadb/mariadb.log /var/lib/mysql/*.err; do
+            if [ -f "$log" ]; then
+              echo "  📄 $log"
+              echo ""
+              echo "Recent entries:"
+              sudo tail -n "$LINES" "$log" 2>/dev/null
+              break
+            fi
+          done
+          echo ""
+          echo "Slow query log (if enabled):"
+          ls -l /var/log/mysql/*slow*.log 2>/dev/null || echo "  Not enabled or not found"
+          ;;
+          
+        postgresql|postgres)
+          echo "Log directory:"
+          for logdir in /var/log/postgresql /var/lib/pgsql/data/log; do
+            if [ -d "$logdir" ]; then
+              echo "  📁 $logdir"
+              LOG_FILE=$(ls -t "$logdir"/*.log 2>/dev/null | head -1)
+              if [ -n "$LOG_FILE" ]; then
+                echo "  📄 $LOG_FILE"
+                echo ""
+                echo "Recent entries:"
+                sudo tail -n "$LINES" "$LOG_FILE" 2>/dev/null
+              fi
+              break
+            fi
+          done
+          ;;
+          
+        docker)
+          echo "Container logs:"
+          echo "  Use: docker logs <container_name>"
+          echo "  Use: docker logs -f <container_name>  (follow)"
+          echo ""
+          echo "Running containers:"
+          docker ps --format "table {{.Names}}\t{{.Status}}" 2>/dev/null || echo "  Docker not running or no permission"
+          echo ""
+          echo "Docker daemon log:"
+          if command -v journalctl >/dev/null 2>&1; then
+            echo "  Use: journalctl -u docker -n $LINES"
+          fi
+          ;;
+          
+        syslog|system)
+          echo "System logs:"
+          if command -v journalctl >/dev/null 2>&1; then
+            echo "  Using journalctl (systemd):"
+            echo ""
+            sudo journalctl -n "$LINES" --no-pager
+          else
+            echo "  📄 /var/log/syslog"
+            echo "  📄 /var/log/messages"
+            echo ""
+            echo "Recent entries:"
+            if [ -f /var/log/syslog ]; then
+              sudo tail -n "$LINES" /var/log/syslog
+            elif [ -f /var/log/messages ]; then
+              sudo tail -n "$LINES" /var/log/messages
+            fi
+          fi
+          ;;
+          
+        ssh|sshd)
+          echo "SSH authentication log:"
+          if [ -f /var/log/auth.log ]; then
+            echo "  📄 /var/log/auth.log"
+            echo ""
+            echo "Recent SSH entries:"
+            sudo grep -i ssh /var/log/auth.log | tail -n "$LINES"
+          elif [ -f /var/log/secure ]; then
+            echo "  📄 /var/log/secure"
+            echo ""
+            echo "Recent SSH entries:"
+            sudo grep -i ssh /var/log/secure | tail -n "$LINES"
+          fi
+          ;;
+          
+        caddy)
+          echo "Caddy logs:"
+          if command -v journalctl >/dev/null 2>&1; then
+            echo "  Using journalctl:"
+            sudo journalctl -u caddy -n "$LINES" --no-pager
+          else
+            echo "  Check: /var/log/caddy/"
+            ls -la /var/log/caddy/ 2>/dev/null || echo "  Not found"
+          fi
+          ;;
+          
+        redis)
+          echo "Redis log:"
+          for log in /var/log/redis/redis-server.log /var/log/redis.log; do
+            if [ -f "$log" ]; then
+              echo "  📄 $log"
+              echo ""
+              echo "Recent entries:"
+              sudo tail -n "$LINES" "$log" 2>/dev/null || tail -n "$LINES" "$log" 2>/dev/null
+              break
+            fi
+          done
+          ;;
+          
+        php|php-fpm)
+          echo "PHP-FPM logs:"
+          PHP_VERSION=$(php -v 2>/dev/null | head -1 | cut -d' ' -f2 | cut -d'.' -f1,2)
+          for log in /var/log/php${PHP_VERSION}-fpm.log /var/log/php-fpm/error.log /var/log/php-fpm.log; do
+            if [ -f "$log" ]; then
+              echo "  📄 $log"
+              echo ""
+              echo "Recent entries:"
+              sudo tail -n "$LINES" "$log" 2>/dev/null || tail -n "$LINES" "$log" 2>/dev/null
+              break
+            fi
+          done
+          ;;
+          
+        *)
+          echo "Unknown service: $SERVICE"
+          echo ""
+          echo "Supported services:"
+          echo "  - nginx"
+          echo "  - apache/apache2/httpd"
+          echo "  - mysql/mariadb"
+          echo "  - postgresql/postgres"
+          echo "  - docker"
+          echo "  - syslog/system"
+          echo "  - ssh/sshd"
+          echo "  - caddy"
+          echo "  - redis"
+          echo "  - php/php-fpm"
+          exit 1
+          ;;
+      esac
+      
+      echo ""
+      echo "=== Useful Commands ==="
+      echo "  tail -f <logfile>           # Follow log in real-time"
+      echo "  grep 'error' <logfile>      # Search for errors"
+      echo "  journalctl -u <service>     # View service logs (systemd)"
