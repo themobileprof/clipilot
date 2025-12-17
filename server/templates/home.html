@@ -16,6 +16,12 @@
                 {{if .LoggedIn}}
                     <li><a href="/my-modules">My Modules</a></li>
                     <li><a href="/upload">Upload</a></li>
+                    {{if .Session.GitHubUser}}
+                    <li style="display: flex; align-items: center; gap: 0.5rem;">
+                        <img src="{{.Session.GitHubUser.AvatarURL}}" alt="{{.Session.GitHubUser.Login}}" style="width: 24px; height: 24px; border-radius: 50%;">
+                        <span>{{.Session.GitHubUser.Login}}</span>
+                    </li>
+                    {{end}}
                     <li><a href="/logout">Logout</a></li>
                 {{else}}
                     <li><a href="/login">Login</a></li>

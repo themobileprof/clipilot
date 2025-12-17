@@ -1,4 +1,4 @@
-name: Deploy Registry to Production
+name: Manual Deploy (Hotfix)
 
 on:
   workflow_dispatch:
@@ -11,6 +11,9 @@ on:
         options:
           - production
           - staging
+      reason:
+        description: 'Reason for manual deploy (e.g., hotfix, config change)'
+        required: true
 
 jobs:
   deploy:
@@ -41,7 +44,7 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Deploy to server via SSH
+      - name: Manual deploy to ${{ github.event.inputs.environment }}
         uses: appleboy/ssh-action@v1.0.0
         with:
           host: ${{ secrets.SSH_HOST }}
@@ -49,6 +52,9 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: ${{ secrets.SSH_PORT || 22 }}
           script: |
+            echo "Manual deployment triggered by: ${{ github.actor }}"
+            echo "Reason: ${{ github.event.inputs.reason }}"
+            echo ""
             # Create .env file from secret
             cat > /tmp/clipilot-registry.env << 'EOF'
             ${{ secrets.ENV_FILE }}
@@ -58,8 +64,19 @@ jobs:
             docker stop clipilot-registry 2>/dev/null || true
             docker rm clipilot-registry 2>/dev/null || true
             
+            # Login to Docker Hub on server
+            echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+            
             # Pull latest image
             docker pull ${{ secrets.DOCKER_USERNAME }}/clipilot-registry:latest
+            
+            # Create volume if it doesn't exist and fix permissions
+            if ! docker volume ls | grep -q clipilot-registry-data; then
+              docker volume create clipilot-registry-data
+            fi
+            
+            # Fix volume permissions (distroless runs as uid 65532)
+            docker run --rm -v clipilot-registry-data:/data alpine sh -c "chown -R 65532:65532 /data && chmod -R 755 /data"
             
             # Run new container (no port mapping - reverse proxy handles it)
             docker run -d \
@@ -69,6 +86,16 @@ jobs:
               -v clipilot-registry-data:/app/data \
               --env-file /tmp/clipilot-registry.env \
               ${{ secrets.DOCKER_USERNAME }}/clipilot-registry:latest
+            
+            # Wait for container to start
+            sleep 3
+            
+            # Check if container is running
+            if ! docker ps | grep -q clipilot-registry; then
+              echo "❌ Container failed to start. Checking logs..."
+              docker logs clipilot-registry
+              exit 1
+            fi
             
             # Get container IP for reverse proxy
             CONTAINER_IP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' clipilot-registry)

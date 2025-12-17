@@ -36,6 +36,10 @@ You need to configure these secrets in your GitHub repository:
    
    DATA_DIR=/app/data
    
+   # GitHub OAuth (optional - for community contributions)
+   GITHUB_CLIENT_ID=your_github_oauth_client_id
+   GITHUB_CLIENT_SECRET=your_github_oauth_client_secret
+   
    SESSION_SECRET=GENERATE_RANDOM_64_CHAR_STRING
    SESSION_TIMEOUT=86400
    MAX_UPLOAD_SIZE=10485760
@@ -57,6 +61,29 @@ openssl rand -base64 32
 # Generate session secret
 openssl rand -hex 64
 ```
+
+## Setting up GitHub OAuth (Optional)
+
+To allow community members to contribute modules via GitHub login:
+
+1. Go to: https://github.com/settings/developers
+2. Click: **New OAuth App**
+3. Fill in:
+   - **Application name**: CLIPilot Registry
+   - **Homepage URL**: https://clipilot.themobileprof.com
+   - **Authorization callback URL**: https://clipilot.themobileprof.com/auth/github/callback
+4. Click: **Register application**
+5. Copy the **Client ID** and generate a **Client Secret**
+6. Add to your `.env.production`:
+   ```env
+   GITHUB_CLIENT_ID=your_client_id_here
+   GITHUB_CLIENT_SECRET=your_client_secret_here
+   ```
+
+**Benefits:**
+- Community members can login with GitHub (no need to create accounts)
+- Contributions are automatically linked to GitHub profiles
+- Admin account still works for administrative access
 
 ## Deploying
 

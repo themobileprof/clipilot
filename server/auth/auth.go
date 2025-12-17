@@ -17,9 +17,17 @@ type Manager struct {
 }
 
 type Session struct {
-	Username  string
-	CreatedAt time.Time
-	ExpiresAt time.Time
+	Username   string
+	IsAdmin    bool
+	GitHubUser *GitHubUserInfo
+	CreatedAt  time.Time
+	ExpiresAt  time.Time
+}
+
+type GitHubUserInfo struct {
+	Login     string
+	AvatarURL string
+	Name      string
 }
 
 const (
@@ -45,12 +53,43 @@ func (m *Manager) Authenticate(username, password string) bool {
 	return username == m.adminUser && password == m.adminPass
 }
 
-// SetSession creates a new session
+// SetSession creates a new session for admin user
 func (m *Manager) SetSession(w http.ResponseWriter, username string) {
 	token := m.generateToken()
 
 	session := &Session{
 		Username:  username,
+		IsAdmin:   true,
+		CreatedAt: time.Now(),
+		ExpiresAt: time.Now().Add(sessionTTL),
+	}
+
+	m.mu.Lock()
+	m.sessions[token] = session
+	m.mu.Unlock()
+
+	http.SetCookie(w, &http.Cookie{
+		Name:     sessionCookie,
+		Value:    token,
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   false, // Set to true in production with HTTPS
+		MaxAge:   int(sessionTTL.Seconds()),
+	})
+}
+
+// SetGitHubSession creates a new session for GitHub user
+func (m *Manager) SetGitHubSession(w http.ResponseWriter, ghUser *GitHubUser) {
+	token := m.generateToken()
+
+	session := &Session{
+		Username: ghUser.Login,
+		IsAdmin:  false,
+		GitHubUser: &GitHubUserInfo{
+			Login:     ghUser.Login,
+			AvatarURL: ghUser.AvatarURL,
+			Name:      ghUser.Name,
+		},
 		CreatedAt: time.Now(),
 		ExpiresAt: time.Now().Add(sessionTTL),
 	}
@@ -121,6 +160,30 @@ func (m *Manager) GetUsername(r *http.Request) string {
 	}
 
 	return session.Username
+}
+
+// GetSession returns the full session
+func (m *Manager) GetSession(r *http.Request) *Session {
+	cookie, err := r.Cookie(sessionCookie)
+	if err != nil {
+		return nil
+	}
+
+	m.mu.RLock()
+	session, exists := m.sessions[cookie.Value]
+	m.mu.RUnlock()
+
+	if !exists || time.Now().After(session.ExpiresAt) {
+		return nil
+	}
+
+	return session
+}
+
+// IsAdmin checks if the current session is admin
+func (m *Manager) IsAdmin(r *http.Request) bool {
+	session := m.GetSession(r)
+	return session != nil && session.IsAdmin
 }
 
 // generateToken creates a random session token

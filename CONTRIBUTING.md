@@ -8,8 +8,35 @@ Thank you for your interest in contributing to CLIPilot! We welcome contribution
 - **Suggest Features**: Share ideas for new features or improvements
 - **Write Code**: Submit pull requests for bug fixes or new features
 - **Improve Documentation**: Help make our docs clearer and more comprehensive
-- **Create Modules**: Share YAML modules for common tasks via the registry
+- **Create Modules**: Share YAML modules for common tasks (via PR or web registry)
 - **Test**: Try CLIPilot on different platforms and report your experience
+
+## 📦 Contributing Modules
+
+There are two ways to contribute modules:
+
+### 1. Via Pull Request (Built-in Modules)
+
+Built-in modules are packaged with CLIPilot and work offline:
+
+1. Fork the repository
+2. Add your module YAML to `modules/` directory
+3. Test it thoroughly
+4. Submit a Pull Request
+5. See [Module Guidelines](#module-guidelines) below
+
+### 2. Via Web Registry (Community Modules)
+
+Quick way to share experimental or personal modules:
+
+1. Go to https://clipilot.themobileprof.com
+2. Click "Login with GitHub"
+3. Upload your module YAML
+4. Module available immediately to all users
+
+**When to use which:**
+- **Built-in (PR)**: Stable, well-tested, broadly useful modules
+- **Registry (Web)**: Experimental, personal, or niche-specific modules
 
 ## 🚀 Getting Started
 

@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"golang.org/x/oauth2"
 	"gopkg.in/yaml.v3"
 	_ "modernc.org/sqlite"
 
@@ -25,19 +26,23 @@ import (
 var migrationSQL string
 
 type Config struct {
-	UploadsDir  string
-	DBPath      string
-	StaticDir   string
-	TemplateDir string
-	AdminUser   string
-	AdminPass   string
+	UploadsDir         string
+	DBPath             string
+	StaticDir          string
+	TemplateDir        string
+	AdminUser          string
+	AdminPass          string
+	GitHubClientID     string
+	GitHubClientSecret string
+	BaseURL            string
 }
 
 type Handlers struct {
-	config    Config
-	db        *sql.DB
-	templates *template.Template
-	auth      *auth.Manager
+	config      Config
+	db          *sql.DB
+	templates   *template.Template
+	auth        *auth.Manager
+	githubOAuth *oauth2.Config
 }
 
 type ModuleRecord struct {
@@ -75,12 +80,32 @@ func New(cfg Config) *Handlers {
 	// Initialize auth manager
 	authMgr := auth.NewManager(cfg.AdminUser, cfg.AdminPass)
 
-	return &Handlers{
-		config:    cfg,
-		db:        db,
-		templates: templates,
-		auth:      authMgr,
+	// Initialize GitHub OAuth if configured
+	var githubOAuth *oauth2.Config
+	if cfg.GitHubClientID != "" && cfg.GitHubClientSecret != "" {
+		redirectURL := cfg.BaseURL + "/auth/github/callback"
+		githubOAuth = auth.NewGitHubOAuth(cfg.GitHubClientID, cfg.GitHubClientSecret, redirectURL)
+		log.Printf("GitHub OAuth enabled with redirect URL: %s", redirectURL)
+	} else {
+		log.Println("GitHub OAuth not configured (GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET required)")
 	}
+
+	return &Handlers{
+		config:      cfg,
+		db:          db,
+		templates:   templates,
+		auth:        authMgr,
+		githubOAuth: githubOAuth,
+	}
+}
+
+// getGitHubUsername returns GitHub username if user logged in via GitHub, otherwise empty string
+func (h *Handlers) getGitHubUsername(r *http.Request) string {
+	session := h.auth.GetSession(r)
+	if session != nil && session.GitHubUser != nil {
+		return session.GitHubUser.Login
+	}
+	return ""
 }
 
 // Home page
@@ -90,10 +115,12 @@ func (h *Handlers) Home(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	session := h.auth.GetSession(r)
 	data := map[string]interface{}{
 		"Title":       "CLIPilot Registry",
 		"Description": "Community module registry for CLIPilot",
-		"LoggedIn":    h.auth.IsAuthenticated(r),
+		"LoggedIn":    session != nil,
+		"Session":     session,
 	}
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
@@ -129,10 +156,12 @@ func (h *Handlers) ListModules(w http.ResponseWriter, r *http.Request) {
 		modules = append(modules, m)
 	}
 
+	session := h.auth.GetSession(r)
 	data := map[string]interface{}{
 		"Title":    "Browse Modules",
 		"Modules":  modules,
-		"LoggedIn": h.auth.IsAuthenticated(r),
+		"LoggedIn": session != nil,
+		"Session":  session,
 	}
 
 	if err := h.templates.ExecuteTemplate(w, "modules.html", data); err != nil {
@@ -179,9 +208,11 @@ func (h *Handlers) GetModule(w http.ResponseWriter, r *http.Request) {
 
 // UploadPage shows the upload form (authenticated users only)
 func (h *Handlers) UploadPage(w http.ResponseWriter, r *http.Request) {
+	session := h.auth.GetSession(r)
 	data := map[string]interface{}{
 		"Title":    "Upload Module",
 		"LoggedIn": true,
+		"Session":  session,
 		"Username": h.auth.GetUsername(r),
 	}
 
@@ -410,10 +441,10 @@ func (h *Handlers) APIUpload(w http.ResponseWriter, r *http.Request) {
 	if moduleExists {
 		// Update existing module
 		_, err = h.db.Exec(`
-			UPDATE modules 
-			SET description = ?, author = ?, tags = ?, uploaded_by = ?, file_path = ?, original_filename = ?, uploaded_at = CURRENT_TIMESTAMP
-			WHERE id = ?
-		`, module.Description, module.Metadata.Author, tagsJSON, username, savePath, header.Filename, existingID)
+		UPDATE modules
+		SET description = ?, author = ?, tags = ?, uploaded_by = ?, github_user = ?, file_path = ?, original_filename = ?, uploaded_at = CURRENT_TIMESTAMP
+		WHERE id = ?
+		`, module.Description, module.Metadata.Author, tagsJSON, username, h.getGitHubUsername(r), savePath, header.Filename, existingID)
 
 		if err != nil {
 			log.Printf("Database update error: %v", err)
@@ -439,10 +470,10 @@ func (h *Handlers) APIUpload(w http.ResponseWriter, r *http.Request) {
 	} else {
 		// Insert new module
 		_, err = h.db.Exec(`
-			INSERT INTO modules (name, version, description, author, tags, uploaded_by, file_path, original_filename)
-			VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+			INSERT INTO modules (name, version, description, author, tags, uploaded_by, github_user, file_path, original_filename)
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
 		`, module.Name, module.Version, module.Description,
-			module.Metadata.Author, tagsJSON, username, savePath, header.Filename)
+			module.Metadata.Author, tagsJSON, username, h.getGitHubUsername(r), savePath, header.Filename)
 
 		if err != nil {
 			log.Printf("Database insert error: %v", err)
@@ -506,7 +537,8 @@ func (h *Handlers) MyModules(w http.ResponseWriter, r *http.Request) {
 func (h *Handlers) Login(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodGet {
 		data := map[string]interface{}{
-			"Title": "Login",
+			"Title":              "Login",
+			"GitHubOAuthEnabled": h.githubOAuth != nil,
 		}
 		if err := h.templates.ExecuteTemplate(w, "login.html", data); err != nil {
 			log.Printf("Template error: %v", err)
@@ -540,8 +572,9 @@ func (h *Handlers) Login(w http.ResponseWriter, r *http.Request) {
 
 		log.Printf("Failed login attempt for user: %s", username)
 		data := map[string]interface{}{
-			"Title": "Login",
-			"Error": "Invalid username or password. Please try again.",
+			"Title":              "Login",
+			"Error":              "Invalid username or password. Please try again.",
+			"GitHubOAuthEnabled": h.githubOAuth != nil,
 		}
 		if err := h.templates.ExecuteTemplate(w, "login.html", data); err != nil {
 			log.Printf("Template error: %v", err)

@@ -422,6 +422,53 @@ section > p {
     margin-bottom: 1.5rem;
 }
 
+/* GitHub OAuth button */
+.btn-github {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: #24292e;
+    color: white;
+    padding: 0.75rem 1.5rem;
+    border-radius: 4px;
+    text-decoration: none;
+    font-weight: 500;
+    transition: background 0.2s;
+    border: none;
+    cursor: pointer;
+    width: 100%;
+    justify-content: center;
+    font-size: 1rem;
+}
+
+.btn-github:hover {
+    background: #1b1f23;
+}
+
+.btn-github svg {
+    flex-shrink: 0;
+}
+
+.divider {
+    display: flex;
+    align-items: center;
+    text-align: center;
+    margin: 1.5rem 0;
+    color: #666;
+}
+
+.divider::before,
+.divider::after {
+    content: '';
+    flex: 1;
+    border-bottom: 1px solid #ddd;
+}
+
+.divider span {
+    padding: 0 1rem;
+    font-size: 0.9rem;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
     nav .container {

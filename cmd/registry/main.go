@@ -28,6 +28,9 @@ func main() {
 	tmplDir := getEnv("TEMPLATE_DIR", "./server/templates")
 	adminUser := getEnv("ADMIN_USER", "admin")
 	adminPass := getEnv("ADMIN_PASSWORD", "")
+	githubClientID := getEnv("GITHUB_CLIENT_ID", "")
+	githubClientSecret := getEnv("GITHUB_CLIENT_SECRET", "")
+	baseURL := getEnv("BASE_URL", "")
 
 	// Allow command-line flags to override environment variables
 	flag.StringVar(&port, "port", port, "Server port")
@@ -58,12 +61,15 @@ func main() {
 
 	// Initialize handlers
 	h := handlers.New(handlers.Config{
-		UploadsDir:  uploadsDir,
-		DBPath:      dbPath,
-		StaticDir:   staticDir,
-		TemplateDir: tmplDir,
-		AdminUser:   adminUser,
-		AdminPass:   adminPass,
+		UploadsDir:         uploadsDir,
+		DBPath:             dbPath,
+		StaticDir:          staticDir,
+		TemplateDir:        tmplDir,
+		AdminUser:          adminUser,
+		AdminPass:          adminPass,
+		GitHubClientID:     githubClientID,
+		GitHubClientSecret: githubClientSecret,
+		BaseURL:            baseURL,
 	})
 
 	// Setup routes
@@ -79,6 +85,8 @@ func main() {
 	// Auth routes
 	mux.HandleFunc("/login", h.Login)
 	mux.HandleFunc("/logout", h.Logout)
+	mux.HandleFunc("/auth/github", h.GitHubLogin)
+	mux.HandleFunc("/auth/github/callback", h.GitHubCallback)
 
 	// Protected routes (require authentication)
 	mux.HandleFunc("/upload", h.RequireAuth(h.UploadPage))
@@ -90,7 +98,9 @@ func main() {
 
 	// Start server
 	addr := ":" + port
-	baseURL := getEnv("BASE_URL", "http://localhost"+addr)
+	if baseURL == "" {
+		baseURL = "http://localhost" + addr
+	}
 	fmt.Printf("✓ Server ready at %s\n", baseURL)
 	fmt.Println("  - Home: /")
 	fmt.Println("  - Modules: /modules")
