@@ -69,13 +69,15 @@ func (h *Handlers) APIModuleRequest(w http.ResponseWriter, r *http.Request) {
 
 	// Return success response
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	if err := json.NewEncoder(w).Encode(map[string]interface{}{
 		"success":    true,
 		"message":    "Thank you! Your request has been received. Our community is working to expand the module library, and your feedback helps us prioritize what to build next.",
 		"request_id": requestID,
 		"status":     "pending",
 		"note":       "You can check https://clipilot.themobileprof.com for new modules, or contribute by logging in with GitHub.",
-	})
+	}); err != nil {
+		log.Printf("Failed to encode response: %v", err)
+	}
 }
 
 // ModuleRequestsPage shows admin view of all module requests
@@ -254,10 +256,12 @@ func (h *Handlers) APIUpdateModuleRequest(w http.ResponseWriter, r *http.Request
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	if err := json.NewEncoder(w).Encode(map[string]interface{}{
 		"success": true,
 		"message": "Request updated successfully",
-	})
+	}); err != nil {
+		log.Printf("Failed to encode response: %v", err)
+	}
 }
 
 // getClientIP extracts the client IP address from the request
