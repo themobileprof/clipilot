@@ -93,6 +93,11 @@ func main() {
 	mux.HandleFunc("/api/upload", h.RequireAuth(h.APIUpload))
 	mux.HandleFunc("/my-modules", h.RequireAuth(h.MyModules))
 
+	// Module request tracking (public POST, admin-only view)
+	mux.HandleFunc("/api/module-request", h.APIModuleRequest)
+	mux.HandleFunc("/api/module-request/", h.APIUpdateModuleRequest)
+	mux.HandleFunc("/module-requests", h.ModuleRequestsPage)
+
 	// Static files
 	mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir(staticDir))))
 

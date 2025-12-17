@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{.Title}} - CLIPilot Registry</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <nav>
+        <div class="container">
+            <a href="/" class="logo">CLIPilot Registry</a>
+            <div class="nav-links">
+                <a href="/modules">Modules</a>
+                {{if .Session}}
+                    <a href="/upload">Upload</a>
+                    <a href="/my-modules">My Modules</a>
+                    {{if .Session.IsAdmin}}
+                        <a href="/module-requests" class="active">Requests</a>
+                    {{end}}
+                    {{if .Session.GitHubUser}}
+                        <img src="{{.Session.GitHubUser.AvatarURL}}" alt="{{.Session.GitHubUser.Login}}" style="width: 24px; height: 24px; border-radius: 50%; vertical-align: middle;">
+                        <span>{{.Session.GitHubUser.Login}}</span>
+                    {{end}}
+                    <a href="/logout">Logout</a>
+                {{else}}
+                    <a href="/login">Login</a>
+                {{end}}
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <h1>Module Requests</h1>
+        <p class="subtitle">User queries that didn't match any existing modules</p>
+
+        <div class="filter-tabs">
+            <a href="/module-requests?status=pending" class="{{if eq .StatusFilter "pending"}}active{{end}}">
+                Pending {{if index .StatusCounts "pending"}}({{index .StatusCounts "pending"}}){{end}}
+            </a>
+            <a href="/module-requests?status=in_progress" class="{{if eq .StatusFilter "in_progress"}}active{{end}}">
+                In Progress {{if index .StatusCounts "in_progress"}}({{index .StatusCounts "in_progress"}}){{end}}
+            </a>
+            <a href="/module-requests?status=completed" class="{{if eq .StatusFilter "completed"}}active{{end}}">
+                Completed {{if index .StatusCounts "completed"}}({{index .StatusCounts "completed"}}){{end}}
+            </a>
+            <a href="/module-requests?status=duplicate" class="{{if eq .StatusFilter "duplicate"}}active{{end}}">
+                Duplicate {{if index .StatusCounts "duplicate"}}({{index .StatusCounts "duplicate"}}){{end}}
+            </a>
+            <a href="/module-requests?status=all" class="{{if eq .StatusFilter "all"}}active{{end}}">
+                All
+            </a>
+        </div>
+
+        {{if .Requests}}
+        <div class="requests-list">
+            {{range .Requests}}
+            <div class="request-card status-{{.Status}}">
+                <div class="request-header">
+                    <span class="request-id">#{{.ID}}</span>
+                    <span class="request-status status-badge-{{.Status}}">{{.Status}}</span>
+                    <span class="request-date">{{.CreatedAt.Format "Jan 2, 2006 15:04"}}</span>
+                </div>
+                <div class="request-query">
+                    <strong>Query:</strong> {{.Query}}
+                </div>
+                {{if .UserContext}}
+                <div class="request-context">
+                    <strong>Context:</strong> {{.UserContext}}
+                </div>
+                {{end}}
+                {{if .Notes}}
+                <div class="request-notes">
+                    <strong>Notes:</strong> {{.Notes}}
+                </div>
+                {{end}}
+                {{if .FulfilledByModule}}
+                <div class="request-fulfilled">
+                    <strong>Fulfilled by:</strong> <a href="/modules?q={{.FulfilledByModule}}">{{.FulfilledByModule}}</a>
+                </div>
+                {{end}}
+                {{if .DuplicateOf}}
+                <div class="request-duplicate">
+                    <strong>Duplicate of:</strong> <a href="/module-requests?status=all#request-{{.DuplicateOf}}">#{{.DuplicateOf}}</a>
+                </div>
+                {{end}}
+                <div class="request-actions">
+                    <button onclick="updateStatus({{.ID}}, 'in_progress')">Mark In Progress</button>
+                    <button onclick="updateStatus({{.ID}}, 'completed')">Mark Completed</button>
+                    <button onclick="updateStatus({{.ID}}, 'duplicate')">Mark Duplicate</button>
+                    <button onclick="addNotes({{.ID}})">Add Notes</button>
+                </div>
+            </div>
+            {{end}}
+        </div>
+        {{else}}
+        <div class="empty-state">
+            <p>No {{.StatusFilter}} requests found.</p>
+        </div>
+        {{end}}
+    </div>
+
+    <style>
+        .filter-tabs {
+            display: flex;
+            gap: 1rem;
+            margin: 2rem 0;
+            border-bottom: 2px solid #e0e0e0;
+        }
+        .filter-tabs a {
+            padding: 0.5rem 1rem;
+            text-decoration: none;
+            color: #666;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -2px;
+        }
+        .filter-tabs a.active {
+            color: #007bff;
+            border-bottom-color: #007bff;
+        }
+        .requests-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        .request-card {
+            background: #fff;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 1.5rem;
+        }
+        .request-header {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+        .request-id {
+            font-weight: bold;
+            color: #666;
+        }
+        .request-status {
+            padding: 0.25rem 0.75rem;
+            border-radius: 12px;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+        .status-badge-pending {
+            background: #fff3cd;
+            color: #856404;
+        }
+        .status-badge-in_progress {
+            background: #cfe2ff;
+            color: #084298;
+        }
+        .status-badge-completed {
+            background: #d1e7dd;
+            color: #0f5132;
+        }
+        .status-badge-duplicate {
+            background: #f8d7da;
+            color: #842029;
+        }
+        .request-date {
+            margin-left: auto;
+            color: #666;
+            font-size: 0.875rem;
+        }
+        .request-query {
+            font-size: 1.125rem;
+            margin-bottom: 0.5rem;
+        }
+        .request-context, .request-notes, .request-fulfilled, .request-duplicate {
+            margin-top: 0.5rem;
+            font-size: 0.875rem;
+            color: #666;
+        }
+        .request-actions {
+            margin-top: 1rem;
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+        .request-actions button {
+            padding: 0.5rem 1rem;
+            border: 1px solid #ddd;
+            background: #fff;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.875rem;
+        }
+        .request-actions button:hover {
+            background: #f8f9fa;
+        }
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: #666;
+        }
+    </style>
+
+    <script>
+        function updateStatus(id, status) {
+            fetch(`/api/module-request/${id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ status: status }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    window.location.reload();
+                } else {
+                    alert('Failed to update status');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Failed to update status');
+            });
+        }
+
+        function addNotes(id) {
+            const notes = prompt('Enter notes for this request:');
+            if (notes === null) return;
+
+            fetch(`/api/module-request/${id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ notes: notes }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    window.location.reload();
+                } else {
+                    alert('Failed to add notes');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Failed to add notes');
+            });
+        }
+    </script>
+</body>
+</html>

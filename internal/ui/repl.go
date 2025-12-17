@@ -169,6 +169,9 @@ func (repl *REPL) searchModules(query string) error {
 	if len(result.Candidates) == 0 {
 		fmt.Println("No modules found matching your query.")
 		fmt.Println("Try different keywords or check installed modules with: modules list")
+		
+		// Submit module request to registry
+		repl.submitModuleRequest(query)
 		return nil
 	}
 
@@ -195,6 +198,9 @@ func (repl *REPL) handleQuery(input string) error {
 	if result.ModuleID == "" || len(result.Candidates) == 0 {
 		fmt.Println("I couldn't find a relevant module for your query.")
 		fmt.Println("Try rephrasing or use 'search <keywords>' to find modules.")
+		
+		// Submit module request to registry
+		repl.submitModuleRequest(input)
 		return nil
 	}
 
@@ -535,4 +541,27 @@ func (repl *REPL) AutoSyncIfNeeded() error {
 	}
 
 	return nil
+}
+
+// submitModuleRequest sends a module request to the registry when no matching module is found
+func (repl *REPL) submitModuleRequest(query string) {
+	// Get context information
+	osInfo := os.Getenv("OS")
+	if osInfo == "" {
+		osInfo = "unknown"
+	}
+	
+	isTermux := os.Getenv("TERMUX_VERSION") != ""
+	userContext := fmt.Sprintf("os=%s, termux=%v", osInfo, isTermux)
+	
+	// Try to submit the request
+	err := repl.registryClient.SubmitModuleRequest(query, userContext)
+	if err != nil {
+		// Silently fail - this is a nice-to-have feature
+		// Don't bother the user with connection errors
+		return
+	}
+	
+	fmt.Println("\n💡 Your request has been submitted to help us improve CLIPilot.")
+	fmt.Println("   Check https://clipilot.themobileprof.com for new modules!")
 }

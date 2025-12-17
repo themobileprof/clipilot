@@ -183,6 +183,9 @@ Available commands:
   logs                    - View execution history
   exit                    - Exit CLIPilot
 
+**🤖 Smart Module Requests:**
+When CLIPilot can't find a module for your query, it automatically submits your request to the community registry. This helps contributors know what modules are needed most!
+
 > install mysql
 Found module: install_mysql (v1.0.0)
 Description: Install and configure MySQL with secure defaults

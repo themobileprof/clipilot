@@ -323,6 +323,51 @@ func (c *Client) ListAvailableModules() ([]ModuleMetadata, error) {
 	return modules, nil
 }
 
+// SubmitModuleRequest sends a module request to the registry when no matching module is found
+func (c *Client) SubmitModuleRequest(query string, userContext string) error {
+	if c.registryURL == "" {
+		return fmt.Errorf("registry URL not configured")
+	}
+
+	requestData := map[string]string{
+		"query":        query,
+		"user_context": userContext,
+	}
+
+	jsonData, err := json.Marshal(requestData)
+	if err != nil {
+		return fmt.Errorf("failed to encode request: %w", err)
+	}
+
+	url := fmt.Sprintf("%s/api/module-request", c.registryURL)
+	resp, err := c.httpClient.Post(url, "application/json", strings.NewReader(string(jsonData)))
+	if err != nil {
+		return fmt.Errorf("failed to send request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("registry returned error: %s", string(body))
+	}
+
+	var result struct {
+		Success   bool   `json:"success"`
+		Message   string `json:"message"`
+		RequestID int64  `json:"request_id"`
+	}
+
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return fmt.Errorf("failed to decode response: %w", err)
+	}
+
+	if !result.Success {
+		return fmt.Errorf("request failed: %s", result.Message)
+	}
+
+	return nil
+}
+
 // ListInstalledModules returns locally installed modules
 func (c *Client) ListInstalledModules() ([]ModuleMetadata, error) {
 	rows, err := c.db.Query(`
