@@ -12,16 +12,16 @@ import (
 
 // ModuleRequest represents a user request for a missing module
 type ModuleRequest struct {
-	ID              int64     `json:"id"`
-	Query           string    `json:"query"`
-	UserContext     string    `json:"user_context,omitempty"`
-	IPAddress       string    `json:"ip_address,omitempty"`
-	UserAgent       string    `json:"user_agent,omitempty"`
-	CreatedAt       time.Time `json:"created_at"`
-	Status          string    `json:"status"`
-	DuplicateOf     *int64    `json:"duplicate_of,omitempty"`
-	Notes           string    `json:"notes,omitempty"`
-	FulfilledByModule string  `json:"fulfilled_by_module,omitempty"`
+	ID                int64     `json:"id"`
+	Query             string    `json:"query"`
+	UserContext       string    `json:"user_context,omitempty"`
+	IPAddress         string    `json:"ip_address,omitempty"`
+	UserAgent         string    `json:"user_agent,omitempty"`
+	CreatedAt         time.Time `json:"created_at"`
+	Status            string    `json:"status"`
+	DuplicateOf       *int64    `json:"duplicate_of,omitempty"`
+	Notes             string    `json:"notes,omitempty"`
+	FulfilledByModule string    `json:"fulfilled_by_module,omitempty"`
 }
 
 // APIModuleRequest handles POST /api/module-request
@@ -70,18 +70,18 @@ func (h *Handlers) APIModuleRequest(w http.ResponseWriter, r *http.Request) {
 	// Return success response
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{
-		"success": true,
-		"message": "Thank you! Your request has been received. Our community is working to expand the module library, and your feedback helps us prioritize what to build next.",
+		"success":    true,
+		"message":    "Thank you! Your request has been received. Our community is working to expand the module library, and your feedback helps us prioritize what to build next.",
 		"request_id": requestID,
-		"status": "pending",
-		"note": "You can check https://clipilot.themobileprof.com for new modules, or contribute by logging in with GitHub.",
+		"status":     "pending",
+		"note":       "You can check https://clipilot.themobileprof.com for new modules, or contribute by logging in with GitHub.",
 	})
 }
 
 // ModuleRequestsPage shows admin view of all module requests
 func (h *Handlers) ModuleRequestsPage(w http.ResponseWriter, r *http.Request) {
 	session := h.auth.GetSession(r)
-	
+
 	// Only admins can view requests
 	if session == nil || !session.IsAdmin {
 		http.Redirect(w, r, "/login", http.StatusSeeOther)
@@ -170,11 +170,11 @@ func (h *Handlers) ModuleRequestsPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data := map[string]interface{}{
-		"Title":         "Module Requests",
-		"Session":       session,
-		"Requests":      requests,
-		"StatusFilter":  statusFilter,
-		"StatusCounts":  counts,
+		"Title":              "Module Requests",
+		"Session":            session,
+		"Requests":           requests,
+		"StatusFilter":       statusFilter,
+		"StatusCounts":       counts,
 		"GitHubOAuthEnabled": h.githubOAuth != nil,
 	}
 
