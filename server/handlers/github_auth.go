@@ -4,8 +4,10 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/base64"
+	"fmt"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/themobileprof/clipilot/server/auth"
 )
@@ -96,6 +98,9 @@ func (h *Handlers) GitHubCallback(w http.ResponseWriter, r *http.Request) {
 // generateState creates a random state string for OAuth CSRF protection
 func generateState() string {
 	b := make([]byte, 32)
-	rand.Read(b)
+	if _, err := rand.Read(b); err != nil {
+		// Fallback to timestamp-based state if random generation fails
+		return base64.URLEncoding.EncodeToString([]byte(fmt.Sprintf("%d", time.Now().UnixNano())))
+	}
 	return base64.URLEncoding.EncodeToString(b)
 }
