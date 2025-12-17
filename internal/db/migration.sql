@@ -138,13 +138,13 @@ INSERT OR IGNORE INTO settings (key, value, value_type, description) VALUES
   ('color_output', 'false', 'boolean', 'Enable colored terminal output'),
   ('max_history', '1000', 'integer', 'Maximum command history entries'),
   ('db_version', '2', 'integer', 'Database schema version'),
-  ('registry_url', '', 'string', 'Module registry server URL (required for registry features)'),
+  ('registry_url', 'https://clipilot.themobileprof.com', 'string', 'Module registry server URL'),
   ('auto_sync', 'false', 'boolean', 'Auto-sync registry on startup'),
   ('sync_interval', '86400', 'integer', 'Registry sync interval in seconds (24h)');
 
--- Initialize registry cache (empty URL - must be configured)
+-- Initialize registry cache with default production URL
 INSERT OR IGNORE INTO registry_cache (id, registry_url, sync_status) VALUES
-  (1, '', 'never');
+  (1, 'https://clipilot.themobileprof.com', 'never');
 
 -- Triggers for updated_at timestamps
 CREATE TRIGGER IF NOT EXISTS update_modules_timestamp 

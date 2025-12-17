@@ -440,14 +440,51 @@ go tool cover -html=coverage.out
 
 CLIPilot includes a web-based module registry where users can share and discover community-created modules.
 
-### Using the Registry
+### Official Public Registry
+
+**🌍 https://clipilot.themobileprof.com**
+
+The official public registry is pre-configured in CLIPilot. You can:
+- Browse available modules in the web interface
+- Login with GitHub to contribute modules
+- Install modules via CLI
 
 ```bash
+# Sync with registry (fetches available modules)
+clipilot sync
+
+# Search for modules
+clipilot search <keyword>
+
 # Install modules from registry
 clipilot modules install <module_id>
 
-# Browse modules
-# Visit the registry web interface at http://registry.example.com
+# Check registry configuration
+clipilot settings get registry_url
+```
+
+### Using the Registry
+
+By default, CLIPilot is configured to use the official registry at `https://clipilot.themobileprof.com`. You can:
+
+```bash
+# List available modules from registry
+clipilot modules list
+
+# Install a module
+clipilot modules install where_is_web_root
+
+# Browse the web interface
+# Visit https://clipilot.themobileprof.com
+```
+
+To configure a different registry:
+```bash
+# Set custom registry URL
+clipilot settings set registry_url https://your-registry.com
+
+# Or use environment variable
+export REGISTRY_URL=https://your-registry.com
 ```
 
 ### Running Your Own Registry
