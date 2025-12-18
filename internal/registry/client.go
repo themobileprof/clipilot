@@ -120,8 +120,8 @@ func (c *Client) SyncRegistry() error {
 	// Insert or update modules in cache
 	for _, mod := range modules {
 		moduleID := fmt.Sprintf("%s.%s.%s", "org.themobileprof", mod.Name, mod.Version)
-		downloadURL := fmt.Sprintf("%s/api/download?name=%s&version=%s",
-			c.registryURL, mod.Name, mod.Version)
+		downloadURL := fmt.Sprintf("%s/api/modules/%d",
+			c.registryURL, mod.ID)
 
 		tagsStr := strings.Join(mod.Tags, ",")
 
