@@ -282,6 +282,15 @@ echo -e "${GREEN}✓ Binary verified${NC}"
 "${INSTALL_DIR}/clipilot" --init --load="${CONFIG_DIR}/modules" >/dev/null 2>&1
 echo -e "${GREEN}✓ Database initialized${NC}"
 
+# Sync with registry to get full module library
+echo "📦 Syncing with module registry..."
+if "${INSTALL_DIR}/clipilot" sync >/dev/null 2>&1; then
+    SYNCED_COUNT=$("${INSTALL_DIR}/clipilot" modules list --available 2>/dev/null | wc -l || echo "0")
+    echo -e "${GREEN}✓ Registry synced (${SYNCED_COUNT} modules available)${NC}"
+else
+    echo -e "${YELLOW}⚠️  Registry sync failed (you can run 'clipilot sync' later)${NC}"
+fi
+
 # Check if install dir is in PATH
 if [[ ":$PATH:" != *":${INSTALL_DIR}:"* ]]; then
     # Detect shell and add to appropriate RC file
@@ -306,8 +315,6 @@ fi
 
 echo ""
 echo -e "${GREEN}✓ CLIPilot installed successfully!${NC}"
-echo ""
-echo -e "${YELLOW}💡 Run 'clipilot sync' to get the full module library from the registry${NC}"
 echo ""
 if [ "$IS_TERMUX" = true ]; then
     echo "Try: clipilot run termux_setup"

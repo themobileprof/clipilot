@@ -53,16 +53,21 @@ func NewClient(db *sql.DB, registryURL string) *Client {
 
 // GetRegistryURL retrieves the configured registry URL from settings
 func GetRegistryURL(db *sql.DB) (string, error) {
+	// First check environment variable (highest priority)
+	if envURL := os.Getenv("REGISTRY_URL"); envURL != "" {
+		return envURL, nil
+	}
+
+	// Then check settings table
 	var url string
 	err := db.QueryRow("SELECT value FROM settings WHERE key = 'registry_url'").Scan(&url)
-	if err != nil {
-		// Check environment variable
-		if envURL := os.Getenv("REGISTRY_URL"); envURL != "" {
-			return envURL, nil
-		}
-		return "", fmt.Errorf("registry URL not configured: set REGISTRY_URL environment variable or run 'clipilot settings set registry_url <url>'")
+	if err == nil && url != "" {
+		return url, nil
 	}
-	return url, nil
+
+	// Fallback to default production URL
+	defaultURL := "https://clipilot.themobileprof.com"
+	return defaultURL, nil
 }
 
 // SyncRegistry fetches the module list from registry and updates local cache
