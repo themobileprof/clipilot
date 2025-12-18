@@ -25,9 +25,13 @@ parameters:
     required: false
     default: "20"
 
-steps:
-  - name: Find and display logs
-    command: |
+flows:
+  main:
+    start: find_logs
+    steps:
+      find_logs:
+        type: action
+        command: |
       SERVICE="{{ .service }}"
       LINES="{{ .lines }}"
       
@@ -217,3 +221,7 @@ steps:
       echo "  tail -f <logfile>           # Follow log in real-time"
       echo "  grep 'error' <logfile>      # Search for errors"
       echo "  journalctl -u <service>     # View service logs (systemd)"
+        next: done
+      
+      done:
+        type: end

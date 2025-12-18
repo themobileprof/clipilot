@@ -19,9 +19,13 @@ parameters:
     description: Service to find config for (nginx, apache, mysql, postgresql, ssh, docker, etc.)
     required: true
 
-steps:
-  - name: Find configuration files
-    command: |
+flows:
+  main:
+    start: find_config
+    steps:
+      find_config:
+        type: action
+        command: |
       SERVICE="{{ .service }}"
       
       echo "=== Configuration Locations for $SERVICE ==="
@@ -128,3 +132,7 @@ steps:
           exit 1
           ;;
       esac
+        next: done
+      
+      done:
+        type: end

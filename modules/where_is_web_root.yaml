@@ -15,9 +15,13 @@ metadata:
     - linux
     - darwin
 
-steps:
-  - name: Check for Nginx
-    command: |
+flows:
+  main:
+    start: find_web_root
+    steps:
+      find_web_root:
+        type: action
+        command: |
       if command -v nginx >/dev/null 2>&1; then
         echo "=== Nginx Web Root ==="
         # Check default config
@@ -93,3 +97,7 @@ steps:
       echo "To test a file:"
       echo "  echo 'test' | sudo tee /var/www/html/test.html"
       echo "  curl http://localhost/test.html"
+        next: done
+      
+      done:
+        type: end
