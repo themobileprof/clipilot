@@ -1,14 +1,14 @@
 name: where_is_log
 version: "1.0.0"
 description: Locate log files for common services and show recent entries
+tags:
+  - logs
+  - troubleshooting
+  - debugging
+  - monitoring
 
 metadata:
   author: CLIPilot Team
-  tags:
-    - logs
-    - troubleshooting
-    - debugging
-    - monitoring
   os:
     - linux
     - darwin

@@ -1,16 +1,16 @@
 name: where_is_web_root
 version: "1.0.0"
 description: Identify the web server root directory (Apache, Nginx, Caddy, etc.)
+tags:
+  - web
+  - server
+  - apache
+  - nginx
+  - configuration
+  - troubleshooting
 
 metadata:
   author: CLIPilot Team
-  tags:
-    - web
-    - server
-    - apache
-    - nginx
-    - configuration
-    - troubleshooting
   os:
     - linux
     - darwin

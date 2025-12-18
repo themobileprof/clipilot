@@ -1,14 +1,14 @@
 name: where_is_config
 version: "1.0.0"
 description: Locate common configuration file locations for various services
+tags:
+  - configuration
+  - troubleshooting
+  - system
+  - admin
 
 metadata:
   author: CLIPilot Team
-  tags:
-    - configuration
-    - troubleshooting
-    - system
-    - admin
   os:
     - linux
     - darwin
