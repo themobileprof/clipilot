@@ -134,5 +134,5 @@ flows:
           esac
         next: done
       
-        done:
-          type: end
+      done:
+        type: terminal

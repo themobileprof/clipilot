@@ -92,4 +92,4 @@ flows:
         next: done
       
       done:
-        type: end
+        type: terminal
