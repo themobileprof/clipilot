@@ -510,6 +510,28 @@ See [docs/REGISTRY.md](docs/REGISTRY.md) for full documentation on:
 - API documentation
 - Deployment guides
 
+### Uploading Modules to Production Registry
+
+If you're managing the production registry, you can bulk-upload all modules using the provided script:
+
+```bash
+# Upload all modules from the modules/ directory to the registry
+./scripts/upload-modules.sh https://clipilot.themobileprof.com admin YOUR_PASSWORD
+```
+
+The script will:
+- ✅ Authenticate with the registry admin credentials
+- ✅ Upload all YAML module files from `modules/` directory
+- ✅ Show progress for each module upload
+- ✅ Provide a summary report of successes and failures
+
+**Note**: Some modules require tags for validation. Modules without tags will be rejected with an error message. Update them to include at least one tag before uploading.
+
+After uploading, users can sync their local database with:
+```bash
+clipilot sync
+```
+
 ## 🤝 Contributing
 
 Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
