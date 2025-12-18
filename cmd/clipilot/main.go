@@ -19,6 +19,7 @@ var (
 	dbPath      string
 	dryRun      bool
 	initDB      bool
+	resetDB     bool
 	loadDir     string
 	showVersion bool
 )
@@ -35,6 +36,7 @@ func init() {
 	flag.StringVar(&dbPath, "db", defaultDBPath, "Path to SQLite database")
 	flag.BoolVar(&dryRun, "dry-run", false, "Show commands without executing")
 	flag.BoolVar(&initDB, "init", false, "Initialize database and load modules")
+	flag.BoolVar(&resetDB, "reset", false, "Reset database (delete and reinitialize)")
 	flag.StringVar(&loadDir, "load", "", "Load modules from directory")
 	flag.BoolVar(&showVersion, "version", false, "Show version information")
 }
@@ -53,10 +55,17 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to load configuration: %v", err)
 	}
-
 	// Use config for database path if not overridden by flag
 	if dbPath == "" || dbPath == filepath.Join(os.Getenv("HOME"), ".clipilot", "clipilot.db") {
 		dbPath = cfg.DBPath
+	}
+
+	// Reset if requested
+	if resetDB {
+		if err := resetDatabase(dbPath, loadDir); err != nil {
+			log.Fatalf("Reset failed: %v", err)
+		}
+		return
 	}
 
 	// Open database
@@ -134,6 +143,61 @@ func initializeDB(database *db.DB, modulesDir string) error {
 
 	fmt.Println("\n✓ CLIPilot initialized successfully!")
 	fmt.Println("Run 'clipilot' to start the interactive assistant.")
+	return nil
+}
+
+// resetDatabase deletes and reinitializes the database
+func resetDatabase(dbPath string, modulesDir string) error {
+	fmt.Println("Resetting CLIPilot database...")
+	fmt.Printf("Database: %s\n", dbPath)
+
+	// Check if database exists
+	if _, err := os.Stat(dbPath); err == nil {
+		// Prompt for confirmation
+		fmt.Print("\n⚠️  This will delete all your data, modules, and settings. Continue? [y/N]: ")
+		var response string
+		fmt.Scanln(&response)
+		if response != "y" && response != "Y" && response != "yes" && response != "YES" {
+			fmt.Println("Reset cancelled.")
+			return nil
+		}
+
+		// Delete the database file
+		if err := os.Remove(dbPath); err != nil {
+			return fmt.Errorf("failed to delete database: %w", err)
+		}
+		fmt.Println("✓ Database deleted")
+	} else {
+		fmt.Println("Database doesn't exist, creating new one...")
+	}
+
+	// Create new database
+	database, err := db.New(dbPath)
+	if err != nil {
+		return fmt.Errorf("failed to create database: %w", err)
+	}
+	defer database.Close()
+
+	fmt.Println("✓ Database recreated")
+
+	// Load modules if directory specified
+	if modulesDir != "" {
+		if err := loadModulesFromDir(database, modulesDir); err != nil {
+			return fmt.Errorf("failed to load modules: %w", err)
+		}
+	} else {
+		// Try to load from default location
+		homeDir, _ := os.UserHomeDir()
+		defaultDir := filepath.Join(homeDir, ".clipilot", "modules")
+		if _, err := os.Stat(defaultDir); err == nil {
+			if err := loadModulesFromDir(database, defaultDir); err != nil {
+				fmt.Printf("Warning: failed to load default modules: %v\n", err)
+			}
+		}
+	}
+
+	fmt.Println("\n✓ Database reset successfully!")
+	fmt.Println("💡 Run 'clipilot sync' to get modules from the registry.")
 	return nil
 }
 

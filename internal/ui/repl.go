@@ -113,6 +113,8 @@ func (repl *REPL) handleCommand(input string) error {
 		return repl.handleModulesCommand(args)
 	case "sync":
 		return repl.syncRegistry()
+	case "reset":
+		return repl.resetDatabase()
 	case "settings":
 		return repl.showSettings()
 	case "logs":
@@ -131,6 +133,7 @@ Available Commands:
   search <query>          - Search for modules matching query
   run <module_id>         - Execute a specific module
   sync                    - Sync registry catalog (updates available modules)
+  reset                   - Reset database (delete all data and modules)
   modules list            - List all installed modules
   modules list --all      - List all modules (installed + available)
   modules list --available - List available modules (not installed)
@@ -564,4 +567,31 @@ func (repl *REPL) submitModuleRequest(query string) {
 
 	fmt.Println("\n💡 Your request has been submitted to help us improve CLIPilot.")
 	fmt.Println("   Check https://clipilot.themobileprof.com for new modules!")
+}
+
+// resetDatabase resets the database with confirmation
+func (repl *REPL) resetDatabase() error {
+	fmt.Println("\n⚠️  WARNING: This will delete ALL data including:")
+	fmt.Println("  - Installed modules")
+	fmt.Println("  - Settings and preferences")
+	fmt.Println("  - Execution history")
+	fmt.Println("  - Registry cache")
+	fmt.Print("\nAre you sure you want to reset? Type 'yes' to confirm: ")
+
+	reader := bufio.NewReader(os.Stdin)
+	response, _ := reader.ReadString('\n')
+	response = strings.ToLower(strings.TrimSpace(response))
+
+	if response != "yes" {
+		fmt.Println("Reset cancelled.")
+		return nil
+	}
+
+	fmt.Println("\n⚠️  To complete the reset, please:")
+	fmt.Println("1. Exit CLIPilot (type 'exit')")
+	fmt.Println("2. Run: clipilot --reset --load=~/.clipilot/modules")
+	fmt.Println("3. Run: clipilot sync")
+	fmt.Println("\nThis will delete and recreate the database with your local modules.")
+	
+	return nil
 }
