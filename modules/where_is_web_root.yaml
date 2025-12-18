@@ -22,81 +22,73 @@ flows:
       find_web_root:
         type: action
         command: |
-      if command -v nginx >/dev/null 2>&1; then
-        echo "=== Nginx Web Root ==="
-        # Check default config
-        if [ -f /etc/nginx/nginx.conf ]; then
-          grep -E "^\s*root" /etc/nginx/nginx.conf /etc/nginx/sites-enabled/* 2>/dev/null | head -5
-        fi
-        # Common defaults
-        echo ""
-        echo "Common Nginx roots:"
-        for dir in /var/www/html /usr/share/nginx/html /var/www; do
-          if [ -d "$dir" ]; then
-            echo "  ✓ $dir"
+          if command -v nginx >/dev/null 2>&1; then
+            echo "=== Nginx Web Root ==="
+            # Check default config
+            if [ -f /etc/nginx/nginx.conf ]; then
+              grep -E "^\s*root" /etc/nginx/nginx.conf /etc/nginx/sites-enabled/* 2>/dev/null | head -5
+            fi
+            # Common defaults
+            echo ""
+            echo "Common Nginx roots:"
+            for dir in /var/www/html /usr/share/nginx/html /var/www; do
+              if [ -d "$dir" ]; then
+                echo "  ✓ $dir"
+              fi
+            done
           fi
-        done
-      fi
-
-  - name: Check for Apache
-    command: |
-      if command -v apache2 >/dev/null 2>&1 || command -v httpd >/dev/null 2>&1; then
-        echo ""
-        echo "=== Apache Web Root ==="
-        # Check config files
-        for conf in /etc/apache2/sites-enabled/*.conf /etc/httpd/conf/httpd.conf /etc/apache2/apache2.conf; do
-          if [ -f "$conf" ]; then
-            grep -E "^\s*DocumentRoot" "$conf" 2>/dev/null | head -5
+          
+          if command -v apache2 >/dev/null 2>&1 || command -v httpd >/dev/null 2>&1; then
+            echo ""
+            echo "=== Apache Web Root ==="
+            # Check config files
+            for conf in /etc/apache2/sites-enabled/*.conf /etc/httpd/conf/httpd.conf /etc/apache2/apache2.conf; do
+              if [ -f "$conf" ]; then
+                grep -E "^\s*DocumentRoot" "$conf" 2>/dev/null | head -5
+              fi
+            done
+            # Common defaults
+            echo ""
+            echo "Common Apache roots:"
+            for dir in /var/www/html /var/www /usr/local/apache2/htdocs; do
+              if [ -d "$dir" ]; then
+                echo "  ✓ $dir"
+              fi
+            done
           fi
-        done
-        # Common defaults
-        echo ""
-        echo "Common Apache roots:"
-        for dir in /var/www/html /var/www /usr/local/apache2/htdocs; do
-          if [ -d "$dir" ]; then
-            echo "  ✓ $dir"
+          
+          if command -v caddy >/dev/null 2>&1; then
+            echo ""
+            echo "=== Caddy Web Root ==="
+            if [ -f /etc/caddy/Caddyfile ]; then
+              grep -E "root\s+" /etc/caddy/Caddyfile 2>/dev/null | head -5
+            fi
+            echo ""
+            echo "Common Caddy roots:"
+            for dir in /var/www/html /srv /usr/share/caddy; do
+              if [ -d "$dir" ]; then
+                echo "  ✓ $dir"
+              fi
+            done
           fi
-        done
-      fi
-
-  - name: Check for Caddy
-    command: |
-      if command -v caddy >/dev/null 2>&1; then
-        echo ""
-        echo "=== Caddy Web Root ==="
-        if [ -f /etc/caddy/Caddyfile ]; then
-          grep -E "root\s+" /etc/caddy/Caddyfile 2>/dev/null | head -5
-        fi
-        echo ""
-        echo "Common Caddy roots:"
-        for dir in /var/www/html /srv /usr/share/caddy; do
-          if [ -d "$dir" ]; then
-            echo "  ✓ $dir"
+          
+          if command -v lighttpd >/dev/null 2>&1; then
+            echo ""
+            echo "=== Lighttpd Web Root ==="
+            if [ -f /etc/lighttpd/lighttpd.conf ]; then
+              grep -E "server.document-root" /etc/lighttpd/lighttpd.conf 2>/dev/null
+            fi
           fi
-        done
-      fi
-
-  - name: Check for Lighttpd
-    command: |
-      if command -v lighttpd >/dev/null 2>&1; then
-        echo ""
-        echo "=== Lighttpd Web Root ==="
-        if [ -f /etc/lighttpd/lighttpd.conf ]; then
-          grep -E "server.document-root" /etc/lighttpd/lighttpd.conf 2>/dev/null
-        fi
-      fi
-
-  - name: Summary
-    command: |
-      echo ""
-      echo "=== Quick Check ==="
-      echo "To verify web root ownership and permissions:"
-      echo "  ls -la /var/www/html"
-      echo "  ls -la /usr/share/nginx/html"
-      echo ""
-      echo "To test a file:"
-      echo "  echo 'test' | sudo tee /var/www/html/test.html"
-      echo "  curl http://localhost/test.html"
+          
+          echo ""
+          echo "=== Quick Check ==="
+          echo "To verify web root ownership and permissions:"
+          echo "  ls -la /var/www/html"
+          echo "  ls -la /usr/share/nginx/html"
+          echo ""
+          echo "To test a file:"
+          echo "  echo 'test' | sudo tee /var/www/html/test.html"
+          echo "  curl http://localhost/test.html"
         next: done
       
       done:

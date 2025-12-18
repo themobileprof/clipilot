@@ -26,113 +26,113 @@ flows:
       find_config:
         type: action
         command: |
-      SERVICE="{{ .service }}"
-      
-      echo "=== Configuration Locations for $SERVICE ==="
-      echo ""
-      
-      case "${SERVICE,,}" in
-        nginx)
-          echo "Main config:"
-          ls -l /etc/nginx/nginx.conf 2>/dev/null || echo "  Not found: /etc/nginx/nginx.conf"
-          echo ""
-          echo "Site configs:"
-          ls -l /etc/nginx/sites-available/ 2>/dev/null || echo "  Not found: /etc/nginx/sites-available/"
-          ls -l /etc/nginx/sites-enabled/ 2>/dev/null || echo "  Not found: /etc/nginx/sites-enabled/"
-          echo ""
-          echo "Test config: nginx -t"
-          ;;
+          SERVICE="{{ .service }}"
           
-        apache|apache2|httpd)
-          echo "Main config:"
-          ls -l /etc/apache2/apache2.conf 2>/dev/null || echo "  Not found: /etc/apache2/apache2.conf"
-          ls -l /etc/httpd/conf/httpd.conf 2>/dev/null || echo "  Not found: /etc/httpd/conf/httpd.conf"
+          echo "=== Configuration Locations for $SERVICE ==="
           echo ""
-          echo "Site configs:"
-          ls -l /etc/apache2/sites-available/ 2>/dev/null || echo "  Not found: /etc/apache2/sites-available/"
-          ls -l /etc/apache2/sites-enabled/ 2>/dev/null || echo "  Not found: /etc/apache2/sites-enabled/"
-          echo ""
-          echo "Test config: apache2ctl -t or apachectl -t"
-          ;;
           
-        mysql|mariadb)
-          echo "Main config:"
-          ls -l /etc/mysql/my.cnf 2>/dev/null || echo "  Not found: /etc/mysql/my.cnf"
-          ls -l /etc/my.cnf 2>/dev/null || echo "  Not found: /etc/my.cnf"
-          echo ""
-          echo "Include directories:"
-          ls -l /etc/mysql/conf.d/ 2>/dev/null || echo "  Not found: /etc/mysql/conf.d/"
-          ls -l /etc/mysql/mysql.conf.d/ 2>/dev/null || echo "  Not found: /etc/mysql/mysql.conf.d/"
-          ;;
+          case "${SERVICE,,}" in
+            nginx)
+              echo "Main config:"
+              ls -l /etc/nginx/nginx.conf 2>/dev/null || echo "  Not found: /etc/nginx/nginx.conf"
+              echo ""
+              echo "Site configs:"
+              ls -l /etc/nginx/sites-available/ 2>/dev/null || echo "  Not found: /etc/nginx/sites-available/"
+              ls -l /etc/nginx/sites-enabled/ 2>/dev/null || echo "  Not found: /etc/nginx/sites-enabled/"
+              echo ""
+              echo "Test config: nginx -t"
+              ;;
+              
+            apache|apache2|httpd)
+              echo "Main config:"
+              ls -l /etc/apache2/apache2.conf 2>/dev/null || echo "  Not found: /etc/apache2/apache2.conf"
+              ls -l /etc/httpd/conf/httpd.conf 2>/dev/null || echo "  Not found: /etc/httpd/conf/httpd.conf"
+              echo ""
+              echo "Site configs:"
+              ls -l /etc/apache2/sites-available/ 2>/dev/null || echo "  Not found: /etc/apache2/sites-available/"
+              ls -l /etc/apache2/sites-enabled/ 2>/dev/null || echo "  Not found: /etc/apache2/sites-enabled/"
+              echo ""
+              echo "Test config: apache2ctl -t or apachectl -t"
+              ;;
+              
+              mysql|mariadb)
+                echo "Main config:"
+                ls -l /etc/mysql/my.cnf 2>/dev/null || echo "  Not found: /etc/mysql/my.cnf"
+                ls -l /etc/my.cnf 2>/dev/null || echo "  Not found: /etc/my.cnf"
+                echo ""
+                echo "Include directories:"
+                ls -l /etc/mysql/conf.d/ 2>/dev/null || echo "  Not found: /etc/mysql/conf.d/"
+                ls -l /etc/mysql/mysql.conf.d/ 2>/dev/null || echo "  Not found: /etc/mysql/mysql.conf.d/"
+                ;;
+              
+              postgresql|postgres)
+                echo "Main config:"
+                sudo -u postgres psql -t -P format=unaligned -c 'SHOW config_file;' 2>/dev/null || echo "  Run as postgres user: psql -c 'SHOW config_file;'"
+                echo ""
+                echo "Common locations:"
+                ls -l /etc/postgresql/*/main/postgresql.conf 2>/dev/null || echo "  Not found: /etc/postgresql/"
+                ls -l /var/lib/pgsql/data/postgresql.conf 2>/dev/null || echo "  Not found: /var/lib/pgsql/data/"
+                ;;
+              
+              ssh|sshd)
+                echo "Main config:"
+                ls -l /etc/ssh/sshd_config 2>/dev/null || echo "  Not found: /etc/ssh/sshd_config"
+                echo ""
+                echo "Client config:"
+                ls -l /etc/ssh/ssh_config 2>/dev/null || echo "  Not found: /etc/ssh/ssh_config"
+                ls -l ~/.ssh/config 2>/dev/null || echo "  Not found: ~/.ssh/config"
+                echo ""
+                echo "Test config: sshd -t"
+                ;;
+              
+              docker)
+                echo "Main config:"
+                ls -l /etc/docker/daemon.json 2>/dev/null || echo "  Not found: /etc/docker/daemon.json"
+                echo ""
+                echo "Compose files (current directory):"
+                ls -l docker-compose.yml docker-compose.yaml 2>/dev/null || echo "  Not found in current directory"
+                ;;
+              
+              caddy)
+                echo "Main config:"
+                ls -l /etc/caddy/Caddyfile 2>/dev/null || echo "  Not found: /etc/caddy/Caddyfile"
+                echo ""
+                echo "Test config: caddy validate --config /etc/caddy/Caddyfile"
+                ;;
+                
+              redis)
+                echo "Main config:"
+                ls -l /etc/redis/redis.conf 2>/dev/null || echo "  Not found: /etc/redis/redis.conf"
+                ls -l /etc/redis.conf 2>/dev/null || echo "  Not found: /etc/redis.conf"
+                ;;
+                
+              php|php-fpm)
+                echo "Main config:"
+                PHP_VERSION=$(php -v 2>/dev/null | head -1 | cut -d' ' -f2 | cut -d'.' -f1,2)
+                if [ -n "$PHP_VERSION" ]; then
+                  ls -l /etc/php/$PHP_VERSION/fpm/php.ini 2>/dev/null || echo "  Not found: /etc/php/$PHP_VERSION/fpm/php.ini"
+                  ls -l /etc/php/$PHP_VERSION/cli/php.ini 2>/dev/null || echo "  Not found: /etc/php/$PHP_VERSION/cli/php.ini"
+                fi
+                ls -l /etc/php.ini 2>/dev/null || echo "  Not found: /etc/php.ini"
+                ;;
           
-        postgresql|postgres)
-          echo "Main config:"
-          sudo -u postgres psql -t -P format=unaligned -c 'SHOW config_file;' 2>/dev/null || echo "  Run as postgres user: psql -c 'SHOW config_file;'"
-          echo ""
-          echo "Common locations:"
-          ls -l /etc/postgresql/*/main/postgresql.conf 2>/dev/null || echo "  Not found: /etc/postgresql/"
-          ls -l /var/lib/pgsql/data/postgresql.conf 2>/dev/null || echo "  Not found: /var/lib/pgsql/data/"
-          ;;
-          
-        ssh|sshd)
-          echo "Main config:"
-          ls -l /etc/ssh/sshd_config 2>/dev/null || echo "  Not found: /etc/ssh/sshd_config"
-          echo ""
-          echo "Client config:"
-          ls -l /etc/ssh/ssh_config 2>/dev/null || echo "  Not found: /etc/ssh/ssh_config"
-          ls -l ~/.ssh/config 2>/dev/null || echo "  Not found: ~/.ssh/config"
-          echo ""
-          echo "Test config: sshd -t"
-          ;;
-          
-        docker)
-          echo "Main config:"
-          ls -l /etc/docker/daemon.json 2>/dev/null || echo "  Not found: /etc/docker/daemon.json"
-          echo ""
-          echo "Compose files (current directory):"
-          ls -l docker-compose.yml docker-compose.yaml 2>/dev/null || echo "  Not found in current directory"
-          ;;
-          
-        caddy)
-          echo "Main config:"
-          ls -l /etc/caddy/Caddyfile 2>/dev/null || echo "  Not found: /etc/caddy/Caddyfile"
-          echo ""
-          echo "Test config: caddy validate --config /etc/caddy/Caddyfile"
-          ;;
-          
-        redis)
-          echo "Main config:"
-          ls -l /etc/redis/redis.conf 2>/dev/null || echo "  Not found: /etc/redis/redis.conf"
-          ls -l /etc/redis.conf 2>/dev/null || echo "  Not found: /etc/redis.conf"
-          ;;
-          
-        php|php-fpm)
-          echo "Main config:"
-          PHP_VERSION=$(php -v 2>/dev/null | head -1 | cut -d' ' -f2 | cut -d'.' -f1,2)
-          if [ -n "$PHP_VERSION" ]; then
-            ls -l /etc/php/$PHP_VERSION/fpm/php.ini 2>/dev/null || echo "  Not found: /etc/php/$PHP_VERSION/fpm/php.ini"
-            ls -l /etc/php/$PHP_VERSION/cli/php.ini 2>/dev/null || echo "  Not found: /etc/php/$PHP_VERSION/cli/php.ini"
-          fi
-          ls -l /etc/php.ini 2>/dev/null || echo "  Not found: /etc/php.ini"
-          ;;
-          
-        *)
-          echo "Unknown service: $SERVICE"
-          echo ""
-          echo "Supported services:"
-          echo "  - nginx"
-          echo "  - apache/apache2/httpd"
-          echo "  - mysql/mariadb"
-          echo "  - postgresql/postgres"
-          echo "  - ssh/sshd"
-          echo "  - docker"
-          echo "  - caddy"
-          echo "  - redis"
-          echo "  - php/php-fpm"
-          exit 1
-          ;;
-      esac
+            *)
+              echo "Unknown service: $SERVICE"
+              echo ""
+              echo "Supported services:"
+              echo "  - nginx"
+              echo "  - apache/apache2/httpd"
+              echo "  - mysql/mariadb"
+              echo "  - postgresql/postgres"
+              echo "  - ssh/sshd"
+              echo "  - docker"
+              echo "  - caddy"
+              echo "  - redis"
+              echo "  - php/php-fpm"
+              exit 1
+              ;;
+          esac
         next: done
       
-      done:
-        type: end
+        done:
+          type: end
