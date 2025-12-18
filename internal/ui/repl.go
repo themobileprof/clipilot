@@ -592,6 +592,6 @@ func (repl *REPL) resetDatabase() error {
 	fmt.Println("2. Run: clipilot --reset --load=~/.clipilot/modules")
 	fmt.Println("3. Run: clipilot sync")
 	fmt.Println("\nThis will delete and recreate the database with your local modules.")
-	
+
 	return nil
 }
