@@ -156,7 +156,7 @@ func resetDatabase(dbPath string, modulesDir string) error {
 		// Prompt for confirmation
 		fmt.Print("\n⚠️  This will delete all your data, modules, and settings. Continue? [y/N]: ")
 		var response string
-		fmt.Scanln(&response)
+		_, _ = fmt.Scanln(&response)
 		if response != "y" && response != "Y" && response != "yes" && response != "YES" {
 			fmt.Println("Reset cancelled.")
 			return nil
