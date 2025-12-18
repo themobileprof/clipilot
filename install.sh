@@ -211,7 +211,7 @@ if [ -n "$CLONED_MODULES_DIR" ] && [ -d "$CLONED_MODULES_DIR" ]; then
     MODULE_COUNT=$(ls -1 "${CONFIG_DIR}/modules/"*.yaml 2>/dev/null | wc -l)
     echo -e "${GREEN}✓ Installed $MODULE_COUNT modules${NC}"
 else
-    MODULES=("detect_os.yaml" "git_setup.yaml" "docker_install.yaml")
+    MODULES=("detect_os.yaml" "git_setup.yaml" "docker_install.yaml" "nginx_setup.yaml" "nodejs_setup.yaml" "python_dev_setup.yaml")
     for module in "${MODULES[@]}"; do
         if command -v curl &> /dev/null; then
             curl -fsSL "${MODULES_BASE_URL}/${module}" -o "${CONFIG_DIR}/modules/${module}" 2>/dev/null || true
@@ -220,7 +220,8 @@ else
         fi
     done
     rm -rf "$TMP_DIR"
-    echo -e "${GREEN}✓ Installed modules${NC}"
+    MODULE_COUNT=$(ls -1 "${CONFIG_DIR}/modules/"*.yaml 2>/dev/null | wc -l)
+    echo -e "${GREEN}✓ Installed $MODULE_COUNT core modules${NC}"
 fi
 
 # Verify binary works before initializing
@@ -305,6 +306,8 @@ fi
 
 echo ""
 echo -e "${GREEN}✓ CLIPilot installed successfully!${NC}"
+echo ""
+echo -e "${YELLOW}💡 Run 'clipilot sync' to get the full module library from the registry${NC}"
 echo ""
 if [ "$IS_TERMUX" = true ]; then
     echo "Try: clipilot run termux_setup"
