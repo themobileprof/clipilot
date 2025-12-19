@@ -1,10 +1,12 @@
 package registry
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"os"
 	"strings"
@@ -40,14 +42,62 @@ type SyncStatus struct {
 	Error         string
 }
 
-// NewClient creates a new registry client
+// NewClient creates a new registry client with DNS fallback support
 func NewClient(db *sql.DB, registryURL string) *Client {
 	return &Client{
 		db:          db,
 		registryURL: strings.TrimSuffix(registryURL, "/"),
 		httpClient: &http.Client{
 			Timeout: 30 * time.Second,
+			Transport: newTransportWithDNSFallback(),
 		},
+	}
+}
+
+// newTransportWithDNSFallback creates a transport with DNS fallback for Termux/Android
+func newTransportWithDNSFallback() *http.Transport {
+	// DNS fallback map for known registries (avoids Termux DNS issues)
+	dnsFallback := map[string]string{
+		"clipilot.themobileprof.com": "157.230.148.144",
+	}
+
+	dialer := &net.Dialer{
+		Timeout:   30 * time.Second,
+		KeepAlive: 30 * time.Second,
+	}
+
+	return &http.Transport{
+		Proxy: http.ProxyFromEnvironment,
+		DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
+			host, port, err := net.SplitHostPort(addr)
+			if err != nil {
+				return nil, err
+			}
+
+			// Try normal DNS first
+			conn, err := dialer.DialContext(ctx, network, addr)
+			if err == nil {
+				return conn, nil
+			}
+
+			// If DNS fails and we have a fallback IP, try that
+			if fallbackIP, ok := dnsFallback[host]; ok {
+				fallbackAddr := net.JoinHostPort(fallbackIP, port)
+				conn, fallbackErr := dialer.DialContext(ctx, network, fallbackAddr)
+				if fallbackErr == nil {
+					// DNS fallback succeeded
+					return conn, nil
+				}
+			}
+
+			// Return original error if fallback also failed
+			return nil, err
+		},
+		ForceAttemptHTTP2:     true,
+		MaxIdleConns:          100,
+		IdleConnTimeout:       90 * time.Second,
+		TLSHandshakeTimeout:   10 * time.Second,
+		ExpectContinueTimeout: 1 * time.Second,
 	}
 }
 
