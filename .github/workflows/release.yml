@@ -65,10 +65,16 @@ jobs:
 
       - name: Build binary
         run: |
-          # Pure Go build - no CGO needed (uses modernc.org/sqlite)
-          # Works on all platforms including Termux without compilation
-          CGO_ENABLED=0 GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} GOARM=${{ matrix.goarm }} \
-            go build -ldflags="-s -w" -o ${{ matrix.name }} ./cmd/clipilot
+          # For Android, we need to use -buildmode=pie
+          if [ "${{ matrix.goos }}" = "android" ]; then
+            echo "Building for Android..."
+            CGO_ENABLED=0 GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} GOARM=${{ matrix.goarm }} \
+              go build -buildmode=pie -ldflags="-s -w" -o ${{ matrix.name }} ./cmd/clipilot
+          else
+            echo "Building for ${{ matrix.goos }}..."
+            CGO_ENABLED=0 GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} GOARM=${{ matrix.goarm }} \
+              go build -ldflags="-s -w" -o ${{ matrix.name }} ./cmd/clipilot
+          fi
           
           # Verify binary was created
           ls -lh ${{ matrix.name }}
