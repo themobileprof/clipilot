@@ -76,6 +76,12 @@ case $ARCH in
 esac
 
 OS=$(uname -s | tr '[:upper:]' '[:lower:]')
+
+# Termux needs android binaries, not linux
+if [ "$IS_TERMUX" = true ]; then
+    OS="android"
+fi
+
 BINARY_NAME="clipilot-${OS}-${ARCH}"
 
 echo "Detected platform: ${OS}-${ARCH}"

@@ -107,7 +107,7 @@ This script will:
 - Set up configuration directory at `~/.clipilot`
 
 **Supported Platforms:**
-- **Termux/Android**: ARM64, ARM32, x86_64 (primary platform)
+- **Termux/Android**: ARM64, ARM32 (dedicated android builds)
 - Linux: amd64 (x86_64), arm64 (aarch64), armv7
 - macOS: amd64 (Intel), arm64 (Apple Silicon)
 
@@ -123,8 +123,11 @@ tar -xzf clipilot-linux-amd64.tar.gz
 chmod +x clipilot-linux-amd64
 sudo mv clipilot-linux-amd64 /usr/local/bin/clipilot
 
-# Or for Termux (no sudo needed)
-mv clipilot-linux-arm64 $PREFIX/bin/clipilot
+# Or for Termux/Android (use android binaries, no sudo needed)
+curl -LO https://github.com/themobileprof/clipilot/releases/latest/download/clipilot-android-arm64.tar.gz
+tar -xzf clipilot-android-arm64.tar.gz
+chmod +x clipilot-android-arm64
+mv clipilot-android-arm64 $PREFIX/bin/clipilot
 
 # Initialize with default modules
 mkdir -p ~/.clipilot/modules

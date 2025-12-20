@@ -26,6 +26,13 @@ jobs:
             goarch: arm
             goarm: 7
             name: clipilot-linux-armv7
+          - goos: android
+            goarch: arm64
+            name: clipilot-android-arm64
+          - goos: android
+            goarch: arm
+            goarm: 7
+            name: clipilot-android-armv7
           - goos: darwin
             goarch: amd64
             name: clipilot-darwin-amd64
