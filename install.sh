@@ -300,12 +300,12 @@ if [ $SYNC_EXIT -eq 0 ]; then
         echo -e "${GREEN}✓ Registry synced ($SYNCED_COUNT modules available)${NC}"
     else
         echo -e "${YELLOW}⚠️  Registry synced but no modules found${NC}"
-        echo -e "${YELLOW}   You can run 'clipilot sync' later to fetch modules${NC}"
+        echo -e "${YELLOW}   Run 'clipilot sync' manually to fetch modules from registry${NC}"
     fi
 else
     echo -e "${YELLOW}⚠️  Registry sync failed${NC}"
     echo -e "${YELLOW}   Error: $(echo "$SYNC_OUTPUT" | head -1)${NC}"
-    echo -e "${YELLOW}   You can run 'clipilot sync' later to retry${NC}"
+    echo -e "${YELLOW}   Run 'clipilot sync' manually after installation${NC}"
 fi
 
 # Check if install dir is in PATH
