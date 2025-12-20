@@ -290,11 +290,22 @@ echo -e "${GREEN}✓ Database initialized${NC}"
 
 # Sync with registry to get full module library
 echo "📦 Syncing with module registry..."
-if "${INSTALL_DIR}/clipilot" sync >/dev/null 2>&1; then
-    SYNCED_COUNT=$("${INSTALL_DIR}/clipilot" modules list --available 2>/dev/null | wc -l || echo "0")
-    echo -e "${GREEN}✓ Registry synced (${SYNCED_COUNT} modules available)${NC}"
+SYNC_OUTPUT=$("${INSTALL_DIR}/clipilot" sync 2>&1)
+SYNC_EXIT=$?
+
+if [ $SYNC_EXIT -eq 0 ]; then
+    # Extract module count from sync output
+    SYNCED_COUNT=$(echo "$SYNC_OUTPUT" | grep -oP "Total modules: \K\d+" || echo "0")
+    if [ "$SYNCED_COUNT" -gt 0 ]; then
+        echo -e "${GREEN}✓ Registry synced ($SYNCED_COUNT modules available)${NC}"
+    else
+        echo -e "${YELLOW}⚠️  Registry synced but no modules found${NC}"
+        echo -e "${YELLOW}   You can run 'clipilot sync' later to fetch modules${NC}"
+    fi
 else
-    echo -e "${YELLOW}⚠️  Registry sync failed (you can run 'clipilot sync' later)${NC}"
+    echo -e "${YELLOW}⚠️  Registry sync failed${NC}"
+    echo -e "${YELLOW}   Error: $(echo "$SYNC_OUTPUT" | head -1)${NC}"
+    echo -e "${YELLOW}   You can run 'clipilot sync' later to retry${NC}"
 fi
 
 # Check if install dir is in PATH
