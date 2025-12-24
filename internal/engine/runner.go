@@ -9,25 +9,28 @@ import (
 	"strings"
 	"time"
 
-	"github.com/themobileprof/clipilot/internal/modules"
+	"github.com/themobileprof/clipilot/internal/interfaces"
 	"github.com/themobileprof/clipilot/pkg/models"
 )
 
 // Runner executes module flows
 type Runner struct {
 	db      *sql.DB
-	loader  *modules.Loader
+	loader  interfaces.ModuleStore
 	dryRun  bool
 	autoYes bool
 }
 
 // NewRunner creates a new flow runner
-func NewRunner(db *sql.DB, loader *modules.Loader) *Runner {
+func NewRunner(db *sql.DB, loader interfaces.ModuleStore) *Runner {
 	return &Runner{
 		db:     db,
 		loader: loader,
 	}
 }
+
+// Ensure Runner implements FlowRunner interface
+var _ interfaces.FlowRunner = (*Runner)(nil)
 
 // SetDryRun enables/disables dry-run mode
 func (r *Runner) SetDryRun(enabled bool) {

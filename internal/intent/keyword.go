@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/themobileprof/clipilot/internal/interfaces"
 	"github.com/themobileprof/clipilot/pkg/models"
 )
 
@@ -25,6 +26,9 @@ func NewDetector(db *sql.DB) *Detector {
 		onlineEnabled: false,
 	}
 }
+
+// Ensure Detector implements IntentClassifier interface
+var _ interfaces.IntentClassifier = (*Detector)(nil)
 
 // SetThresholds updates confidence thresholds
 func (d *Detector) SetThresholds(keyword, llm float64) {

@@ -7,6 +7,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/themobileprof/clipilot/internal/interfaces"
 	"github.com/themobileprof/clipilot/pkg/models"
 	"gopkg.in/yaml.v3"
 )
@@ -20,6 +21,9 @@ type Loader struct {
 func NewLoader(db *sql.DB) *Loader {
 	return &Loader{db: db}
 }
+
+// Ensure Loader implements ModuleStore interface
+var _ interfaces.ModuleStore = (*Loader)(nil)
 
 // LoadFromFile reads and parses a module YAML file
 func (l *Loader) LoadFromFile(path string) (*models.Module, error) {

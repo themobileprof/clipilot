@@ -90,3 +90,17 @@ type ValidationResult struct {
 	Message string
 	Type    string
 }
+
+// LogEntry represents an execution log record
+type LogEntry struct {
+	ID             int64
+	SessionID      string
+	Input          string
+	ResolvedModule string
+	Confidence     float64
+	Method         string
+	Status         string
+	ErrorMessage   string
+	DurationMs     int64
+	Timestamp      int64
+}
