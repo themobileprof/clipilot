@@ -1,8 +1,327 @@
-# CLIPilot Registry - Testing Guide
+# CLIPilot Testing
 
-## 🚀 Quick Test (Visual)
+## 🚀 Quick Start
 
-The registry server is already running at **http://localhost:8080**
+### Using the Test Runner Script (Recommended)
+```bash
+# Run all tests
+./scripts/test.sh
+
+# Quick test (no race detector)
+./scripts/test.sh quick
+
+# Generate coverage report
+./scripts/test.sh coverage
+
+# Run specific package
+./scripts/test.sh db
+./scripts/test.sh intent
+./scripts/test.sh modules
+
+# Full CI/CD suite
+./scripts/test.sh ci
+
+# Show all options
+./scripts/test.sh help
+```
+
+### Using Go Test Directly
+```bash
+# All unit tests
+go test ./...
+
+# With coverage
+go test -cover ./...
+
+# With race detection
+go test -race ./...
+
+# Integration tests
+go test -tags=integration ./...
+
+# Specific package
+go test ./internal/db
+```
+
+## 📊 Current Test Status
+
+- ✅ **52 tests** total (43 unit + 9 integration)
+- ✅ **69.7% coverage** overall
+- ✅ **All tests passing**
+- ✅ **CI/CD integrated** via GitHub Actions
+- ✅ **Race detection** enabled
+
+### Coverage by Package
+| Package | Coverage | Status |
+|---------|----------|--------|
+| `internal/db` | 66.1% | ✅ Good |
+| `internal/engine` | 48.6% | ⚠️ Needs improvement |
+| `internal/intent` | 77.9% | ✅ Excellent |
+| `internal/modules` | 83.8% | ✅ Excellent |
+| `pkg/config` | 72.0% | ✅ Good |
+
+## 📁 Test Files
+
+```
+internal/
+├── db/db_test.go           # 11 tests - database operations
+├── engine/runner_test.go   # 9 tests - flow execution
+├── intent/keyword_test.go  # 7 tests - intent detection
+└── modules/loader_test.go  # 10 tests - module loading
+
+pkg/
+└── config/config_test.go   # 6 tests - configuration
+
+integration_test.go         # 9 integration tests
+```
+
+## 🎯 Before Submitting PR
+
+Run the full test suite:
+```bash
+./scripts/test.sh ci
+```
+
+Or manually:
+```bash
+go test -v -race -cover ./...
+go test -tags=integration ./...
+```
+
+## 📚 Documentation
+
+- [Testing Guide](docs/TESTING_GUIDE.md) - Comprehensive testing documentation
+- [Test Coverage Report](docs/TEST_COVERAGE.md) - Detailed coverage status
+- [Implementation Summary](docs/TEST_IMPLEMENTATION_SUMMARY.md) - What was built
+
+## 🔍 Running Specific Tests
+
+```bash
+# Single package
+go test ./internal/db
+go test -v ./internal/intent
+
+# Single test function
+go test ./internal/db -run TestNew
+go test ./internal/intent -run TestDetect
+
+# Tests matching pattern
+go test ./... -run "TestConcurrent"
+
+# Benchmarks
+go test -bench=. ./internal/intent
+```
+
+## 🐛 Debugging Failed Tests
+
+```bash
+# Verbose output
+go test -v ./internal/db
+
+# With race detector
+go test -v -race ./internal/db
+
+# Check for temp files (if cleanup fails)
+ls -la /tmp/clipilot-test-*
+
+# Run with custom timeout
+go test -timeout 30s ./internal/db
+```
+
+## ⚡ Performance Testing
+
+```bash
+# Run benchmarks
+./scripts/test.sh bench
+
+# Or manually
+go test -bench=. -benchmem ./internal/intent
+go test -bench=. ./internal/modules
+```
+
+## 📈 Coverage Report
+
+Generate HTML coverage report:
+```bash
+./scripts/test.sh coverage
+# Opens coverage.html in your browser
+```
+
+Or manually:
+```bash
+go test -coverprofile=coverage.out ./...
+go tool cover -html=coverage.out -o coverage.html
+xdg-open coverage.html  # Linux
+open coverage.html      # macOS
+```
+
+## 🎓 Writing New Tests
+
+### Basic Test Template
+```go
+package yourpackage
+
+import (
+    "testing"
+)
+
+func TestYourFunction(t *testing.T) {
+    // Setup
+    input := "test input"
+    expected := "expected output"
+    
+    // Execute
+    result, err := YourFunction(input)
+    
+    // Assert
+    if err != nil {
+        t.Fatalf("Unexpected error: %v", err)
+    }
+    if result != expected {
+        t.Errorf("Expected %v, got %v", expected, result)
+    }
+}
+```
+
+### Database Test Template
+```go
+func TestWithDatabase(t *testing.T) {
+    db, cleanup := setupTestDB(t)
+    defer cleanup()
+    
+    // Your test logic here
+}
+```
+
+### Table-Driven Test Template
+```go
+func TestMultipleCases(t *testing.T) {
+    tests := []struct {
+        name     string
+        input    string
+        expected string
+    }{
+        {"case1", "input1", "output1"},
+        {"case2", "input2", "output2"},
+    }
+    
+    for _, tt := range tests {
+        t.Run(tt.name, func(t *testing.T) {
+            result := Function(tt.input)
+            if result != tt.expected {
+                t.Errorf("Expected %v, got %v", tt.expected, result)
+            }
+        })
+    }
+}
+```
+
+## 🔄 CI/CD Integration
+
+Tests run automatically via GitHub Actions on:
+- ✅ Push to `main` or `develop` branches
+- ✅ Pull requests
+- ✅ Version tags (releases)
+
+Workflow file: [`.github/workflows/test.yml`](.github/workflows/test.yml)
+
+### What CI/CD Runs
+1. **Unit Tests** - All packages with race detection
+2. **Coverage** - Upload to Codecov
+3. **Build Verification** - CLI and registry binaries
+4. **Linting** - golangci-lint
+5. **Integration Tests** - Optional, manual trigger
+
+## 🧪 Test Categories
+
+### Unit Tests (43 tests)
+Test individual functions and components in isolation.
+
+**Database Tests (11)**
+- Database creation and migration
+- Settings CRUD operations
+- State management
+- Query logging
+- Concurrent access
+
+**Engine Tests (9)**
+- Runner initialization
+- Flow execution
+- Condition evaluation
+- Command execution
+- Logging
+
+**Intent Detection Tests (7)**
+- Tokenization
+- Keyword search
+- Threshold configuration
+- Benchmarks
+
+**Module Tests (10)**
+- YAML parsing
+- Module import
+- Module retrieval
+- Listing
+
+**Config Tests (6)**
+- Configuration loading
+- Saving
+- Default values
+
+### Integration Tests (9 tests)
+Test full workflows and build processes.
+
+- CLI binary build and execution
+- Registry server build
+- Module loading workflows
+- Cross-platform compilation
+- Docker image building
+- Module YAML validation
+
+## 🎯 Testing Best Practices
+
+1. ✅ **Isolation** - Tests don't depend on each other
+2. ✅ **Cleanup** - Always clean up temp files and connections
+3. ✅ **Clear Names** - Test names describe what they test
+4. ✅ **Fast** - Unit tests complete in <100ms
+5. ✅ **Deterministic** - Always produce same results
+6. ✅ **Error Paths** - Test both success and failure cases
+7. ✅ **Table-Driven** - Use tables for multiple inputs
+
+## 🚨 Common Issues
+
+### Issue: Race Condition Detected
+```bash
+# Run with race detector to identify
+go test -race ./...
+```
+
+### Issue: Test Hangs
+```bash
+# Add timeout
+go test -timeout 10s ./internal/db
+```
+
+### Issue: Temp Files Not Cleaned
+```bash
+# Check for leftover files
+ls -la /tmp/clipilot-test-*
+
+# Clean manually
+rm -rf /tmp/clipilot-test-*
+```
+
+## 📞 Getting Help
+
+- Check [docs/TESTING_GUIDE.md](docs/TESTING_GUIDE.md) for detailed info
+- See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines  
+- Open an issue on GitHub for test-related problems
+
+---
+
+## Registry Server Testing
+
+For testing the web-based module registry:
 
 ### Test in Browser (Easiest Method)
 
