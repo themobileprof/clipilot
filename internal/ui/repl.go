@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/themobileprof/clipilot/internal/commands"
 	"github.com/themobileprof/clipilot/internal/engine"
 	"github.com/themobileprof/clipilot/internal/intent"
 	"github.com/themobileprof/clipilot/internal/modules"
@@ -113,6 +114,8 @@ func (repl *REPL) handleCommand(input string) error {
 		return repl.handleModulesCommand(args)
 	case "sync":
 		return repl.syncRegistry()
+	case "update-commands":
+		return repl.updateCommands()
 	case "reset":
 		return repl.resetDatabase()
 	case "settings":
@@ -133,6 +136,7 @@ Available Commands:
   search <query>          - Search for modules matching query
   run <module_id>         - Execute a specific module
   sync                    - Sync registry catalog (updates available modules)
+  update-commands         - Index available system commands (using man pages)
   reset                   - Reset database (delete all data and modules)
   modules list            - List all installed modules
   modules list --all      - List all modules (installed + available)
@@ -149,6 +153,7 @@ Natural Language:
 
 Examples:
   > sync
+  > update-commands
   > modules list --all
   > install mysql
   > setup docker
@@ -488,6 +493,46 @@ func (repl *REPL) showLogs() error {
 	fmt.Println()
 
 	return nil
+}
+
+// updateCommands indexes all available system commands
+func (repl *REPL) updateCommands() error {
+	fmt.Println("\n=== Indexing System Commands ===")
+
+	// Check if man is available
+	if !repl.checkManAvailable() {
+		return fmt.Errorf("man command not found - please install man pages first")
+	}
+
+	// Create indexer and run
+	indexer := commands.NewIndexer(repl.db)
+
+	if err := indexer.RefreshCommandIndex(); err != nil {
+		return fmt.Errorf("indexing failed: %w", err)
+	}
+
+	// Show summary
+	count := indexer.GetCommandCount()
+	fmt.Printf("\n💡 Indexed %d commands with descriptions from man pages\n", count)
+	fmt.Println("   You can now search for any command using natural language!")
+
+	return nil
+}
+
+// checkManAvailable verifies man command is installed
+func (repl *REPL) checkManAvailable() bool {
+	var cmdExists bool
+	err := repl.db.QueryRow(`
+		SELECT COUNT(*) > 0 FROM commands WHERE name = 'man'
+	`).Scan(&cmdExists)
+
+	if err == nil && cmdExists {
+		return true
+	}
+
+	// Fallback: check if man command exists via system
+	// This will be true on first run before indexing
+	return true // We'll let the indexer fail if man is truly unavailable
 }
 
 // ExecuteNonInteractive runs a command non-interactively

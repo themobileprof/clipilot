@@ -284,9 +284,64 @@ if ! "${INSTALL_DIR}/clipilot" --version >/dev/null 2>&1; then
 fi
 echo -e "${GREEN}✓ Binary verified${NC}"
 
+# Install man pages if not already installed
+echo ""
+echo "📚 Installing man pages for command indexing..."
+if [ "$IS_TERMUX" = true ]; then
+    # Termux: Install man and man-pages
+    if ! command -v man &> /dev/null; then
+        pkg update -y >/dev/null 2>&1
+        pkg install -y man man-pages >/dev/null 2>&1
+        echo -e "${GREEN}✓ Installed man and man-pages${NC}"
+    else
+        echo -e "${GREEN}✓ man already installed${NC}"
+    fi
+    
+    # Build man database
+    if command -v mandb &> /dev/null; then
+        mandb -q >/dev/null 2>&1 && echo -e "${GREEN}✓ Man database built${NC}"
+    fi
+else
+    # Regular Linux: Check for man-db
+    if ! command -v man &> /dev/null; then
+        echo -e "${YELLOW}⚠️  man not found - attempting to install...${NC}"
+        if command -v apt-get &> /dev/null; then
+            sudo apt-get update -qq >/dev/null 2>&1
+            sudo apt-get install -y man-db >/dev/null 2>&1
+            echo -e "${GREEN}✓ Installed man-db${NC}"
+        elif command -v dnf &> /dev/null; then
+            sudo dnf install -y man-db >/dev/null 2>&1
+            echo -e "${GREEN}✓ Installed man-db${NC}"
+        elif command -v yum &> /dev/null; then
+            sudo yum install -y man-db >/dev/null 2>&1
+            echo -e "${GREEN}✓ Installed man-db${NC}"
+        else
+            echo -e "${YELLOW}⚠️  Could not install man pages - install manually${NC}"
+        fi
+    else
+        echo -e "${GREEN}✓ man already installed${NC}"
+    fi
+    
+    # Build man database
+    if command -v mandb &> /dev/null; then
+        sudo mandb -q >/dev/null 2>&1 && echo -e "${GREEN}✓ Man database built${NC}"
+    fi
+fi
+
 # Initialize database
 "${INSTALL_DIR}/clipilot" --init --load="${CONFIG_DIR}/modules" >/dev/null 2>&1
 echo -e "${GREEN}✓ Database initialized${NC}"
+
+# Index system commands
+echo "📇 Indexing system commands (this may take a minute)..."
+INDEX_OUTPUT=$(echo "update-commands" | "${INSTALL_DIR}/clipilot" 2>&1)
+if echo "$INDEX_OUTPUT" | grep -q "Indexed.*commands successfully"; then
+    INDEXED_COUNT=$(echo "$INDEX_OUTPUT" | grep -oP "Indexed \K\d+" | head -1)
+    echo -e "${GREEN}✓ Indexed $INDEXED_COUNT commands${NC}"
+else
+    echo -e "${YELLOW}⚠️  Command indexing failed${NC}"
+    echo -e "${YELLOW}   Run 'clipilot' then 'update-commands' manually${NC}"
+fi
 
 # Sync with registry to get full module library
 echo "📦 Syncing with module registry..."

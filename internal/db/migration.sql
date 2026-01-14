@@ -117,6 +117,16 @@ CREATE TABLE IF NOT EXISTS registry_cache (
   updated_at INTEGER DEFAULT (strftime('%s', 'now'))
 );
 
+-- Available commands on this system (populated via compgen -c and whatis)
+CREATE TABLE IF NOT EXISTS commands (
+  name TEXT PRIMARY KEY,
+  description TEXT,
+  has_man BOOLEAN DEFAULT 0,
+  has_help BOOLEAN,  -- NULL = unknown, 0 = no, 1 = yes (detected lazily)
+  last_seen INTEGER DEFAULT (strftime('%s', 'now')),
+  created_at INTEGER DEFAULT (strftime('%s', 'now'))
+);
+
 -- Indexes for performance
 CREATE INDEX IF NOT EXISTS idx_modules_installed ON modules(installed);
 CREATE INDEX IF NOT EXISTS idx_modules_tags ON modules(tags);
@@ -127,6 +137,7 @@ CREATE INDEX IF NOT EXISTS idx_steps_order ON steps(module_id, order_num);
 CREATE INDEX IF NOT EXISTS idx_logs_ts ON logs(ts DESC);
 CREATE INDEX IF NOT EXISTS idx_logs_module ON logs(resolved_module);
 CREATE INDEX IF NOT EXISTS idx_state_session ON state(session_id);
+CREATE INDEX IF NOT EXISTS idx_commands_name ON commands(name);
 
 -- Insert default settings
 INSERT OR IGNORE INTO settings (key, value, value_type, description) VALUES
@@ -140,7 +151,8 @@ INSERT OR IGNORE INTO settings (key, value, value_type, description) VALUES
   ('db_version', '2', 'integer', 'Database schema version'),
   ('registry_url', 'https://clipilot.themobileprof.com', 'string', 'Module registry server URL'),
   ('auto_sync', 'false', 'boolean', 'Auto-sync registry on startup'),
-  ('sync_interval', '86400', 'integer', 'Registry sync interval in seconds (24h)');
+  ('sync_interval', '86400', 'integer', 'Registry sync interval in seconds (24h)'),
+  ('commands_indexed', 'false', 'boolean', 'Whether system commands have been indexed');
 
 -- Initialize registry cache with default production URL
 INSERT OR IGNORE INTO registry_cache (id, registry_url, sync_status) VALUES

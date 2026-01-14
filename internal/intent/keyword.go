@@ -89,11 +89,41 @@ func (d *Detector) keywordSearch(input string) (*models.IntentResult, error) {
 		}, nil
 	}
 
-	// Build scoring map
+	// Build scoring map for both modules and commands
 	scores := make(map[string]float64)
 	weights := make(map[string]float64)
+	commandMatches := make(map[string]models.Candidate) // Store command matches separately
 
-	// Query patterns for each token
+	// First, check for direct command matches (highest priority)
+	for _, token := range tokens {
+		rows, err := d.db.Query(`
+			SELECT name, description, has_man
+			FROM commands
+			WHERE name = ? OR name LIKE ?
+			LIMIT 5
+		`, token, token+"%")
+		if err == nil {
+			for rows.Next() {
+				var name, description string
+				var hasMan bool
+				if err := rows.Scan(&name, &description, &hasMan); err == nil {
+					// Commands get very high weight (3.0) to prioritize over modules
+					cmdID := "cmd:" + name
+					scores[cmdID] = 3.0
+					commandMatches[cmdID] = models.Candidate{
+						ModuleID:    cmdID,
+						Name:        name,
+						Description: description,
+						Score:       3.0,
+						Tags:        []string{"command"},
+					}
+				}
+			}
+			rows.Close()
+		}
+	}
+
+	// Query module patterns for each token
 	for _, token := range tokens {
 		rows, err := d.db.Query(`
 			SELECT DISTINCT p.module_id, p.weight, p.pattern_type
@@ -127,7 +157,19 @@ func (d *Detector) keywordSearch(input string) (*models.IntentResult, error) {
 
 	// Normalize scores and get candidates
 	candidates := []models.Candidate{}
+
+	// Add command matches first (highest priority)
+	for _, cmd := range commandMatches {
+		candidates = append(candidates, cmd)
+	}
+
+	// Add module matches
 	for moduleID, score := range scores {
+		// Skip command IDs (already added)
+		if strings.HasPrefix(moduleID, "cmd:") {
+			continue
+		}
+
 		normalizedScore := score / float64(len(tokens))
 
 		// Get module details
