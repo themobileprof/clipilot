@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/themobileprof/clipilot/internal/db"
 	"github.com/themobileprof/clipilot/internal/modules"
@@ -105,8 +106,8 @@ func main() {
 
 	// Check for non-interactive command
 	if len(args) > 0 {
-		// Non-interactive mode
-		command := args[0]
+		// Non-interactive mode - join all args as a single command
+		command := strings.Join(args, " ")
 		if err := repl.ExecuteNonInteractive(command); err != nil {
 			log.Fatalf("Command failed: %v", err)
 		}
