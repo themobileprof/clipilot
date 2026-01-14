@@ -309,14 +309,16 @@ See `docs/module_development.md` for detailed guide.
 
 ## 📚 System Command Discovery
 
-CLIPilot automatically indexes all available system commands from man pages, making every installed command searchable via natural language.
+CLIPilot automatically indexes all available system commands from man pages **and suggests commonly-needed commands you don't have installed yet**, making command discovery effortless.
 
 ### How It Works
 
-1. **Automatic Indexing**: During installation, CLIPilot runs `compgen -c` to discover all commands
+1. **Automatic Indexing**: During installation, CLIPilot runs `compgen -c` to discover all installed commands
 2. **Description Extraction**: Uses `whatis` to fetch one-line descriptions from man pages
-3. **SQLite Storage**: Commands cached locally for instant search (~2500 commands typical)
-4. **Smart Priority**: System commands prioritized over modules in search results
+3. **Common Commands Catalog**: Maintains a curated list of ~70 commonly-needed commands with OS-specific installation instructions
+4. **Smart Fallback**: When no strong match is found in installed commands, suggests from the catalog
+5. **SQLite Storage**: Commands cached locally for instant search (~2500 commands typical)
+6. **Priority-Based Ranking**: System commands prioritized over modules in search results
 
 ### Usage
 
@@ -324,17 +326,56 @@ CLIPilot automatically indexes all available system commands from man pages, mak
 # Index commands (done automatically during install)
 clipilot update-commands
 
-# Search for system commands
+# Search for installed commands
 clipilot search git        # Finds git command with description
 clipilot search "list files"  # Finds ls, dir, and related commands
 
-# Commands appear in search results
+# Search for uninstalled commands - get installation suggestions!
+clipilot search ripgrep    # Shows: ripgrep (not installed) - sudo apt install ripgrep
+clipilot search bat        # Shows: bat (not installed) - pkg install bat (on Termux)
+
+# Commands appear in search results with scores
 > search grep
 Found 3 results:
 1. grep (ID: cmd:grep)
    print lines that match patterns
    Score: 3.00 | Tags: command
+
+> search ripgrep
+Found 2 results:
+1. ripgrep (not installed) (ID: common:ripgrep)
+   Fast recursive grep alternative - sudo apt install ripgrep
+   Score: 1.40 | Tags: installable, file-management
+2. modern_cli_tools_install (ID: org.themobileprof.modern_cli_tools_install)
+   Install modern CLI tools (bat, eza, fd, ripgrep, fzf, tldr, htop)...
+   Score: 1.00 | Tags: installer, composite
 ```
+
+### Common Commands Catalog
+
+The catalog includes ~70 commonly-needed commands across 10 categories:
+
+- **Development**: git, python3, node, npm, go, make, gcc
+- **Modern CLI**: bat, eza, fd, ripgrep, fzf, tldr, htop, btop
+- **Networking**: curl, wget, ssh, rsync, nmap
+- **Databases**: psql, mysql, redis-cli, mongosh, sqlite3
+- **File Management**: tar, zip, grep, sed, awk, jq
+- **System**: htop, btop, iftop
+- **Editors**: vim, nano, emacs
+- **Containers**: docker, kubectl
+- **Cloud**: aws, gcloud, az
+- **Misc**: tmux, screen, tree
+
+Each command includes **OS-specific installation instructions** for:
+- **apt** (Debian/Ubuntu)
+- **pkg** (Termux/Android)
+- **dnf** (Fedora/RHEL)
+- **brew** (macOS)
+- **pacman** (Arch Linux)
+
+CLIPilot automatically detects your OS and shows the correct command!
+
+📖 **Learn more**: See [docs/COMMON_COMMANDS.md](docs/COMMON_COMMANDS.md) for the complete catalog.
 
 ### When to Re-index
 

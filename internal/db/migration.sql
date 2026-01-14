@@ -127,6 +127,22 @@ CREATE TABLE IF NOT EXISTS commands (
   created_at INTEGER DEFAULT (strftime('%s', 'now'))
 );
 
+-- Common commands catalog (reference for suggesting installations)
+CREATE TABLE IF NOT EXISTS common_commands (
+  name TEXT PRIMARY KEY,
+  description TEXT NOT NULL,
+  category TEXT NOT NULL,  -- development, networking, file-management, database, etc.
+  keywords TEXT,  -- comma-separated search keywords
+  apt_package TEXT,  -- Debian/Ubuntu package name
+  pkg_package TEXT,  -- Termux package name
+  dnf_package TEXT,  -- Fedora/RHEL package name
+  brew_package TEXT,  -- macOS Homebrew package name
+  arch_package TEXT,  -- Arch Linux package name
+  alternative_to TEXT,  -- comma-separated list of similar commands
+  homepage TEXT,
+  priority INTEGER DEFAULT 50  -- Higher = more commonly needed (0-100)
+);
+
 -- Indexes for performance
 CREATE INDEX IF NOT EXISTS idx_modules_installed ON modules(installed);
 CREATE INDEX IF NOT EXISTS idx_modules_tags ON modules(tags);
@@ -138,6 +154,9 @@ CREATE INDEX IF NOT EXISTS idx_logs_ts ON logs(ts DESC);
 CREATE INDEX IF NOT EXISTS idx_logs_module ON logs(resolved_module);
 CREATE INDEX IF NOT EXISTS idx_state_session ON state(session_id);
 CREATE INDEX IF NOT EXISTS idx_commands_name ON commands(name);
+CREATE INDEX IF NOT EXISTS idx_common_commands_name ON common_commands(name);
+CREATE INDEX IF NOT EXISTS idx_common_commands_category ON common_commands(category);
+CREATE INDEX IF NOT EXISTS idx_common_commands_priority ON common_commands(priority DESC);
 
 -- Insert default settings
 INSERT OR IGNORE INTO settings (key, value, value_type, description) VALUES

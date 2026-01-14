@@ -3,6 +3,8 @@ package intent
 import (
 	"database/sql"
 	"fmt"
+	"os"
+	"os/exec"
 	"strings"
 
 	"github.com/themobileprof/clipilot/internal/interfaces"
@@ -197,6 +199,22 @@ func (d *Detector) keywordSearch(input string) (*models.IntentResult, error) {
 		})
 	}
 
+	// If no strong matches, check common commands catalog for suggestions
+	if len(candidates) == 0 || (len(candidates) > 0 && candidates[0].Score < 1.5) {
+		commonCmds, err := d.searchCommonCommands(input, 3)
+		if err == nil && len(commonCmds) > 0 {
+			for _, cmd := range commonCmds {
+				candidates = append(candidates, models.Candidate{
+					ModuleID:    "common:" + cmd.Name,
+					Name:        cmd.Name + " (not installed)",
+					Description: cmd.Description + " - " + cmd.InstallCmd,
+					Score:       float64(cmd.Priority) / 100.0 * 2.0, // Convert priority to score
+					Tags:        []string{"installable", cmd.Category},
+				})
+			}
+		}
+	}
+
 	// Sort candidates by score (descending)
 	for i := 0; i < len(candidates); i++ {
 		for j := i + 1; j < len(candidates); j++ {
@@ -251,4 +269,96 @@ func tokenize(text string) []string {
 	}
 
 	return filtered
+}
+
+// searchCommonCommands searches installable commands from catalog
+func (d *Detector) searchCommonCommands(query string, limit int) ([]commonCommandSuggestion, error) {
+	query = strings.ToLower(query)
+
+	rows, err := d.db.Query(`
+		SELECT name, description, category, priority,
+		       apt_package, pkg_package, dnf_package, brew_package, arch_package
+		FROM common_commands
+		WHERE name LIKE ? OR description LIKE ? OR keywords LIKE ?
+		ORDER BY priority DESC, name
+		LIMIT ?
+	`, "%"+query+"%", "%"+query+"%", "%"+query+"%", limit)
+
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	results := []commonCommandSuggestion{}
+	for rows.Next() {
+		var cmd commonCommandSuggestion
+		var aptPkg, pkgPkg, dnfPkg, brewPkg, archPkg sql.NullString
+
+		err := rows.Scan(
+			&cmd.Name, &cmd.Description, &cmd.Category, &cmd.Priority,
+			&aptPkg, &pkgPkg, &dnfPkg, &brewPkg, &archPkg,
+		)
+		if err != nil {
+			continue
+		}
+
+		// Determine install command for current OS
+		cmd.InstallCmd = getInstallCommand(
+			aptPkg.String, pkgPkg.String, dnfPkg.String, brewPkg.String, archPkg.String,
+		)
+
+		if cmd.InstallCmd != "" {
+			results = append(results, cmd)
+		}
+	}
+
+	return results, nil
+}
+
+type commonCommandSuggestion struct {
+	Name        string
+	Description string
+	Category    string
+	Priority    int
+	InstallCmd  string
+}
+
+// getInstallCommand returns OS-specific install command
+func getInstallCommand(aptPkg, pkgPkg, dnfPkg, brewPkg, archPkg string) string {
+	// Check for Termux
+	if os.Getenv("TERMUX_VERSION") != "" || os.Getenv("PREFIX") != "" {
+		if pkgPkg != "" {
+			return "pkg install " + pkgPkg
+		}
+	}
+
+	// Check for apt (Debian/Ubuntu)
+	if _, err := exec.LookPath("apt"); err == nil {
+		if aptPkg != "" {
+			return "sudo apt install " + aptPkg
+		}
+	}
+
+	// Check for dnf (Fedora/RHEL)
+	if _, err := exec.LookPath("dnf"); err == nil {
+		if dnfPkg != "" {
+			return "sudo dnf install " + dnfPkg
+		}
+	}
+
+	// Check for brew (macOS)
+	if _, err := exec.LookPath("brew"); err == nil {
+		if brewPkg != "" {
+			return "brew install " + brewPkg
+		}
+	}
+
+	// Check for pacman (Arch Linux)
+	if _, err := exec.LookPath("pacman"); err == nil {
+		if archPkg != "" {
+			return "sudo pacman -S " + archPkg
+		}
+	}
+
+	return ""
 }

@@ -507,8 +507,17 @@ func (repl *REPL) updateCommands() error {
 	// Create indexer and run
 	indexer := commands.NewIndexer(repl.db)
 
+	// Index installed commands
 	if err := indexer.RefreshCommandIndex(); err != nil {
 		return fmt.Errorf("indexing failed: %w", err)
+	}
+
+	// Load common commands catalog
+	fmt.Println("\nLoading common commands catalog...")
+	if err := indexer.LoadCommonCommands(); err != nil {
+		fmt.Printf("Warning: failed to load common commands: %v\n", err)
+	} else {
+		fmt.Println("✓ Common commands catalog loaded")
 	}
 
 	// Show summary
