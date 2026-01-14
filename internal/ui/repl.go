@@ -52,12 +52,21 @@ func (repl *REPL) Start() error {
 	// Detect Termux environment
 	isTermux := os.Getenv("TERMUX_VERSION") != "" || os.Getenv("PREFIX") != ""
 
-	fmt.Println("CLIPilot v1.0.0 - Lightweight CLI Assistant")
+	fmt.Println("╔═══════════════════════════════════════════════════════════╗")
+	fmt.Println("║          CLIPilot v1.0.0 - Your CLI Assistant           ║")
+	fmt.Println("╚═══════════════════════════════════════════════════════════╝")
+	fmt.Println()
 	if isTermux {
-		fmt.Println("📱 Running on Termux - All modules are optimized for your device!")
-		fmt.Println("💡 Try: 'run termux_setup' or 'search phone'")
+		fmt.Println("📱 Running on Termux - All tools work on your Android device!")
+		fmt.Println("💡 New to command line? Type 'help' for a beginner's guide")
+		fmt.Println("🚀 Quick start: 'run termux_setup' or 'search phone tools'")
+	} else {
+		fmt.Println("👋 New to command line? Type 'help' for a beginner's guide")
+		fmt.Println("🔍 Try searching: 'search git' or 'search copy files'")
 	}
-	fmt.Println("Type 'help' for available commands, 'exit' to quit")
+	fmt.Println()
+	fmt.Println("Type 'help' anytime • Type 'exit' when done")
+	fmt.Println()
 
 	reader := bufio.NewReader(os.Stdin)
 
@@ -131,34 +140,99 @@ func (repl *REPL) handleCommand(input string) error {
 // showHelp displays help information
 func (repl *REPL) showHelp() error {
 	fmt.Print(`
-Available Commands:
-  help                    - Show this help message
-  search <query>          - Search for modules matching query
-  run <module_id>         - Execute a specific module
-  sync                    - Sync registry catalog (updates available modules)
-  update-commands         - Index available system commands (using man pages)
-  reset                   - Reset database (delete all data and modules)
-  modules list            - List all installed modules
-  modules list --all      - List all modules (installed + available)
-  modules list --available - List available modules (not installed)
-  modules install <id>    - Download and install a module
-  modules remove <id>     - Remove an installed module
-  settings                - Show current settings
-  logs                    - View execution history
-  exit, quit              - Exit CLIPilot
+╔══════════════════════════════════════════════════════════════════════════╗
+║                       Welcome to CLIPilot!                               ║
+║           Your Friendly Assistant for Command-Line Tasks                 ║
+╚══════════════════════════════════════════════════════════════════════════╝
 
-Natural Language:
-  You can also type natural language queries, and CLIPilot will
-  try to find and suggest relevant modules.
+💡 NEW TO COMMAND LINE? Just type what you want to do in plain English!
+   CLIPilot will find the right tools and guide you step-by-step.
 
-Examples:
-  > sync
-  > update-commands
-  > modules list --all
-  > install mysql
-  > setup docker
-  > how to configure git
+🔍 BASIC COMMANDS (Just type these and press Enter):
+
+  help                    Show this help message anytime you need it
+  
+  search <what you need>  Find tools and modules
+                          Example: search "copy files"
+                          Example: search git
+                          
+  exit  or  quit          Close CLIPilot when you're done
+
+📦 DISCOVERING TOOLS:
+
+  When you search, CLIPilot will show you:
+  • Tools already on your device (ready to use)
+  • Tools you can install (with instructions)
+  • Modules that automate tasks for you
+  
+  If a tool is "not installed", CLIPilot tells you how to get it!
+
+⚙️  MANAGING MODULES (Pre-made Automations):
+
+  modules list            See what's on your device
+  modules list --all      See everything available (uses some data)
+  modules install <name>  Add a new module (downloads it)
+  modules remove <name>   Delete a module you don't need
+  
+  run <module_name>       Use a module to do a task
+
+🌐 KEEPING UP TO DATE:
+
+  sync                    Get latest modules from internet
+                          (Will download data - do this on WiFi!)
+                          
+  update-commands         Refresh list of tools on your device
+                          (No internet needed - safe anytime)
+
+📊 SETTINGS & HISTORY:
+
+  settings                See your current configuration
+  logs                    See what tasks you've run before
+
+🆘 FIRST TIME USING COMMAND LINE?
+
+  Don't worry! Here's what to do:
+  
+  1. Type: search "system information"
+     (This shows you details about your device)
+     
+  2. Type: modules list
+     (This shows helpful tools already installed)
+     
+  3. Try asking in plain English:
+     • "how do I check disk space"
+     • "copy files"
+     • "setup git"
+     
+  CLIPilot understands natural language - just describe what you need!
+
+✨ EXAMPLES TO TRY:
+
+  > search ripgrep
+    (Finds tools for searching inside files)
+    
+  > search "copy files"
+    (Shows you different ways to copy files)
+    
+  > modules list
+    (See what automations you have)
+    
+  > how do I setup python
+    (CLIPilot guides you through Python setup)
+    
   > run detect_os
+    (Tells you about your device)
+
+💾 DATA USAGE TIPS (Important for limited internet):
+
+  ✓ "search" - No internet needed (searches local database)
+  ✓ "update-commands" - No internet needed
+  ✓ "modules list" - No internet needed
+  ⚠ "sync" - Uses internet (downloads module catalog)
+  ⚠ "modules install" - Uses internet (downloads module)
+
+📱 REMEMBER: You can always type "help" to see this message again!
+
 `)
 	return nil
 }
@@ -166,24 +240,37 @@ Examples:
 // searchModules searches for modules matching a query
 func (repl *REPL) searchModules(query string) error {
 	if query == "" {
-		return fmt.Errorf("please provide a search query")
+		fmt.Println("\n💡 To search, type what you're looking for after 'search'")
+		fmt.Println("   Examples:")
+		fmt.Println("   • search git")
+		fmt.Println("   • search \"copy files\"")
+		fmt.Println("   • search database")
+		return nil
 	}
 
 	result, err := repl.detector.Detect(query)
 	if err != nil {
-		return fmt.Errorf("search failed: %w", err)
+		fmt.Printf("\n⚠️  Search had a problem: %v\n", err)
+		fmt.Println("💡 Try simpler words or check your spelling")
+		return nil
 	}
 
 	if len(result.Candidates) == 0 {
-		fmt.Println("No modules found matching your query.")
-		fmt.Println("Try different keywords or check installed modules with: modules list")
+		fmt.Println("\n🔍 No matches found for your search.")
+		fmt.Println()
+		fmt.Println("💡 Tips:")
+		fmt.Println("   • Try different words (e.g., 'copy' instead of 'duplicate')")
+		fmt.Println("   • Check what's installed: modules list")
+		fmt.Println("   • Get new tools: sync (requires internet)")
+		fmt.Println()
+		fmt.Println("📝 Your search has been recorded to help improve CLIPilot!")
 
 		// Submit module request to registry
 		repl.submitModuleRequest(query)
 		return nil
 	}
 
-	fmt.Printf("\nFound %d module(s):\n\n", len(result.Candidates))
+	fmt.Printf("\n✨ Found %d result(s) for '%s':\n\n", len(result.Candidates), query)
 	for i, candidate := range result.Candidates {
 		if i >= 10 {
 			break // Limit to top 10
@@ -200,12 +287,21 @@ func (repl *REPL) searchModules(query string) error {
 func (repl *REPL) handleQuery(input string) error {
 	result, err := repl.detector.Detect(input)
 	if err != nil {
-		return fmt.Errorf("query processing failed: %w", err)
+		fmt.Printf("\n⚠️  Could not understand your request: %v\n", err)
+		fmt.Println("\n💡 Try using the 'search' command instead:")
+		fmt.Printf("   search %s\n", input)
+		return nil
 	}
 
 	if result.ModuleID == "" || len(result.Candidates) == 0 {
-		fmt.Println("I couldn't find a relevant module for your query.")
-		fmt.Println("Try rephrasing or use 'search <keywords>' to find modules.")
+		fmt.Println("\n🤔 I couldn't find tools for what you're asking.")
+		fmt.Println()
+		fmt.Println("💡 Here are some things to try:")
+		fmt.Printf("   1. Use 'search' command: search %s\n", input)
+		fmt.Println("   2. Try simpler words: instead of 'duplicate files', try 'copy files'")
+		fmt.Println("   3. Check available modules: modules list")
+		fmt.Println()
+		fmt.Println("📝 Your request helps us improve CLIPilot - thank you!")
 
 		// Submit module request to registry
 		repl.submitModuleRequest(input)
@@ -214,13 +310,13 @@ func (repl *REPL) handleQuery(input string) error {
 
 	// Show top candidate
 	top := result.Candidates[0]
-	fmt.Printf("\nFound: %s (confidence: %.2f)\n", top.Name, result.Confidence)
-	fmt.Printf("Description: %s\n", top.Description)
+	fmt.Printf("\n✨ Found: %s (match strength: %.0f%%)\n", top.Name, result.Confidence*100)
+	fmt.Printf("   What it does: %s\n", top.Description)
 
 	if result.Confidence < 0.7 && len(result.Candidates) > 1 {
-		fmt.Println("\nOther possible matches:")
+		fmt.Println("\n🔍 Other tools you might want:")
 		for i := 1; i < len(result.Candidates) && i < 4; i++ {
-			fmt.Printf("  - %s\n", result.Candidates[i].Name)
+			fmt.Printf("   • %s\n", result.Candidates[i].Name)
 		}
 	}
 
@@ -233,7 +329,7 @@ func (repl *REPL) handleQuery(input string) error {
 		return repl.runner.Run(top.ModuleID)
 	}
 
-	fmt.Println("Cancelled.")
+	fmt.Println("💡 Tip: To just search without running, use: search <what you need>")
 	return nil
 }
 
