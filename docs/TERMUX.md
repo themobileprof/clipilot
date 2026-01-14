@@ -39,6 +39,8 @@ curl -fsSL https://raw.githubusercontent.com/themobileprof/clipilot/main/install
 - ✅ Detects your device architecture (ARM64/ARM32/x86_64)
 - ✅ Downloads pre-built binary (no compilation!)
 - ✅ Installs to `$PREFIX/bin` (already in PATH)
+- ✅ Installs man pages (`man` and `man-pages` packages)
+- ✅ Indexes all system commands for smart search
 - ✅ Copies all 66+ modules including Termux-optimized ones
 - ✅ Initializes database and configuration
 
@@ -48,6 +50,10 @@ curl -fsSL https://raw.githubusercontent.com/themobileprof/clipilot/main/install
 ```bash
 # Configure your Termux environment
 clipilot run termux_setup
+
+# Search for any command or module
+clipilot search git
+clipilot search "copy files"
 
 # Install development tools
 clipilot run setup_development_environment
@@ -207,6 +213,39 @@ The `setup_development_environment` wizard lets you choose:
 - Cloud CLI Tools (AWS CLI, gcloud, Azure CLI, Terraform, kubectl)
 
 Each category has individual tool selection, so you only install what you need!
+
+## System Command Discovery
+
+CLIPilot automatically indexes all available Termux commands during installation:
+
+```bash
+# Commands are indexed automatically, but you can re-index anytime
+clipilot update-commands
+
+# Search for any command
+clipilot search pkg       # Find package manager commands
+clipilot search termux    # Find Termux-specific commands
+clipilot search ssh       # Find SSH-related commands
+
+# After installing new packages, update the index
+pkg install git
+clipilot update-commands  # Picks up newly installed git commands
+```
+
+**What gets indexed:**
+- All commands in `$PREFIX/bin` (~200-500 on typical Termux)
+- Built-in shell commands
+- Custom scripts you add to PATH
+- Descriptions from man pages (automatically installed)
+
+**Smart search examples:**
+```bash
+> search "copy files"
+  Finds: cp, rsync, scp commands with descriptions
+
+> search git
+  Finds: git, git-shell, git-upload-pack, etc. with man page descriptions
+```
 
 ## Termux-Specific Features
 

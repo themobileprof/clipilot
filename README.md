@@ -25,6 +25,7 @@ CLIPilot is an intelligent command-line assistant designed for developers and op
 - **🗃️ SQLite Backend**: Fast local caching and state persistence (embedded, no installation needed)
 - **🔄 Flow Engine**: Deterministic multi-step workflows with branching and validation
 - **📱 Zero Dependencies**: SQLite is compiled into the binary - just download and run!
+- **📚 Smart Command Discovery**: Automatically indexes system commands from man pages for natural language search
 
 ## 🏗️ Architecture
 
@@ -158,7 +159,10 @@ clipilot --init --load=~/.clipilot/modules
 ```bash
 # Start interactive mode
 clipilot
-
+# Index system commands (done automatically during install)
+# Run manually if you install new software later
+clipolot
+> update-commands
 # Or run directly
 clipilot "setup git"
 
@@ -177,8 +181,9 @@ CLIPilot v1.0.0 - Type 'help' for commands
 > help
 Available commands:
   help                    - Show this help message
-  search <query>          - Search for modules
+  search <query>          - Search for modules and system commands
   run <module_id>         - Execute a specific module
+  update-commands         - Index available system commands
   modules list            - List installed modules
   modules install <id>    - Download and install a module
   modules remove <id>     - Remove a module
@@ -224,8 +229,12 @@ clipilot run install_mysql
 # Dry run (show commands without executing)
 clipilot --dry-run run install_mysql
 
-# Search for modules
-clipilot search "setup docker"
+# Search for modules and system commands
+clipolot search "setup docker"
+clipolot search "git"  # Also finds system commands like 'git'
+
+# Update command index (after installing new software)
+clipolot update-commands
 
 # List available modules
 clipilot modules list
@@ -297,6 +306,44 @@ flows:
 5. Test with `clipilot run your_module_id`
 
 See `docs/module_development.md` for detailed guide.
+
+## 📚 System Command Discovery
+
+CLIPilot automatically indexes all available system commands from man pages, making every installed command searchable via natural language.
+
+### How It Works
+
+1. **Automatic Indexing**: During installation, CLIPilot runs `compgen -c` to discover all commands
+2. **Description Extraction**: Uses `whatis` to fetch one-line descriptions from man pages
+3. **SQLite Storage**: Commands cached locally for instant search (~2500 commands typical)
+4. **Smart Priority**: System commands prioritized over modules in search results
+
+### Usage
+
+```bash
+# Index commands (done automatically during install)
+clipilot update-commands
+
+# Search for system commands
+clipilot search git        # Finds git command with description
+clipilot search "list files"  # Finds ls, dir, and related commands
+
+# Commands appear in search results
+> search grep
+Found 3 results:
+1. grep (ID: cmd:grep)
+   print lines that match patterns
+   Score: 3.00 | Tags: command
+```
+
+### When to Re-index
+
+Run `update-commands` after:
+- Installing new software packages
+- Adding custom scripts to PATH
+- Setting up new development tools
+
+**Note**: Man pages are automatically installed during CLIPilot setup on both Linux and Termux.
 
 ## ⚙️ Configuration
 
@@ -459,7 +506,10 @@ The official public registry is pre-configured in CLIPilot. You can:
 # Sync with registry (fetches available modules)
 clipilot sync
 
-# Search for modules
+# Index system commands (indexes all available commands from man pages)
+clipolot update-commands
+
+# Search for modules and system commands
 clipilot search <keyword>
 
 # Install modules from registry
