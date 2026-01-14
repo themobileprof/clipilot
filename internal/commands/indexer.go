@@ -43,7 +43,9 @@ func (idx *Indexer) RefreshCommandIndex() error {
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
-	defer tx.Rollback()
+	defer func() {
+		_ = tx.Rollback() // Ignore error - might be committed
+	}()
 
 	// Prepare statement for batch inserts
 	stmt, err := tx.Prepare(`
@@ -292,7 +294,9 @@ func (idx *Indexer) LoadCommonCommands() error {
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
-	defer tx.Rollback()
+	defer func() {
+		_ = tx.Rollback() // Ignore error - might be committed
+	}()
 
 	// Prepare insert statement
 	stmt, err := tx.Prepare(`
