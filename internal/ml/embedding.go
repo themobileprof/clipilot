@@ -9,7 +9,6 @@ import (
 	"regexp"
 	"strings"
 	"sync"
-	"unicode"
 
 	ort "github.com/yalue/onnxruntime_go"
 )
@@ -81,7 +80,7 @@ func (e *EmbeddingEngine) Load() error {
 	if err != nil {
 		return fmt.Errorf("failed to create session options: %w", err)
 	}
-	defer options.Destroy()
+	defer func() { _ = options.Destroy() }()
 
 	// Set intra-op threads for better mobile performance
 	if err := options.SetIntraOpNumThreads(2); err != nil {
@@ -147,13 +146,13 @@ func (e *EmbeddingEngine) Embed(text string) ([]float32, error) {
 	}
 	attentionMaskTensor, err := ort.NewTensor(ort.NewShape(1, int64(e.maxSeqLen)), int64Slice(attentionMaskData))
 	if err != nil {
-		inputIDsTensor.Destroy()
+		_ = inputIDsTensor.Destroy()
 		return nil, fmt.Errorf("failed to create attention_mask tensor: %w", err)
 	}
 	tokenTypeIDsTensor, err := ort.NewTensor(ort.NewShape(1, int64(e.maxSeqLen)), int64Slice(tokenTypeIDsData))
 	if err != nil {
-		inputIDsTensor.Destroy()
-		attentionMaskTensor.Destroy()
+		_ = inputIDsTensor.Destroy()
+		_ = attentionMaskTensor.Destroy()
 		return nil, fmt.Errorf("failed to create token_type_ids tensor: %w", err)
 	}
 
@@ -161,9 +160,9 @@ func (e *EmbeddingEngine) Embed(text string) ([]float32, error) {
 	outputData := make([]float32, e.embeddingDim)
 	outputTensor, err := ort.NewTensor(ort.NewShape(1, int64(e.embeddingDim)), outputData)
 	if err != nil {
-		inputIDsTensor.Destroy()
-		attentionMaskTensor.Destroy()
-		tokenTypeIDsTensor.Destroy()
+		_ = inputIDsTensor.Destroy()
+		_ = attentionMaskTensor.Destroy()
+		_ = tokenTypeIDsTensor.Destroy()
 		return nil, fmt.Errorf("failed to create output tensor: %w", err)
 	}
 
@@ -174,13 +173,13 @@ func (e *EmbeddingEngine) Embed(text string) ([]float32, error) {
 	}
 
 	// Clean up input tensors
-	inputIDsTensor.Destroy()
-	attentionMaskTensor.Destroy()
-	tokenTypeIDsTensor.Destroy()
+	_ = inputIDsTensor.Destroy()
+	_ = attentionMaskTensor.Destroy()
+	_ = tokenTypeIDsTensor.Destroy()
 
 	// Normalize embedding (L2 normalization for cosine similarity)
 	normalized := normalizeL2(outputTensor.GetData())
-	outputTensor.Destroy()
+	_ = outputTensor.Destroy()
 
 	return normalized, nil
 }
@@ -218,12 +217,12 @@ func (e *EmbeddingEngine) Close() error {
 	defer e.mu.Unlock()
 
 	if e.session != nil {
-		e.session.Destroy()
+		_ = e.session.Destroy()
 		e.session = nil
 	}
 	e.loaded = false
 
-	ort.DestroyEnvironment()
+	_ = ort.DestroyEnvironment()
 	return nil
 }
 
@@ -472,9 +471,4 @@ func (c *EmbeddingCache) FromJSON(data []byte) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	return json.Unmarshal(data, &c.embeddings)
-}
-
-// isAlphanumeric checks if a rune is alphanumeric
-func isAlphanumeric(r rune) bool {
-	return unicode.IsLetter(r) || unicode.IsDigit(r)
 }

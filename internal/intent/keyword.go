@@ -123,59 +123,6 @@ func (d *Detector) Detect(input string) (*models.IntentResult, error) {
 	}, nil
 }
 
-// mergeResults combines keyword and semantic search results
-func (d *Detector) mergeResults(keyword, semantic *models.IntentResult) *models.IntentResult {
-	// Create a map for deduplication
-	seen := make(map[string]bool)
-	merged := []models.Candidate{}
-
-	// Add keyword candidates first (preserving order)
-	for _, c := range keyword.Candidates {
-		if !seen[c.ModuleID] {
-			seen[c.ModuleID] = true
-			merged = append(merged, c)
-		}
-	}
-
-	// Add semantic candidates that aren't duplicates
-	for _, c := range semantic.Candidates {
-		if !seen[c.ModuleID] {
-			seen[c.ModuleID] = true
-			merged = append(merged, c)
-		} else {
-			// Boost score for candidates found by both methods
-			for i := range merged {
-				if merged[i].ModuleID == c.ModuleID {
-					// Average the scores with boost
-					merged[i].Score = (merged[i].Score + c.Score) * 1.2 / 2
-					break
-				}
-			}
-		}
-	}
-
-	// Sort by score
-	for i := 0; i < len(merged); i++ {
-		for j := i + 1; j < len(merged); j++ {
-			if merged[j].Score > merged[i].Score {
-				merged[i], merged[j] = merged[j], merged[i]
-			}
-		}
-	}
-
-	result := &models.IntentResult{
-		Candidates: merged,
-		Method:     semantic.Method,
-	}
-
-	if len(merged) > 0 {
-		result.ModuleID = merged[0].ModuleID
-		result.Confidence = merged[0].Score
-	}
-
-	return result
-}
-
 // keywordSearch performs token-based search against intent_patterns
 func (d *Detector) keywordSearch(input string) (*models.IntentResult, error) {
 	tokens := tokenize(input)
@@ -361,7 +308,7 @@ func (d *Detector) keywordSearchCommands(input string) (*models.IntentResult, er
 			var hasMan bool
 			if err := rows.Scan(&name, &description, &hasMan); err == nil {
 				// Calculate score based on match type
-				score := 1.0
+				var score float64
 				if name == token {
 					score = 3.0 // Exact match
 				} else if strings.HasPrefix(name, token) {
