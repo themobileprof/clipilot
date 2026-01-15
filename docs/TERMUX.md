@@ -341,7 +341,26 @@ mv clipilot $PREFIX/bin/
 
 ## Uninstalling
 
-### Quick Uninstall (Recommended)
+### Built-in Uninstall Command (Easiest)
+
+The simplest way to uninstall is using the built-in command:
+
+```bash
+clipilot
+> uninstall
+```
+
+CLIPilot will:
+- 🔍 Automatically detect your Termux installation
+- 📋 Show you what will be removed
+- ⚠️  Ask for confirmation before deleting
+- 🗑️  Remove the binary from `$PREFIX/bin`
+- 🗑️  Remove all data from `~/.clipilot`
+- ✅ Self-remove cleanly
+
+### Uninstall Script (Alternative)
+
+You can also use the standalone script:
 
 ```bash
 # Download and run the uninstall script
@@ -350,13 +369,6 @@ curl -fsSL https://raw.githubusercontent.com/themobileprof/clipilot/main/uninsta
 # Or if you have the repository cloned:
 ./uninstall.sh
 ```
-
-The uninstall script will:
-- 🔍 Detect your Termux installation automatically
-- 📋 Show you what will be removed before doing anything
-- ⚠️  Ask for your confirmation
-- 🗑️  Remove the CLIPilot binary from `$PREFIX/bin`
-- 🗑️  Remove all data and settings from `~/.clipilot`
 
 ### Manual Uninstall
 

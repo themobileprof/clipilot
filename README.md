@@ -628,9 +628,27 @@ clipilot sync
 
 ## 🗑️ Uninstalling CLIPilot
 
-If you need to remove CLIPilot from your system, we provide an automated uninstall script:
+If you need to remove CLIPilot from your system, you have two convenient options:
 
-### Quick Uninstall
+### Built-in Uninstall Command (Easiest)
+
+Simply run the uninstall command from within CLIPilot:
+
+```bash
+clipilot
+> uninstall
+```
+
+This will:
+- 🔍 Automatically detect your installation location
+- 📋 Show you exactly what will be removed
+- ⚠️  Ask for confirmation before deleting anything
+- 🗑️  Remove the binary and all data
+- ✅ Clean exit and self-removal
+
+### Uninstall Script
+
+Alternatively, use our standalone uninstall script:
 
 ```bash
 # Download and run the uninstall script
@@ -639,14 +657,6 @@ curl -fsSL https://raw.githubusercontent.com/themobileprof/clipilot/main/uninsta
 # Or if you have the repository cloned:
 ./uninstall.sh
 ```
-
-The script will:
-- 🔍 Detect your CLIPilot installation (Linux, macOS, or Termux)
-- 📋 Show you what will be removed
-- ⚠️  Ask for confirmation before deleting anything
-- 🗑️  Remove the CLIPilot binary
-- 🗑️  Remove all data, modules, and settings (~/.clipilot)
-- ✅ Provide clear feedback on what was removed
 
 **What gets removed:**
 - CLIPilot binary (`/usr/local/bin/clipilot` or `$PREFIX/bin/clipilot`)

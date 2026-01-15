@@ -277,6 +277,8 @@ func (repl *REPL) showHelp() error {
 }
 
 // searchModules searches for modules matching a query
+// searchModules searches for commands (and shows module info separately)
+// Note: Despite the name, this now primarily searches commands since Detect() focuses on commands
 func (repl *REPL) searchModules(query string) error {
 	if query == "" {
 		fmt.Println("\n💡 To search, type what you're looking for after 'search'")
@@ -299,13 +301,11 @@ func (repl *REPL) searchModules(query string) error {
 		fmt.Println()
 		fmt.Println("💡 Tips:")
 		fmt.Println("   • Try different words (e.g., 'copy' instead of 'duplicate')")
-		fmt.Println("   • Check what's installed: modules list")
-		fmt.Println("   • Get new tools: sync (requires internet)")
+		fmt.Println("   • Check available modules: modules list")
+		fmt.Println("   • Index system commands: update-commands")
+		fmt.Println("   • Get new modules: sync (requires internet)")
 		fmt.Println()
 		fmt.Println("📝 Your search has been recorded to help improve CLIPilot!")
-
-		// Submit module request to registry
-		repl.submitModuleRequest(query)
 		return nil
 	}
 
@@ -314,10 +314,25 @@ func (repl *REPL) searchModules(query string) error {
 		if i >= 10 {
 			break // Limit to top 10
 		}
-		fmt.Printf("%d. %s (ID: %s)\n", i+1, candidate.Name, candidate.ModuleID)
+
+		// Check if it's a command or installable
+		if strings.HasPrefix(candidate.ModuleID, "cmd:") {
+			cmdName := strings.TrimPrefix(candidate.ModuleID, "cmd:")
+			fmt.Printf("%d. %s [COMMAND]\n", i+1, cmdName)
+		} else if strings.HasPrefix(candidate.ModuleID, "common:") {
+			cmdName := strings.TrimPrefix(candidate.ModuleID, "common:")
+			fmt.Printf("%d. %s [NOT INSTALLED]\n", i+1, cmdName)
+		} else {
+			fmt.Printf("%d. %s (ID: %s)\n", i+1, candidate.Name, candidate.ModuleID)
+		}
+
 		fmt.Printf("   %s\n", candidate.Description)
 		fmt.Printf("   Score: %.2f | Tags: %s\n\n", candidate.Score, strings.Join(candidate.Tags, ", "))
 	}
+
+	fmt.Println("💡 To run a command: Just type it in your terminal")
+	fmt.Println("💡 For detailed help: describe <command_name>")
+	fmt.Println("💡 To run a module: run <module_id>")
 
 	return nil
 }
@@ -352,12 +367,12 @@ func (repl *REPL) handleQuery(input string) error {
 	// Check if it's a command (cmd:) or installable (common:)
 	if strings.HasPrefix(top.ModuleID, "cmd:") {
 		cmdName := strings.TrimPrefix(top.ModuleID, "cmd:")
-		fmt.Printf("\n✨ Found command: %s (match strength: %.0f%%)\n", cmdName, result.Confidence*100)
-		fmt.Printf("   %s\n\n", top.Description)
+		fmt.Printf("\n✨ Found command: %s\n", cmdName)
+		fmt.Printf("   %s\n", top.Description)
 
 		// Show other related commands if confidence is low
 		if result.Confidence < 0.7 && len(result.Candidates) > 1 {
-			fmt.Println("🔍 Other related commands:")
+			fmt.Println("\n🔍 Other related commands:")
 			for i := 1; i < len(result.Candidates) && i < 4; i++ {
 				name := result.Candidates[i].Name
 				if strings.HasSuffix(name, " (not installed)") {
@@ -365,11 +380,11 @@ func (repl *REPL) handleQuery(input string) error {
 				}
 				fmt.Printf("   • %s - %s\n", name, result.Candidates[i].Description)
 			}
-			fmt.Println()
 		}
 
 		// Interactive menu
-		fmt.Println("What would you like to do?")
+		fmt.Println("\nWhat would you like to do?")
+		fmt.Println("  (Not what you need? Choose option 3 to search again)")
 		fmt.Println("  1. See detailed help (man page, usage, examples)")
 		fmt.Println("  2. Just show me the command to use")
 		fmt.Println("  3. Search for different command")
