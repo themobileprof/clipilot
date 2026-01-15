@@ -13,19 +13,25 @@ import (
 
 // Detector handles intent detection using multiple strategies
 type Detector struct {
-	db            *sql.DB
-	keywordThresh float64
-	llmThresh     float64
-	onlineEnabled bool
+	db                 *sql.DB
+	keywordThresh      float64
+	llmThresh          float64
+	semanticThresh     float64
+	onlineEnabled      bool
+	semanticClassifier *SemanticClassifier
+	semanticEnabled    bool
 }
 
 // NewDetector creates a new intent detector
 func NewDetector(db *sql.DB) *Detector {
 	return &Detector{
-		db:            db,
-		keywordThresh: 0.6,
-		llmThresh:     0.6,
-		onlineEnabled: false,
+		db:                 db,
+		keywordThresh:      0.6,
+		llmThresh:          0.6,
+		semanticThresh:     0.5,
+		onlineEnabled:      false,
+		semanticClassifier: nil,
+		semanticEnabled:    false,
 	}
 }
 
@@ -38,15 +44,57 @@ func (d *Detector) SetThresholds(keyword, llm float64) {
 	d.llmThresh = llm
 }
 
+// SetSemanticThreshold sets the semantic search threshold
+func (d *Detector) SetSemanticThreshold(threshold float64) {
+	d.semanticThresh = threshold
+	if d.semanticClassifier != nil {
+		d.semanticClassifier.SetThreshold(threshold)
+	}
+}
+
+// EnableSemantic enables semantic search with the given classifier
+func (d *Detector) EnableSemantic() error {
+	if d.semanticClassifier == nil {
+		d.semanticClassifier = NewSemanticClassifier(d.db)
+	}
+
+	if err := d.semanticClassifier.Load(); err != nil {
+		return fmt.Errorf("failed to load semantic classifier: %w", err)
+	}
+
+	d.semanticEnabled = true
+	return nil
+}
+
+// DisableSemantic disables semantic search
+func (d *Detector) DisableSemantic() {
+	d.semanticEnabled = false
+}
+
+// IsSemanticEnabled returns whether semantic search is enabled
+func (d *Detector) IsSemanticEnabled() bool {
+	return d.semanticEnabled && d.semanticClassifier != nil && d.semanticClassifier.IsLoaded()
+}
+
 // SetOnlineEnabled enables/disables online LLM fallback
 func (d *Detector) SetOnlineEnabled(enabled bool) {
 	d.onlineEnabled = enabled
 }
 
-// Detect performs intent detection using the hybrid pipeline
+// Detect performs intent detection for COMMANDS only using semantic search
+// Modules are run directly via 'run <module_id>' - not searched
 func (d *Detector) Detect(input string) (*models.IntentResult, error) {
-	// Layer 1: Keyword/DB search
-	result, err := d.keywordSearch(input)
+	// Layer 1: Semantic search for commands (if enabled and model is loaded)
+	if d.semanticEnabled && d.semanticClassifier != nil && d.semanticClassifier.IsLoaded() {
+		semanticResult, err := d.semanticClassifier.ClassifyCommands(input)
+		if err == nil && semanticResult.Confidence >= d.semanticThresh {
+			semanticResult.Method = "semantic"
+			return semanticResult, nil
+		}
+	}
+
+	// Layer 2: Keyword/DB search for commands (fallback)
+	result, err := d.keywordSearchCommands(input)
 	if err != nil {
 		return nil, fmt.Errorf("keyword search failed: %w", err)
 	}
@@ -56,16 +104,9 @@ func (d *Detector) Detect(input string) (*models.IntentResult, error) {
 		return result, nil
 	}
 
-	// Layer 2: Tiny Local LLM (TODO: implement)
-	// llmResult, err := d.localLLM(input, result.Candidates)
-	// if err == nil && llmResult.Confidence >= d.llmThresh {
-	//     return llmResult, nil
-	// }
-
 	// Layer 3: Online LLM fallback (if enabled)
 	if d.onlineEnabled {
 		// TODO: implement online LLM call
-		// return d.onlineLLM(input, result.Candidates)
 		_ = d.onlineEnabled // Suppress empty branch warning until implementation
 	}
 
@@ -80,6 +121,59 @@ func (d *Detector) Detect(input string) (*models.IntentResult, error) {
 		Method:     "none",
 		Candidates: []models.Candidate{},
 	}, nil
+}
+
+// mergeResults combines keyword and semantic search results
+func (d *Detector) mergeResults(keyword, semantic *models.IntentResult) *models.IntentResult {
+	// Create a map for deduplication
+	seen := make(map[string]bool)
+	merged := []models.Candidate{}
+
+	// Add keyword candidates first (preserving order)
+	for _, c := range keyword.Candidates {
+		if !seen[c.ModuleID] {
+			seen[c.ModuleID] = true
+			merged = append(merged, c)
+		}
+	}
+
+	// Add semantic candidates that aren't duplicates
+	for _, c := range semantic.Candidates {
+		if !seen[c.ModuleID] {
+			seen[c.ModuleID] = true
+			merged = append(merged, c)
+		} else {
+			// Boost score for candidates found by both methods
+			for i := range merged {
+				if merged[i].ModuleID == c.ModuleID {
+					// Average the scores with boost
+					merged[i].Score = (merged[i].Score + c.Score) * 1.2 / 2
+					break
+				}
+			}
+		}
+	}
+
+	// Sort by score
+	for i := 0; i < len(merged); i++ {
+		for j := i + 1; j < len(merged); j++ {
+			if merged[j].Score > merged[i].Score {
+				merged[i], merged[j] = merged[j], merged[i]
+			}
+		}
+	}
+
+	result := &models.IntentResult{
+		Candidates: merged,
+		Method:     semantic.Method,
+	}
+
+	if len(merged) > 0 {
+		result.ModuleID = merged[0].ModuleID
+		result.Confidence = merged[0].Score
+	}
+
+	return result
 }
 
 // keywordSearch performs token-based search against intent_patterns
@@ -209,6 +303,109 @@ func (d *Detector) keywordSearch(input string) (*models.IntentResult, error) {
 					Name:        cmd.Name + " (not installed)",
 					Description: cmd.Description + " - " + cmd.InstallCmd,
 					Score:       float64(cmd.Priority) / 100.0 * 2.0, // Convert priority to score
+					Tags:        []string{"installable", cmd.Category},
+				})
+			}
+		}
+	}
+
+	// Sort candidates by score (descending)
+	for i := 0; i < len(candidates); i++ {
+		for j := i + 1; j < len(candidates); j++ {
+			if candidates[j].Score > candidates[i].Score {
+				candidates[i], candidates[j] = candidates[j], candidates[i]
+			}
+		}
+	}
+
+	// Build result
+	result := &models.IntentResult{
+		Candidates: candidates,
+		Method:     "keyword",
+	}
+
+	if len(candidates) > 0 {
+		result.ModuleID = candidates[0].ModuleID
+		result.Confidence = candidates[0].Score
+	}
+
+	return result, nil
+}
+
+// keywordSearchCommands performs token-based search for COMMANDS only (Layer 2)
+// This is the fallback when semantic search is unavailable or has low confidence
+func (d *Detector) keywordSearchCommands(input string) (*models.IntentResult, error) {
+	tokens := tokenize(input)
+	if len(tokens) == 0 {
+		return &models.IntentResult{
+			Candidates: []models.Candidate{},
+		}, nil
+	}
+
+	candidates := []models.Candidate{}
+
+	// Search for direct command matches
+	for _, token := range tokens {
+		rows, err := d.db.Query(`
+			SELECT name, description, has_man
+			FROM commands
+			WHERE name = ? OR name LIKE ? OR description LIKE ?
+			LIMIT 10
+		`, token, token+"%", "%"+token+"%")
+		if err != nil {
+			continue
+		}
+
+		for rows.Next() {
+			var name, description string
+			var hasMan bool
+			if err := rows.Scan(&name, &description, &hasMan); err == nil {
+				// Calculate score based on match type
+				score := 1.0
+				if name == token {
+					score = 3.0 // Exact match
+				} else if strings.HasPrefix(name, token) {
+					score = 2.5 // Prefix match
+				} else {
+					score = 2.0 // Description match
+				}
+
+				// Check if already added (deduplicate)
+				found := false
+				for i := range candidates {
+					if candidates[i].Name == name {
+						if score > candidates[i].Score {
+							candidates[i].Score = score
+						}
+						found = true
+						break
+					}
+				}
+
+				if !found {
+					candidates = append(candidates, models.Candidate{
+						ModuleID:    "cmd:" + name,
+						Name:        name,
+						Description: description,
+						Score:       score,
+						Tags:        []string{"command"},
+					})
+				}
+			}
+		}
+		rows.Close()
+	}
+
+	// If no installed commands found, check common commands catalog
+	if len(candidates) == 0 || (len(candidates) > 0 && candidates[0].Score < 2.0) {
+		commonCmds, err := d.searchCommonCommands(input, 5)
+		if err == nil && len(commonCmds) > 0 {
+			for _, cmd := range commonCmds {
+				candidates = append(candidates, models.Candidate{
+					ModuleID:    "common:" + cmd.Name,
+					Name:        cmd.Name + " (not installed)",
+					Description: cmd.Description + " - " + cmd.InstallCmd,
+					Score:       float64(cmd.Priority) / 100.0 * 2.0,
 					Tags:        []string{"installable", cmd.Category},
 				})
 			}

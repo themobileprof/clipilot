@@ -24,6 +24,7 @@ type REPL struct {
 	runner         *engine.Runner
 	detector       *intent.Detector
 	registryClient *registry.Client
+	cmdHelper      *commands.CommandHelper
 	history        []string
 }
 
@@ -37,12 +38,16 @@ func NewREPL(db *sql.DB) *REPL {
 	registryURL, _ := registry.GetRegistryURL(db)
 	registryClient := registry.NewClient(db, registryURL)
 
+	// Create command helper
+	cmdHelper := commands.NewCommandHelper(db)
+
 	return &REPL{
 		db:             db,
 		loader:         loader,
 		runner:         runner,
 		detector:       detector,
 		registryClient: registryClient,
+		cmdHelper:      cmdHelper,
 		history:        []string{},
 	}
 }
@@ -116,6 +121,13 @@ func (repl *REPL) handleCommand(input string) error {
 			return fmt.Errorf("usage: run <module_id>")
 		}
 		return repl.runner.Run(args[0])
+	case "describe", "desc":
+		if len(args) == 0 {
+			return fmt.Errorf("usage: describe <command_name>")
+		}
+		return repl.cmdHelper.DescribeCommand(args[0])
+	case "model":
+		return repl.handleModelCommand(args)
 	case "modules":
 		if len(args) == 0 {
 			return fmt.Errorf("usage: modules <list|install|remove>")
@@ -155,6 +167,10 @@ func (repl *REPL) showHelp() error {
   search <what you need>  Find tools and modules
                           Example: search "copy files"
                           Example: search git
+  
+  describe <command>      Get detailed help for any command
+                          Example: describe rsync
+                          Shows usage, examples, options (from man pages)
                           
   exit  or  quit          Close CLIPilot when you're done
 
@@ -175,6 +191,17 @@ func (repl *REPL) showHelp() error {
   modules remove <name>   Delete a module you don't need
   
   run <module_name>       Use a module to do a task
+
+🧠 SEMANTIC SEARCH (AI-Powered):
+
+  model status            Check if semantic model is installed
+  model download          Download the AI model (~23 MB)
+  model enable            Enable AI-powered search
+  model disable           Use only keyword search
+  model refresh           Recompute embeddings after adding modules
+
+  When enabled, searches understand meaning, not just keywords!
+  "find big files" matches "locate large files", "disk usage", etc.
 
 🌐 KEEPING UP TO DATE:
 
@@ -214,6 +241,9 @@ func (repl *REPL) showHelp() error {
   > search "copy files"
     (Shows you different ways to copy files)
     
+  > describe tar
+    (Shows usage, examples, options for tar command)
+    
   > modules list
     (See what automations you have)
     
@@ -226,10 +256,12 @@ func (repl *REPL) showHelp() error {
 💾 DATA USAGE TIPS (Important for limited internet):
 
   ✓ "search" - No internet needed (searches local database)
+  ✓ "describe" - No internet needed (uses local man pages)
   ✓ "update-commands" - No internet needed
   ✓ "modules list" - No internet needed
   ⚠ "sync" - Uses internet (downloads module catalog)
   ⚠ "modules install" - Uses internet (downloads module)
+  ⚠ "model download" - Uses internet (~23 MB download)
 
 📱 REMEMBER: You can always type "help" to see this message again!
 
@@ -743,5 +775,167 @@ func (repl *REPL) resetDatabase() error {
 	fmt.Println("3. Run: clipilot sync")
 	fmt.Println("\nThis will delete and recreate the database with your local modules.")
 
+	return nil
+}
+
+// handleModelCommand manages the semantic search model
+func (repl *REPL) handleModelCommand(args []string) error {
+	if len(args) == 0 {
+		return repl.showModelStatus()
+	}
+
+	switch args[0] {
+	case "status":
+		return repl.showModelStatus()
+	case "download":
+		return repl.downloadModel()
+	case "enable":
+		return repl.enableSemantic()
+	case "disable":
+		repl.detector.DisableSemantic()
+		fmt.Println("✓ Semantic search disabled")
+		return nil
+	case "refresh":
+		return repl.refreshEmbeddings()
+	default:
+		fmt.Println("Model commands:")
+		fmt.Println("  model status    - Show semantic model status")
+		fmt.Println("  model download  - Download all-MiniLM-L6-v2 model")
+		fmt.Println("  model enable    - Enable semantic search")
+		fmt.Println("  model disable   - Disable semantic search")
+		fmt.Println("  model refresh   - Recompute embeddings")
+		return nil
+	}
+}
+
+// showModelStatus displays semantic search model information
+func (repl *REPL) showModelStatus() error {
+	fmt.Println("\n📊 Semantic Search Model Status")
+	fmt.Println("─────────────────────────────────────")
+
+	// Check if model files exist
+	homeDir, _ := os.UserHomeDir()
+	modelPath := homeDir + "/.clipilot/models/model_quantized.onnx"
+	vocabPath := homeDir + "/.clipilot/models/vocab.txt"
+
+	modelExists := false
+	if info, err := os.Stat(modelPath); err == nil {
+		modelExists = true
+		fmt.Printf("Model file: ✓ Found (%d MB)\n", info.Size()/(1024*1024))
+	} else {
+		fmt.Println("Model file: ✗ Not found")
+	}
+
+	if _, err := os.Stat(vocabPath); err == nil {
+		fmt.Println("Vocabulary:  ✓ Found")
+	} else {
+		fmt.Println("Vocabulary:  ✗ Not found")
+	}
+
+	// Check if enabled
+	if repl.detector.IsSemanticEnabled() {
+		fmt.Println("Status:      ✓ Enabled and loaded")
+	} else if modelExists {
+		fmt.Println("Status:      ○ Available but not enabled")
+		fmt.Println("             Run 'model enable' to activate")
+	} else {
+		fmt.Println("Status:      ✗ Not available")
+		fmt.Println("             Run 'model download' to get the model")
+	}
+
+	// Get embedding stats if loaded
+	if repl.detector.IsSemanticEnabled() {
+		// Query embedding counts from database
+		var moduleCount, cmdCount int
+		_ = repl.db.QueryRow("SELECT COUNT(*) FROM module_embeddings").Scan(&moduleCount)
+		_ = repl.db.QueryRow("SELECT COUNT(*) FROM command_embeddings").Scan(&cmdCount)
+
+		fmt.Printf("\nEmbeddings:\n")
+		fmt.Printf("  Modules:  %d\n", moduleCount)
+		fmt.Printf("  Commands: %d\n", cmdCount)
+	}
+
+	fmt.Println()
+	return nil
+}
+
+// downloadModel downloads the semantic model
+func (repl *REPL) downloadModel() error {
+	fmt.Println("\n📥 Downloading Semantic Search Model")
+	fmt.Println("─────────────────────────────────────")
+	fmt.Println("Model: all-MiniLM-L6-v2 (INT8 quantized)")
+	fmt.Println("Size:  ~23 MB")
+	fmt.Println()
+
+	// Check for download script
+	scriptPath := ""
+	possiblePaths := []string{
+		"./scripts/download_model.sh",
+		"/usr/local/share/clipilot/scripts/download_model.sh",
+		os.Getenv("HOME") + "/.clipilot/scripts/download_model.sh",
+	}
+
+	for _, path := range possiblePaths {
+		if _, err := os.Stat(path); err == nil {
+			scriptPath = path
+			break
+		}
+	}
+
+	if scriptPath != "" {
+		fmt.Printf("Found download script: %s\n", scriptPath)
+		fmt.Println("\nRun the following command to download:")
+		fmt.Printf("\n  bash %s\n\n", scriptPath)
+	} else {
+		fmt.Println("Download manually from Hugging Face:")
+		fmt.Println()
+		fmt.Println("  mkdir -p ~/.clipilot/models")
+		fmt.Println("  cd ~/.clipilot/models")
+		fmt.Println()
+		fmt.Println("  # Download vocabulary")
+		fmt.Println("  curl -LO https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2/resolve/main/vocab.txt")
+		fmt.Println()
+		fmt.Println("  # Download ONNX model (~90MB, will be quantized)")
+		fmt.Println("  curl -L -o model.onnx https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2/resolve/main/onnx/model.onnx")
+		fmt.Println()
+		fmt.Println("  # Quantize to INT8 (requires Python with onnxruntime)")
+		fmt.Println("  python3 -c \"from onnxruntime.quantization import quantize_dynamic, QuantType; quantize_dynamic('model.onnx', 'model_quantized.onnx', weight_type=QuantType.QInt8)\"")
+		fmt.Println()
+	}
+
+	return nil
+}
+
+// enableSemantic enables semantic search
+func (repl *REPL) enableSemantic() error {
+	fmt.Println("\n🔄 Enabling semantic search...")
+
+	if err := repl.detector.EnableSemantic(); err != nil {
+		return fmt.Errorf("failed to enable semantic search: %w", err)
+	}
+
+	fmt.Println("✓ Semantic search enabled!")
+	fmt.Println("  Searches will now use AI-powered similarity matching")
+	fmt.Println()
+
+	return nil
+}
+
+// refreshEmbeddings recomputes all embeddings
+func (repl *REPL) refreshEmbeddings() error {
+	fmt.Println("\n🔄 Refreshing embeddings...")
+
+	if !repl.detector.IsSemanticEnabled() {
+		return fmt.Errorf("semantic search not enabled - run 'model enable' first")
+	}
+
+	// Get the semantic classifier and refresh
+	// This would require exposing the classifier, for now just reload
+	repl.detector.DisableSemantic()
+	if err := repl.detector.EnableSemantic(); err != nil {
+		return fmt.Errorf("failed to refresh embeddings: %w", err)
+	}
+
+	fmt.Println("✓ Embeddings refreshed!")
 	return nil
 }

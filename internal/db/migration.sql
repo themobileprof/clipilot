@@ -158,6 +158,45 @@ CREATE INDEX IF NOT EXISTS idx_common_commands_name ON common_commands(name);
 CREATE INDEX IF NOT EXISTS idx_common_commands_category ON common_commands(category);
 CREATE INDEX IF NOT EXISTS idx_common_commands_priority ON common_commands(priority DESC);
 
+-- Embedding tables for semantic search (Layer 2)
+-- Pre-computed embeddings are cached here for fast startup
+
+-- Module embeddings for semantic intent matching
+CREATE TABLE IF NOT EXISTS module_embeddings (
+  module_id TEXT PRIMARY KEY,
+  embedding BLOB NOT NULL,  -- JSON-encoded float32 array (384 dimensions)
+  text_hash TEXT,  -- Hash of text used to generate embedding (for invalidation)
+  updated_at INTEGER DEFAULT (strftime('%s', 'now')),
+  FOREIGN KEY (module_id) REFERENCES modules(id) ON DELETE CASCADE
+);
+
+-- Command embeddings for semantic command search
+CREATE TABLE IF NOT EXISTS command_embeddings (
+  command_name TEXT PRIMARY KEY,
+  embedding BLOB NOT NULL,  -- JSON-encoded float32 array (384 dimensions)
+  text_hash TEXT,  -- Hash of text used to generate embedding (for invalidation)
+  updated_at INTEGER DEFAULT (strftime('%s', 'now')),
+  FOREIGN KEY (command_name) REFERENCES commands(name) ON DELETE CASCADE
+);
+
+-- Semantic model metadata
+CREATE TABLE IF NOT EXISTS semantic_model (
+  id INTEGER PRIMARY KEY CHECK (id = 1),  -- Single row table
+  model_name TEXT NOT NULL DEFAULT 'all-MiniLM-L6-v2',
+  model_version TEXT,
+  embedding_dim INTEGER DEFAULT 384,
+  last_loaded INTEGER,
+  embeddings_computed INTEGER DEFAULT 0,
+  total_modules INTEGER DEFAULT 0,
+  total_commands INTEGER DEFAULT 0,
+  created_at INTEGER DEFAULT (strftime('%s', 'now')),
+  updated_at INTEGER DEFAULT (strftime('%s', 'now'))
+);
+
+-- Initialize semantic model metadata
+INSERT OR IGNORE INTO semantic_model (id, model_name, embedding_dim) VALUES
+  (1, 'all-MiniLM-L6-v2', 384);
+
 -- Insert default settings
 INSERT OR IGNORE INTO settings (key, value, value_type, description) VALUES
   ('online_mode', 'false', 'boolean', 'Enable online LLM fallback'),

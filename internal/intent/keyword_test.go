@@ -3,6 +3,7 @@ package intent
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/themobileprof/clipilot/internal/db"
@@ -157,7 +158,47 @@ func TestDetectWithNoModules(t *testing.T) {
 	}
 }
 
-func TestDetectWithModule(t *testing.T) {
+func TestDetectWithCommand(t *testing.T) {
+	database, cleanup := setupTestDB(t)
+	defer cleanup()
+
+	// Insert test command (Detect() now searches commands, not modules)
+	_, err := database.Conn().Exec(`
+		INSERT INTO commands (name, description, has_man)
+		VALUES (?, ?, 1)
+	`, "testcmd", "A test command for testing")
+	if err != nil {
+		t.Fatalf("Failed to insert test command: %v", err)
+	}
+
+	detector := NewDetector(database.Conn())
+
+	// Test detection - should find the command
+	result, err := detector.Detect("testcmd help")
+	if err != nil {
+		t.Fatalf("Detect failed: %v", err)
+	}
+
+	if result == nil {
+		t.Fatal("Expected non-nil result")
+	}
+
+	if len(result.Candidates) == 0 {
+		t.Error("Expected at least one candidate")
+	}
+
+	if result.Confidence == 0.0 {
+		t.Error("Expected non-zero confidence")
+	}
+
+	// Verify the result is a command, not a module
+	if len(result.Candidates) > 0 && !strings.HasPrefix(result.Candidates[0].ModuleID, "cmd:") {
+		t.Errorf("Expected command result (cmd: prefix), got: %s", result.Candidates[0].ModuleID)
+	}
+}
+
+// TestKeywordSearchModule tests the original keywordSearch which still searches modules
+func TestKeywordSearchModule(t *testing.T) {
 	database, cleanup := setupTestDB(t)
 	defer cleanup()
 
@@ -193,10 +234,10 @@ func TestDetectWithModule(t *testing.T) {
 
 	detector := NewDetector(database.Conn())
 
-	// Test detection
-	result, err := detector.Detect("run test module")
+	// Test keywordSearch (not Detect) - this still searches modules
+	result, err := detector.keywordSearch("run test module")
 	if err != nil {
-		t.Fatalf("Detect failed: %v", err)
+		t.Fatalf("keywordSearch failed: %v", err)
 	}
 
 	if result == nil {
