@@ -315,53 +315,96 @@ func (repl *REPL) searchModules(query string) error {
 	return nil
 }
 
-// handleQuery processes natural language queries
+// handleQuery processes natural language queries - shows COMMANDS and interactive help
+// Note: Modules are now accessed directly via 'run <module_id>', not through natural language queries
 func (repl *REPL) handleQuery(input string) error {
 	result, err := repl.detector.Detect(input)
 	if err != nil {
 		fmt.Printf("\n⚠️  Could not understand your request: %v\n", err)
-		fmt.Println("\n💡 Try using the 'search' command instead:")
-		fmt.Printf("   search %s\n", input)
+		fmt.Println("\n💡 Try using the 'describe' command for command help:")
+		fmt.Printf("   describe <command_name>\n")
 		return nil
 	}
 
 	if result.ModuleID == "" || len(result.Candidates) == 0 {
-		fmt.Println("\n🤔 I couldn't find tools for what you're asking.")
+		fmt.Println("\n🤔 I couldn't find commands for what you're asking.")
 		fmt.Println()
 		fmt.Println("💡 Here are some things to try:")
-		fmt.Printf("   1. Use 'search' command: search %s\n", input)
-		fmt.Println("   2. Try simpler words: instead of 'duplicate files', try 'copy files'")
-		fmt.Println("   3. Check available modules: modules list")
+		fmt.Println("   1. Be more specific: 'how to copy files' → 'copy files'")
+		fmt.Println("   2. Use 'search' to find commands: search copy")
+		fmt.Println("   3. Install missing tools: update-commands")
+		fmt.Println("   4. Check available modules: modules list")
 		fmt.Println()
 		fmt.Println("📝 Your request helps us improve CLIPilot - thank you!")
-
-		// Submit module request to registry
-		repl.submitModuleRequest(input)
 		return nil
 	}
 
-	// Show top candidate
+	// Show command results with descriptions
 	top := result.Candidates[0]
-	fmt.Printf("\n✨ Found: %s (match strength: %.0f%%)\n", top.Name, result.Confidence*100)
-	fmt.Printf("   What it does: %s\n", top.Description)
 
-	if result.Confidence < 0.7 && len(result.Candidates) > 1 {
-		fmt.Println("\n🔍 Other tools you might want:")
-		for i := 1; i < len(result.Candidates) && i < 4; i++ {
-			fmt.Printf("   • %s\n", result.Candidates[i].Name)
+	// Check if it's a command (cmd:) or installable (common:)
+	if strings.HasPrefix(top.ModuleID, "cmd:") {
+		cmdName := strings.TrimPrefix(top.ModuleID, "cmd:")
+		fmt.Printf("\n✨ Found command: %s (match strength: %.0f%%)\n", cmdName, result.Confidence*100)
+		fmt.Printf("   %s\n\n", top.Description)
+
+		// Show other related commands if confidence is low
+		if result.Confidence < 0.7 && len(result.Candidates) > 1 {
+			fmt.Println("🔍 Other related commands:")
+			for i := 1; i < len(result.Candidates) && i < 4; i++ {
+				name := result.Candidates[i].Name
+				if strings.HasSuffix(name, " (not installed)") {
+					continue // Skip installable suggestions for now
+				}
+				fmt.Printf("   • %s - %s\n", name, result.Candidates[i].Description)
+			}
+			fmt.Println()
 		}
+
+		// Interactive menu
+		fmt.Println("What would you like to do?")
+		fmt.Println("  1. See detailed help (man page, usage, examples)")
+		fmt.Println("  2. Just show me the command to use")
+		fmt.Println("  3. Search for different command")
+		fmt.Println("  0. Cancel")
+		fmt.Print("\nChoice [1-3, 0]: ")
+
+		reader := bufio.NewReader(os.Stdin)
+		response, _ := reader.ReadString('\n')
+		response = strings.TrimSpace(response)
+
+		switch response {
+		case "1":
+			// Show detailed help using CommandHelper
+			return repl.cmdHelper.DescribeCommand(cmdName)
+		case "2":
+			// Just show the command
+			fmt.Printf("\n💡 Command: %s\n", cmdName)
+			fmt.Printf("   Usage: %s --help  (for full options)\n\n", cmdName)
+			return nil
+		case "3":
+			// Prompt for new search
+			fmt.Print("\nWhat would you like to search for? ")
+			newQuery, _ := reader.ReadString('\n')
+			newQuery = strings.TrimSpace(newQuery)
+			if newQuery != "" {
+				return repl.handleQuery(newQuery)
+			}
+			return nil
+		case "0", "":
+			return nil
+		default:
+			fmt.Println("Invalid choice. Use 'describe " + cmdName + "' for detailed help.")
+			return nil
+		}
+	} else if strings.HasPrefix(top.ModuleID, "common:") {
+		// Installable command suggestion
+		cmdName := strings.TrimPrefix(top.ModuleID, "common:")
+		fmt.Printf("\n💡 The command '%s' is not installed, but available:\n", cmdName)
+		fmt.Printf("   %s\n\n", top.Description)
+		return nil
 	}
 
-	fmt.Printf("\nRun this module? [y/N]: ")
-	reader := bufio.NewReader(os.Stdin)
-	response, _ := reader.ReadString('\n')
-	response = strings.ToLower(strings.TrimSpace(response))
-
-	if response == "y" || response == "yes" {
-		return repl.runner.Run(top.ModuleID)
-	}
-
-	fmt.Println("💡 Tip: To just search without running, use: search <what you need>")
 	return nil
 }
 
