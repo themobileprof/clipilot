@@ -341,16 +341,39 @@ mv clipilot $PREFIX/bin/
 
 ## Uninstalling
 
+### Quick Uninstall (Recommended)
+
+```bash
+# Download and run the uninstall script
+curl -fsSL https://raw.githubusercontent.com/themobileprof/clipilot/main/uninstall.sh | bash
+
+# Or if you have the repository cloned:
+./uninstall.sh
+```
+
+The uninstall script will:
+- 🔍 Detect your Termux installation automatically
+- 📋 Show you what will be removed before doing anything
+- ⚠️  Ask for your confirmation
+- 🗑️  Remove the CLIPilot binary from `$PREFIX/bin`
+- 🗑️  Remove all data and settings from `~/.clipilot`
+
+### Manual Uninstall
+
+If you prefer to uninstall manually:
+
 ```bash
 # Remove binary
 rm $PREFIX/bin/clipilot
 
-# Remove data (optional)
+# Remove data (optional - contains all your modules and settings)
 rm -rf ~/.clipilot
 
 # Remove source (if you built from source)
 rm -rf ~/clipilot
 ```
+
+**Note**: This only removes CLIPilot itself. Packages you installed using CLIPilot modules (like git, python3, etc.) will remain on your device. To remove those, use `pkg uninstall <package-name>`.
 
 ## Getting Help
 

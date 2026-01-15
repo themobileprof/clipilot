@@ -626,6 +626,80 @@ After uploading, users can sync their local database with:
 clipilot sync
 ```
 
+## 🗑️ Uninstalling CLIPilot
+
+If you need to remove CLIPilot from your system, we provide an automated uninstall script:
+
+### Quick Uninstall
+
+```bash
+# Download and run the uninstall script
+curl -fsSL https://raw.githubusercontent.com/themobileprof/clipilot/main/uninstall.sh | bash
+
+# Or if you have the repository cloned:
+./uninstall.sh
+```
+
+The script will:
+- 🔍 Detect your CLIPilot installation (Linux, macOS, or Termux)
+- 📋 Show you what will be removed
+- ⚠️  Ask for confirmation before deleting anything
+- 🗑️  Remove the CLIPilot binary
+- 🗑️  Remove all data, modules, and settings (~/.clipilot)
+- ✅ Provide clear feedback on what was removed
+
+**What gets removed:**
+- CLIPilot binary (`/usr/local/bin/clipilot` or `$PREFIX/bin/clipilot`)
+- Configuration directory (`~/.clipilot/`)
+- All installed modules
+- Command index and search history
+- Settings and execution logs
+
+**What does NOT get removed:**
+- Packages you installed using CLIPilot modules
+- System commands indexed by CLIPilot (they're still on your system)
+- Files created using CLIPilot
+- The source code (if you cloned the repository)
+
+### Manual Uninstall
+
+If you prefer to uninstall manually or the script doesn't work:
+
+**Linux/macOS:**
+```bash
+# Remove binary (choose the location where it was installed)
+sudo rm /usr/local/bin/clipilot
+# OR
+rm $HOME/.local/bin/clipilot
+
+# Remove data directory
+rm -rf ~/.clipilot
+
+# Optional: Remove cloned source
+rm -rf ~/clipilot  # or wherever you cloned it
+```
+
+**Termux (Android):**
+```bash
+# Remove binary
+rm $PREFIX/bin/clipilot
+
+# Remove data directory
+rm -rf ~/.clipilot
+
+# Optional: Remove cloned source
+rm -rf ~/clipilot
+```
+
+### Reinstalling Later
+
+To reinstall CLIPilot after uninstalling:
+```bash
+curl -fsSL https://raw.githubusercontent.com/themobileprof/clipilot/main/install.sh | bash
+```
+
+Or visit: https://github.com/themobileprof/clipilot
+
 ## 🤝 Contributing
 
 Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
