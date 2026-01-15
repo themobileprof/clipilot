@@ -793,29 +793,6 @@ func (repl *REPL) AutoSyncIfNeeded() error {
 	return nil
 }
 
-// submitModuleRequest sends a module request to the registry when no matching module is found
-func (repl *REPL) submitModuleRequest(query string) {
-	// Get context information
-	osInfo := os.Getenv("OS")
-	if osInfo == "" {
-		osInfo = "unknown"
-	}
-
-	isTermux := os.Getenv("TERMUX_VERSION") != ""
-	userContext := fmt.Sprintf("os=%s, termux=%v", osInfo, isTermux)
-
-	// Try to submit the request
-	err := repl.registryClient.SubmitModuleRequest(query, userContext)
-	if err != nil {
-		// Silently fail - this is a nice-to-have feature
-		// Don't bother the user with connection errors
-		return
-	}
-
-	fmt.Println("\n💡 Your request has been submitted to help us improve CLIPilot.")
-	fmt.Println("   Check https://clipilot.themobileprof.com for new modules!")
-}
-
 // resetDatabase resets the database with confirmation
 func (repl *REPL) resetDatabase() error {
 	fmt.Println("\n⚠️  WARNING: This will delete ALL data including:")
