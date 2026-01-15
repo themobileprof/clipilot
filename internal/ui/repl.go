@@ -7,6 +7,8 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"os/exec"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -139,6 +141,8 @@ func (repl *REPL) handleCommand(input string) error {
 		return repl.updateCommands()
 	case "reset":
 		return repl.resetDatabase()
+	case "uninstall":
+		return repl.uninstallCLIPilot()
 	case "settings":
 		return repl.showSettings()
 	case "logs":
@@ -215,6 +219,9 @@ func (repl *REPL) showHelp() error {
 
   settings                See your current configuration
   logs                    See what tasks you've run before
+  
+  uninstall               Remove CLIPilot from your system
+                          (Don't worry - it will ask for confirmation!)
 
 🆘 FIRST TIME USING COMMAND LINE?
 
@@ -980,5 +987,161 @@ func (repl *REPL) refreshEmbeddings() error {
 	}
 
 	fmt.Println("✓ Embeddings refreshed!")
+	return nil
+}
+
+// uninstallCLIPilot uninstalls CLIPilot with user confirmation
+func (repl *REPL) uninstallCLIPilot() error {
+	fmt.Println("\n╔══════════════════════════════════════════════════════════╗")
+	fmt.Println("║            CLIPilot Uninstall                           ║")
+	fmt.Println("╚══════════════════════════════════════════════════════════╝")
+	fmt.Println()
+	
+	// Detect environment
+	isTermux := os.Getenv("TERMUX_VERSION") != "" || os.Getenv("PREFIX") != ""
+	
+	// Determine installation paths
+	var installDir string
+	if isTermux {
+		installDir = os.Getenv("PREFIX") + "/bin"
+	} else {
+		// Check common locations
+		possiblePaths := []string{
+			"/usr/local/bin/clipilot",
+			filepath.Join(os.Getenv("HOME"), ".local", "bin", "clipilot"),
+			filepath.Join(os.Getenv("HOME"), "bin", "clipilot"),
+		}
+		for _, path := range possiblePaths {
+			if _, err := os.Stat(path); err == nil {
+				installDir = filepath.Dir(path)
+				break
+			}
+		}
+	}
+	
+	homeDir, _ := os.UserHomeDir()
+	dataDir := filepath.Join(homeDir, ".clipilot")
+	binaryPath := filepath.Join(installDir, "clipilot")
+	
+	// Show what will be removed
+	fmt.Println("📋 Found the following CLIPilot components:")
+	fmt.Println()
+	
+	foundBinary := false
+	foundData := false
+	
+	if installDir != "" {
+		if _, err := os.Stat(binaryPath); err == nil {
+			fmt.Printf("  ✓ Binary: %s\n", binaryPath)
+			foundBinary = true
+		}
+	}
+	
+	if _, err := os.Stat(dataDir); err == nil {
+		fmt.Printf("  ✓ Data directory: %s\n", dataDir)
+		foundData = true
+	}
+	
+	if !foundBinary && !foundData {
+		fmt.Println("  ○ No CLIPilot components found")
+		fmt.Println()
+		fmt.Println("CLIPilot does not appear to be installed.")
+		return nil
+	}
+	
+	fmt.Println()
+	fmt.Println("⚠️  This will permanently delete:")
+	if foundBinary {
+		fmt.Println("   • CLIPilot binary")
+	}
+	if foundData {
+		fmt.Println("   • All your modules and settings")
+		fmt.Println("   • Command index and search history")
+		fmt.Println("   • Execution logs")
+	}
+	fmt.Println()
+	fmt.Println("🔴 This action cannot be undone!")
+	fmt.Println()
+	
+	// Confirm
+	reader := bufio.NewReader(os.Stdin)
+	fmt.Print("Continue with uninstallation? [y/N]: ")
+	response, _ := reader.ReadString('\n')
+	response = strings.ToLower(strings.TrimSpace(response))
+	
+	if response != "y" && response != "yes" {
+		fmt.Println("\nUninstallation cancelled.")
+		return nil
+	}
+	
+	fmt.Println()
+	fmt.Println("🗑️  Uninstalling CLIPilot...")
+	fmt.Println()
+	
+	// Create a shell script that will execute after CLIPilot exits
+	tmpScript := filepath.Join(os.TempDir(), "clipilot_uninstall.sh")
+	scriptContent := fmt.Sprintf(`#!/bin/bash
+# CLIPilot self-uninstall cleanup script
+# This script runs after CLIPilot exits
+
+sleep 1  # Wait for CLIPilot to fully exit
+
+echo "Removing CLIPilot components..."
+
+# Remove binary
+if [ -f "%s" ]; then
+    if rm -f "%s" 2>/dev/null; then
+        echo "✓ Removed binary from %s"
+    else
+        if command -v sudo >/dev/null 2>&1; then
+            if sudo rm -f "%s" 2>/dev/null; then
+                echo "✓ Removed binary (using sudo)"
+            else
+                echo "✗ Failed to remove binary - you may need to run: sudo rm %s"
+            fi
+        else
+            echo "✗ Failed to remove binary - you may need to remove it manually"
+        fi
+    fi
+fi
+
+# Remove data directory
+if [ -d "%s" ]; then
+    if rm -rf "%s" 2>/dev/null; then
+        echo "✓ Removed data directory"
+    else
+        echo "✗ Failed to remove data directory - you may need to run: rm -rf %s"
+    fi
+fi
+
+echo ""
+echo "✅ CLIPilot has been uninstalled!"
+echo ""
+echo "📝 Note: Packages installed using CLIPilot modules were not removed."
+echo ""
+echo "Thank you for trying CLIPilot! 👋"
+echo "To reinstall: https://github.com/themobileprof/clipilot"
+echo ""
+
+# Clean up this script
+rm -f "$0"
+`, binaryPath, binaryPath, installDir, binaryPath, binaryPath, dataDir, dataDir, dataDir)
+	
+	if err := os.WriteFile(tmpScript, []byte(scriptContent), 0755); err != nil {
+		return fmt.Errorf("failed to create uninstall script: %w", err)
+	}
+	
+	fmt.Println("📝 Uninstall script created. CLIPilot will now exit and complete uninstallation.")
+	fmt.Println()
+	
+	// Execute the cleanup script in background and exit
+	cmd := exec.Command("bash", tmpScript)
+	if err := cmd.Start(); err != nil {
+		os.Remove(tmpScript)
+		return fmt.Errorf("failed to start uninstall: %w", err)
+	}
+	
+	// Exit CLIPilot
+	os.Exit(0)
 	return nil
 }
