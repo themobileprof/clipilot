@@ -996,10 +996,10 @@ func (repl *REPL) uninstallCLIPilot() error {
 	fmt.Println("║            CLIPilot Uninstall                           ║")
 	fmt.Println("╚══════════════════════════════════════════════════════════╝")
 	fmt.Println()
-	
+
 	// Detect environment
 	isTermux := os.Getenv("TERMUX_VERSION") != "" || os.Getenv("PREFIX") != ""
-	
+
 	// Determine installation paths
 	var installDir string
 	if isTermux {
@@ -1018,37 +1018,37 @@ func (repl *REPL) uninstallCLIPilot() error {
 			}
 		}
 	}
-	
+
 	homeDir, _ := os.UserHomeDir()
 	dataDir := filepath.Join(homeDir, ".clipilot")
 	binaryPath := filepath.Join(installDir, "clipilot")
-	
+
 	// Show what will be removed
 	fmt.Println("📋 Found the following CLIPilot components:")
 	fmt.Println()
-	
+
 	foundBinary := false
 	foundData := false
-	
+
 	if installDir != "" {
 		if _, err := os.Stat(binaryPath); err == nil {
 			fmt.Printf("  ✓ Binary: %s\n", binaryPath)
 			foundBinary = true
 		}
 	}
-	
+
 	if _, err := os.Stat(dataDir); err == nil {
 		fmt.Printf("  ✓ Data directory: %s\n", dataDir)
 		foundData = true
 	}
-	
+
 	if !foundBinary && !foundData {
 		fmt.Println("  ○ No CLIPilot components found")
 		fmt.Println()
 		fmt.Println("CLIPilot does not appear to be installed.")
 		return nil
 	}
-	
+
 	fmt.Println()
 	fmt.Println("⚠️  This will permanently delete:")
 	if foundBinary {
@@ -1062,22 +1062,22 @@ func (repl *REPL) uninstallCLIPilot() error {
 	fmt.Println()
 	fmt.Println("🔴 This action cannot be undone!")
 	fmt.Println()
-	
+
 	// Confirm
 	reader := bufio.NewReader(os.Stdin)
 	fmt.Print("Continue with uninstallation? [y/N]: ")
 	response, _ := reader.ReadString('\n')
 	response = strings.ToLower(strings.TrimSpace(response))
-	
+
 	if response != "y" && response != "yes" {
 		fmt.Println("\nUninstallation cancelled.")
 		return nil
 	}
-	
+
 	fmt.Println()
 	fmt.Println("🗑️  Uninstalling CLIPilot...")
 	fmt.Println()
-	
+
 	// Create a shell script that will execute after CLIPilot exits
 	tmpScript := filepath.Join(os.TempDir(), "clipilot_uninstall.sh")
 	scriptContent := fmt.Sprintf(`#!/bin/bash
@@ -1126,21 +1126,21 @@ echo ""
 # Clean up this script
 rm -f "$0"
 `, binaryPath, binaryPath, installDir, binaryPath, binaryPath, dataDir, dataDir, dataDir)
-	
+
 	if err := os.WriteFile(tmpScript, []byte(scriptContent), 0755); err != nil {
 		return fmt.Errorf("failed to create uninstall script: %w", err)
 	}
-	
+
 	fmt.Println("📝 Uninstall script created. CLIPilot will now exit and complete uninstallation.")
 	fmt.Println()
-	
+
 	// Execute the cleanup script in background and exit
 	cmd := exec.Command("bash", tmpScript)
 	if err := cmd.Start(); err != nil {
 		os.Remove(tmpScript)
 		return fmt.Errorf("failed to start uninstall: %w", err)
 	}
-	
+
 	// Exit CLIPilot
 	os.Exit(0)
 	return nil
