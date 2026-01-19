@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+    "bytes"
 	"net"
 	"net/http"
 	"os"
@@ -451,4 +452,43 @@ func (c *Client) ListInstalledModules() ([]ModuleMetadata, error) {
 	}
 
 	return modules, nil
+}
+
+// CommandCandidate represents a command result from the registry
+type CommandCandidate struct {
+	Name        string   `json:"name"`
+	Description string   `json:"description"`
+	Category    string   `json:"category"`
+	UseCases    []string `json:"use_cases"`
+	Keywords    []string `json:"keywords"`
+}
+
+// SearchResponse represents the registry search response
+type SearchResponse struct {
+	Candidates []CommandCandidate `json:"candidates"`
+	Message    string             `json:"message"`
+	Cached     bool               `json:"cached"`
+}
+
+// SearchCommands performs a semantic search on the registry
+func (c *Client) SearchCommands(query string) ([]CommandCandidate, error) {
+	reqBody := map[string]string{"query": query}
+	jsonBody, _ := json.Marshal(reqBody)
+
+	resp, err := c.httpClient.Post(c.registryURL+"/api/commands/search", "application/json", bytes.NewBuffer(jsonBody))
+	if err != nil {
+		return nil, fmt.Errorf("search failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("server returned status: %d", resp.StatusCode)
+	}
+
+	var result SearchResponse
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return nil, fmt.Errorf("failed to decode response: %w", err)
+	}
+
+	return result.Candidates, nil
 }

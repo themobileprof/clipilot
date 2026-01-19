@@ -152,7 +152,7 @@ func (repl *REPL) handleCommand(input string) error {
 		return repl.showLogs()
 	default:
 		// Treat as natural language query
-		return repl.handleQuery(input)
+		return repl.handleQuery(input, 0)
 	}
 }
 
@@ -353,7 +353,7 @@ func (repl *REPL) searchModules(query string) error {
 
 // handleQuery processes natural language queries - shows COMMANDS and interactive help
 // Note: Modules are now accessed directly via 'run <module_id>', not through natural language queries
-func (repl *REPL) handleQuery(input string) error {
+func (repl *REPL) handleQuery(input string, retryCount int) error {
 	// Start journey logging
 	logger := journey.GetLogger()
 	logger.StartNewJourney(input)
@@ -419,8 +419,18 @@ func (repl *REPL) handleQuery(input string) error {
 		fmt.Println("  2. Run this command (interactive)")
 		fmt.Println("  3. Just show me the command (and exit assistant)")
 		fmt.Println("  4. No, search for a different command")
+		
+		if retryCount >= 2 {
+			fmt.Println("  5. Ask the community (Search Server)")
+		}
+
 		fmt.Println("  0. Cancel")
-		fmt.Print("\nChoice [1-4, 0]: ")
+		
+		promptRange := "1-4, 0"
+		if retryCount >= 2 {
+			promptRange = "1-5, 0"
+		}
+		fmt.Printf("\nChoice [%s]: ", promptRange)
 
 		reader := bufio.NewReader(os.Stdin)
 		response, _ := reader.ReadString('\n')
@@ -448,9 +458,15 @@ func (repl *REPL) handleQuery(input string) error {
 			newQuery, _ := reader.ReadString('\n')
 			newQuery = strings.TrimSpace(newQuery)
 			if newQuery != "" {
-				return repl.handleQuery(newQuery)
+				return repl.handleQuery(newQuery, retryCount+1)
 			}
 			return nil
+		case "5":
+			if retryCount >= 2 {
+				journey.GetLogger().EndJourney("online_search")
+				return repl.handleOnlineSearch(input)
+			}
+			fallthrough
 		case "0", "":
 			journey.GetLogger().EndJourney("cancel")
 			return nil
@@ -1141,5 +1157,37 @@ rm -f "$0"
 
 	// Exit CLIPilot
 	os.Exit(0)
+	return nil
+}
+
+// handleOnlineSearch performs a semantic search against the remote registry
+func (repl *REPL) handleOnlineSearch(query string) error {
+	fmt.Printf("\n🌍 Searching the community for '%s'...\n", query)
+
+	candidates, err := repl.registryClient.SearchCommands(query)
+	if err != nil {
+		fmt.Printf("\n⚠️  Online search failed: %v\n", err)
+		fmt.Println("   Make sure you are connected to the internet.")
+		return nil
+	}
+
+	if len(candidates) == 0 {
+		fmt.Println("\n😕 No results found in the community database.")
+		return nil
+	}
+
+	fmt.Printf("\n✨ Found %d result(s) from the community:\n\n", len(candidates))
+	for i, candidate := range candidates {
+		fmt.Printf("%d. %s\n", i+1, candidate.Name)
+		fmt.Printf("   %s\n", candidate.Description)
+		if len(candidate.UseCases) > 0 {
+			fmt.Printf("   Uses: %s\n", strings.Join(candidate.UseCases, ", "))
+		}
+		fmt.Println()
+	}
+
+	fmt.Println("💡 These commands might not be installed on your system.")
+	fmt.Println("   Use 'describe <command>' to learn more or install them.")
+
 	return nil
 }
