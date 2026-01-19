@@ -237,7 +237,6 @@ func (ch *CommandHelper) runCommand(cmdName string, reader *bufio.Reader) error 
 	return nil
 }
 
-// extractManSection extracts a specific section from man page
 func (ch *CommandHelper) extractManSection(cmdName, sectionName string) string {
 	// Run man with col to strip formatting
 	cmd := exec.Command("sh", "-c", fmt.Sprintf("man %s 2>/dev/null | col -bx", cmdName))
@@ -246,11 +245,16 @@ func (ch *CommandHelper) extractManSection(cmdName, sectionName string) string {
 		return ""
 	}
 
-	text := string(output)
+	return ch.parseManSection(string(output), sectionName)
+}
+
+// parseManSection parses the text to find the requested section
+func (ch *CommandHelper) parseManSection(text, sectionName string) string {
 	lines := strings.Split(text, "\n")
 
-	// Find section start
-	sectionRegex := regexp.MustCompile(`(?i)^` + sectionName + `\s*$`)
+	// Find section start - simpler regex to catch more variations
+	// e.g., "DESCRIPTION", "Description", "DESCRIPTION:"
+	sectionRegex := regexp.MustCompile(`(?i)^\s*` + sectionName + `[:\s]*$`)
 	startIdx := -1
 	for i, line := range lines {
 		if sectionRegex.MatchString(strings.TrimSpace(line)) {
@@ -265,14 +269,16 @@ func (ch *CommandHelper) extractManSection(cmdName, sectionName string) string {
 
 	// Extract until next section (line starting without whitespace)
 	var result []string
-	nextSectionRegex := regexp.MustCompile(`^[A-Z][A-Z ]+$`)
+	// Matches "SECTION NAME" or "SECTION NAME:"
+	nextSectionRegex := regexp.MustCompile(`^[A-Z][A-Z ]+:?$`)
 
 	for i := startIdx; i < len(lines); i++ {
 		line := lines[i]
 		trimmed := strings.TrimSpace(line)
 
 		// Stop at next section header
-		if nextSectionRegex.MatchString(trimmed) && trimmed != sectionName {
+		if nextSectionRegex.MatchString(trimmed) && !strings.EqualFold(trimmed, sectionName) {
+			// Double check it's not the same section if repeated
 			break
 		}
 
@@ -285,7 +291,20 @@ func (ch *CommandHelper) extractManSection(cmdName, sectionName string) string {
 		}
 	}
 
-	return strings.TrimSpace(strings.Join(result, "\n"))
+	return strings.Trim(strings.Join(result, "\n"), "\n")
+}
+
+// hasManPage checks if a man page exists for the command
+func (ch *CommandHelper) hasManPage(name string) bool {
+	// Check for man command first
+	_, err := exec.LookPath("man")
+	if err != nil {
+		return false
+	}
+	
+	cmd := exec.Command("man", "-w", name)
+	err = cmd.Run()
+	return err == nil
 }
 
 // extractHelpUsage extracts usage from --help output
@@ -332,11 +351,12 @@ func (ch *CommandHelper) commandExists(name string) bool {
 }
 
 // hasManPage checks if a man page exists for the command
-func (ch *CommandHelper) hasManPage(name string) bool {
-	cmd := exec.Command("man", "-w", name)
-	err := cmd.Run()
-	return err == nil
-}
+// Moved logic up to replace simple version
+// func (ch *CommandHelper) hasManPage(name string) bool {
+// 	cmd := exec.Command("man", "-w", name)
+// 	err := cmd.Run()
+// 	return err == nil
+// }
 
 // QuickHelp shows a brief one-liner for a command (non-interactive)
 func (ch *CommandHelper) QuickHelp(cmdName string) (string, error) {

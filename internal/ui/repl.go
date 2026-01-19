@@ -15,6 +15,7 @@ import (
 	"github.com/themobileprof/clipilot/internal/commands"
 	"github.com/themobileprof/clipilot/internal/engine"
 	"github.com/themobileprof/clipilot/internal/intent"
+	"github.com/themobileprof/clipilot/internal/journey"
 	"github.com/themobileprof/clipilot/internal/modules"
 	"github.com/themobileprof/clipilot/internal/registry"
 )
@@ -297,8 +298,12 @@ func (repl *REPL) searchModules(query string) error {
 		return nil
 	}
 
+	// Start journey logging
+	journey.GetLogger().StartNewJourney(query)
+
 	result, err := repl.detector.Detect(query)
 	if err != nil {
+		journey.GetLogger().EndJourney("error:" + err.Error())
 		fmt.Printf("\n⚠️  Search had a problem: %v\n", err)
 		fmt.Println("💡 Try simpler words or check your spelling")
 		return nil
@@ -314,6 +319,7 @@ func (repl *REPL) searchModules(query string) error {
 		fmt.Println("   • Get new modules: sync (requires internet)")
 		fmt.Println()
 		fmt.Println("📝 Your search has been recorded to help improve CLIPilot!")
+		journey.GetLogger().EndJourney("no_matches")
 		return nil
 	}
 
@@ -348,11 +354,16 @@ func (repl *REPL) searchModules(query string) error {
 // handleQuery processes natural language queries - shows COMMANDS and interactive help
 // Note: Modules are now accessed directly via 'run <module_id>', not through natural language queries
 func (repl *REPL) handleQuery(input string) error {
+	// Start journey logging
+	logger := journey.GetLogger()
+	logger.StartNewJourney(input)
+
 	result, err := repl.detector.Detect(input)
 	if err != nil {
 		fmt.Printf("\n⚠️  Could not understand your request: %v\n", err)
 		fmt.Println("\n💡 Try using the 'describe' command for command help:")
 		fmt.Printf("   describe <command_name>\n")
+		journey.GetLogger().EndJourney("error:" + err.Error())
 		return nil
 	}
 
@@ -366,6 +377,7 @@ func (repl *REPL) handleQuery(input string) error {
 		fmt.Println("   4. Check available modules: modules list")
 		fmt.Println()
 		fmt.Println("📝 Your request helps us improve CLIPilot - thank you!")
+		journey.GetLogger().EndJourney("no_matches")
 		return nil
 	}
 
@@ -406,14 +418,17 @@ func (repl *REPL) handleQuery(input string) error {
 		switch response {
 		case "1":
 			// Show detailed help using CommandHelper
+			journey.GetLogger().EndJourney("describe:" + cmdName)
 			return repl.cmdHelper.DescribeCommand(cmdName)
 		case "2":
 			// Just show the command
+			journey.GetLogger().EndJourney("show:" + cmdName)
 			fmt.Printf("\n💡 Command: %s\n", cmdName)
 			fmt.Printf("   Usage: %s --help  (for full options)\n\n", cmdName)
 			return nil
 		case "3":
 			// Prompt for new search
+			journey.GetLogger().EndJourney("retry_search")
 			fmt.Print("\nWhat would you like to search for? ")
 			newQuery, _ := reader.ReadString('\n')
 			newQuery = strings.TrimSpace(newQuery)
@@ -422,6 +437,7 @@ func (repl *REPL) handleQuery(input string) error {
 			}
 			return nil
 		case "0", "":
+			journey.GetLogger().EndJourney("cancel")
 			return nil
 		default:
 			fmt.Println("Invalid choice. Use 'describe " + cmdName + "' for detailed help.")

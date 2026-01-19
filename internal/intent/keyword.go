@@ -9,9 +9,11 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"time"
 
 	"github.com/themobileprof/clipilot/internal/commands"
 	"github.com/themobileprof/clipilot/internal/interfaces"
+	"github.com/themobileprof/clipilot/internal/journey"
 	"github.com/themobileprof/clipilot/pkg/models"
 )
 
@@ -85,24 +87,40 @@ func (d *Detector) IsOnlineEnabled() bool {
 // 2. Database FTS Search (Exact/Prefix matches)
 // 3. Result Merging & Re-ranking
 func (d *Detector) Detect(input string) (*models.IntentResult, error) {
+	// Start journey logging (handled by caller usually, but we ensure steps are logged)
+	logger := journey.GetLogger()
+	
 	candidates := make(map[string]models.Candidate)
 	
-	// Layer 1: Hybrid offline intelligence (TF-IDF + intent + category)
+	// Layer 1: Hybrid Offline Intelligence (TF-IDF + intent + category)
+	startHybrid := time.Now()
 	if d.hybridEnabled && d.hybridMatcher != nil {
 		hybridResult, err := d.hybridMatcher.Match(input)
+		count := 0
+		topScore := 0.0
 		if err == nil {
 			for _, c := range hybridResult.Candidates {
 				// Normalize score for fusion
 				candidates[c.ModuleID] = c
+				count++
+				if c.Score > topScore { topScore = c.Score }
 			}
 		}
+		logger.AddStep("hybrid", count, topScore, time.Since(startHybrid), "")
 	}
 
 	// Layer 2: FTS Search (Database Layer) via Indexer
 	// This uses the robust FTS5 tables we added
+	startFTS := time.Now()
 	ftsResults, err := d.keywordSearchCommands(input)
+	countFTS := 0
+	topScoreFTS := 0.0
+	
 	if err == nil {
 		for _, c := range ftsResults.Candidates {
+			countFTS++
+			if c.Score > topScoreFTS { topScoreFTS = c.Score }
+			
 			if existing, ok := candidates[c.ModuleID]; ok {
 				// boost existing score if found in FTS (Confirmation Boost)
 				existing.Score = existing.Score + 0.5 // Significant boost for dual-match
@@ -119,9 +137,10 @@ func (d *Detector) Detect(input string) (*models.IntentResult, error) {
 			}
 		}
 	}
+	logger.AddStep("fts", countFTS, topScoreFTS, time.Since(startFTS), "")
 
-	// Layer 3: Online Semantic Search Fallback
-	// Check if we have strong candidates
+	// Convert map back to list (intermediate for checking max score)
+	// We need to re-evaluate max score for the fallback decision
 	maxScore := 0.0
 	for _, c := range candidates {
 		if c.Score > maxScore {
@@ -129,17 +148,29 @@ func (d *Detector) Detect(input string) (*models.IntentResult, error) {
 		}
 	}
 
+	// Layer 3: Online Semantic Search Fallback
 	if d.onlineEnabled && (len(candidates) == 0 || maxScore < 0.4) {
+		startRemote := time.Now()
 		// Call remote semantic search
 		remoteResults, err := d.remoteSearch(input)
+		countRemote := 0
+		topScoreRemote := 0.0
+		
 		if err == nil && len(remoteResults) > 0 {
 			for _, c := range remoteResults {
+				countRemote++
+				if c.Score > topScoreRemote { topScoreRemote = c.Score }
+				
 				// Only add if not already present with higher score
 				if existing, ok := candidates[c.ModuleID]; !ok || existing.Score < c.Score {
 					candidates[c.ModuleID] = c
 				}
 			}
 		}
+		duration := time.Since(startRemote)
+		status := "success"
+		if err != nil { status = err.Error() }
+		logger.AddStep("remote", countRemote, topScoreRemote, duration, status)
 	}
 
 	// Convert map back to list
@@ -156,6 +187,9 @@ func (d *Detector) Detect(input string) (*models.IntentResult, error) {
 			}
 		}
 	}
+	
+	// Log final candidates
+	logger.SetFinalCandidates(finalCandidates)
 
 	// Return top result
 	if len(finalCandidates) > 0 {
