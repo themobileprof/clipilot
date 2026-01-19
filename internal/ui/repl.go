@@ -140,8 +140,7 @@ func (repl *REPL) handleCommand(input string) error {
 		return repl.syncRegistry()
 	case "update-commands":
 		return repl.updateCommands()
-	case "sync-commands":
-		return repl.syncCommands()
+
 	case "reset":
 		return repl.resetDatabase()
 	case "uninstall":
@@ -221,9 +220,6 @@ func (repl *REPL) showHelp() error {
   update-commands         Refresh list of tools on your device
                           (No internet needed - safe anytime)
                           
-  sync-commands           Sync with registry for enhanced descriptions
-                          (Sends your commands, receives enhancements)
-
 📊 SETTINGS & HISTORY:
 
   settings                See your current configuration
@@ -785,29 +781,7 @@ func (repl *REPL) ExecuteNonInteractive(input string) error {
 	return repl.handleCommand(input)
 }
 
-// syncCommands syncs local commands with registry's enhanced descriptions
-func (repl *REPL) syncCommands() error {
-	fmt.Println("\n=== Syncing Command Descriptions ===")
-	fmt.Println("This will:")
-	fmt.Println("  • Send your command list to the registry")
-	fmt.Println("  • Receive AI-enhanced descriptions")
-	fmt.Println("  • Update your local database")
-	fmt.Println()
 
-	// Get registry URL
-	registryURL, err := registry.GetRegistryURL(repl.db)
-	if err != nil {
-		return fmt.Errorf("registry not configured: run 'sync' first")
-	}
-
-	// Perform sync
-	if err := commands.SyncEnhancedCommands(repl.db, registryURL); err != nil {
-		return fmt.Errorf("sync failed: %w", err)
-	}
-
-	fmt.Println("\n💡 Run 'model refresh' to rebuild the search index with new descriptions")
-	return nil
-}
 
 // syncRegistry syncs the module registry catalog
 func (repl *REPL) syncRegistry() error {

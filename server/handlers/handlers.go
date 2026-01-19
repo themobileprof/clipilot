@@ -70,13 +70,7 @@ func New(cfg Config) *Handlers {
 		log.Fatalf("Failed to run migrations: %v", err)
 	}
 
-	// Run enhanced commands migration if file exists
-	enhancedMigration, err := os.ReadFile("server/migrations/002_enhanced_commands.sql")
-	if err == nil {
-		if _, err := db.Exec(string(enhancedMigration)); err != nil {
-			log.Printf("Warning: enhanced commands migration failed: %v", err)
-		}
-	}
+
 
 	// Bootstrap: discover and submit server's own commands if low on data
 	// This runs asynchronously to not block server startup
