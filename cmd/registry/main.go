@@ -93,6 +93,15 @@ func main() {
 	mux.HandleFunc("/api/upload", h.RequireAuth(h.APIUpload))
 	mux.HandleFunc("/my-modules", h.RequireAuth(h.MyModules))
 
+	// Command sync endpoint (public)
+	mux.HandleFunc("/api/commands/sync", h.HandleCommandSync)
+
+	// Command enhancement endpoint (admin only)
+	geminiAPIKey := getEnv("GEMINI_API_KEY", "")
+	if geminiAPIKey != "" {
+		mux.HandleFunc("/api/commands/enhance", h.RequireAuth(h.HandleEnhanceCommand(geminiAPIKey)))
+	}
+
 	// Module request tracking (public POST, admin-only view)
 	mux.HandleFunc("/api/module-request", h.APIModuleRequest)
 	mux.HandleFunc("/api/module-request/", h.APIUpdateModuleRequest)

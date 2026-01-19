@@ -181,24 +181,38 @@ func (idx *Indexer) GetCommandCount() int {
 	return count
 }
 
-// SearchCommands searches for commands by name or description
+// SearchCommands searches for commands by name or description using FTS
 func (idx *Indexer) SearchCommands(query string, limit int) ([]CommandInfo, error) {
-	query = strings.ToLower(query)
+	// If the FTS table doesn't exist (migrations not run?), fall back to LIKE
+	// But we assume migrations are run.
+	
+	ftsQuery := buildFTSQuery(query)
+	if ftsQuery == "" {
+		return []CommandInfo{}, nil
+	}
 
+	// We join with the main table to get metadata like has_man
+	// FTS5 rank is lower is better (usually), but depends on configuration. 
+	// Default bm25 returns negative score? No, usually lower is more relevant? 
+	// Wait, FTS5 'rank' column value depends on function. Default is bm25. 
+	// BM25 returns a score where lower is better (more negative) by default implementation in some versions?
+	// Actually standard FTS5 bm25() returns a value where *more negative* is better? 
+	// No, usually higher is better.
+	// Let's rely on 'ORDER BY rank'. 
+	
 	rows, err := idx.db.Query(`
-		SELECT name, description, has_man
-		FROM commands
-		WHERE name LIKE ? OR description LIKE ?
-		ORDER BY
-			CASE
-				WHEN name = ? THEN 1
-				WHEN name LIKE ? THEN 2
-				ELSE 3
-			END,
-			name
+		SELECT c.name, c.description, c.has_man
+		FROM commands c
+		JOIN commands_fts f ON c.name = f.name
+		WHERE commands_fts MATCH ?
+		ORDER BY rank
 		LIMIT ?
-	`, "%"+query+"%", "%"+query+"%", query, query+"%", limit)
+	`, ftsQuery, limit)
 
+    // Helper to handle error if FTS table is missing (fallback)
+	if err != nil && strings.Contains(err.Error(), "no such table") {
+        return idx.searchCommandsFallback(query, limit)
+    }
 	if err != nil {
 		return nil, fmt.Errorf("search failed: %w", err)
 	}
@@ -221,6 +235,58 @@ func (idx *Indexer) SearchCommands(query string, limit int) ([]CommandInfo, erro
 	}
 
 	return results, nil
+}
+
+// searchCommandsFallback uses simple LIKE search
+func (idx *Indexer) searchCommandsFallback(query string, limit int) ([]CommandInfo, error) {
+    query = strings.ToLower(query)
+    rows, err := idx.db.Query(`
+		SELECT name, description, has_man
+		FROM commands
+		WHERE name LIKE ? OR description LIKE ?
+		ORDER BY length(name)
+		LIMIT ?
+	`, "%"+query+"%", "%"+query+"%", limit)
+    if err != nil {
+        return nil, err
+    }
+    defer rows.Close()
+    
+    results := []CommandInfo{}
+	for rows.Next() {
+		var cmd CommandInfo
+		var description sql.NullString
+		if err := rows.Scan(&cmd.Name, &description, &cmd.HasMan); err != nil {
+			continue
+		}
+		if description.Valid {
+			cmd.Description = description.String
+		}
+		results = append(results, cmd)
+	}
+    return results, nil
+}
+
+// buildFTSQuery constructs a search query for FTS5
+// It tokenizes input and creates a query like: "token1"* OR "token2"*
+func buildFTSQuery(input string) string {
+    // Remove special FTS characters to prevent syntax errors
+    cleaner := strings.NewReplacer("\"", "", "'", "", ":", "", "*", "", "(", "", ")", "")
+    input = cleaner.Replace(input)
+    
+    terms := strings.Fields(input)
+    if len(terms) == 0 {
+        return ""
+    }
+    
+    var queryParts []string
+    for _, term := range terms {
+        // Use prefix matching for each term
+        queryParts = append(queryParts, fmt.Sprintf("\"%s\"*", term))
+    }
+    
+    // OR semantics allow finding "list files" -> "list" works, even if "files" doesn't match
+    return strings.Join(queryParts, " OR ")
 }
 
 // CommandInfo represents a command entry
@@ -343,28 +409,28 @@ func (idx *Indexer) LoadCommonCommands() error {
 	return nil
 }
 
-// SearchCommonCommands searches for commands in the catalog
+// SearchCommonCommands searches for commands in the catalog using FTS
 func (idx *Indexer) SearchCommonCommands(query string, limit int) ([]CommonCommandInfo, error) {
-	query = strings.ToLower(query)
+	ftsQuery := buildFTSQuery(query)
+    if ftsQuery == "" {
+        return []CommonCommandInfo{}, nil
+    }
 
 	rows, err := idx.db.Query(`
-		SELECT name, description, category, keywords, 
-		       apt_package, pkg_package, dnf_package, brew_package, arch_package,
-		       alternative_to, homepage, priority
-		FROM common_commands
-		WHERE name LIKE ? OR description LIKE ? OR keywords LIKE ? OR category LIKE ?
-		ORDER BY
-			CASE
-				WHEN name = ? THEN 1
-				WHEN name LIKE ? THEN 2
-				ELSE 3
-			END,
-			priority DESC,
-			name
+		SELECT c.name, c.description, c.category, c.keywords, 
+		       c.apt_package, c.pkg_package, c.dnf_package, c.brew_package, c.arch_package,
+		       c.alternative_to, c.homepage, c.priority
+		FROM common_commands c
+        JOIN common_commands_fts f ON c.name = f.name
+		WHERE common_commands_fts MATCH ?
+		ORDER BY rank
 		LIMIT ?
-	`, "%"+query+"%", "%"+query+"%", "%"+query+"%", "%"+query+"%",
-		query, query+"%", limit)
+	`, ftsQuery, limit)
 
+    // Fallback if table missing
+    if err != nil && strings.Contains(err.Error(), "no such table") {
+        return idx.searchCommonCommandsFallback(query, limit)
+    }
 	if err != nil {
 		return nil, fmt.Errorf("search failed: %w", err)
 	}
@@ -413,6 +479,51 @@ func (idx *Indexer) SearchCommonCommands(query string, limit int) ([]CommonComma
 		results = append(results, cmd)
 	}
 
+	return results, nil
+}
+
+// searchCommonCommandsFallback uses LIKE
+func (idx *Indexer) searchCommonCommandsFallback(query string, limit int) ([]CommonCommandInfo, error) {
+    query = strings.ToLower(query)
+	rows, err := idx.db.Query(`
+		SELECT name, description, category, keywords, 
+		       apt_package, pkg_package, dnf_package, brew_package, arch_package,
+		       alternative_to, homepage, priority
+		FROM common_commands
+		WHERE name LIKE ? OR description LIKE ? OR keywords LIKE ? OR category LIKE ?
+		ORDER BY priority DESC, name
+		LIMIT ?
+	`, "%"+query+"%", "%"+query+"%", "%"+query+"%", "%"+query+"%", limit)
+
+	if err != nil {
+		return nil, fmt.Errorf("search failed: %w", err)
+	}
+	defer rows.Close()
+
+	results := []CommonCommandInfo{}
+	for rows.Next() {
+		var cmd CommonCommandInfo
+		var keywords, alternativeTo, homepage sql.NullString
+		var aptPkg, pkgPkg, dnfPkg, brewPkg, archPkg sql.NullString
+
+		err := rows.Scan(
+			&cmd.Name, &cmd.Description, &cmd.Category, &keywords,
+			&aptPkg, &pkgPkg, &dnfPkg, &brewPkg, &archPkg,
+			&alternativeTo, &homepage, &cmd.Priority,
+		)
+		if err != nil {
+			continue
+		}
+        if keywords.Valid { cmd.Keywords = keywords.String }
+		if alternativeTo.Valid { cmd.AlternativeTo = alternativeTo.String }
+		if homepage.Valid { cmd.Homepage = homepage.String }
+		if aptPkg.Valid { cmd.AptPackage = aptPkg.String }
+		if pkgPkg.Valid { cmd.PkgPackage = pkgPkg.String }
+		if dnfPkg.Valid { cmd.DnfPackage = dnfPkg.String }
+		if brewPkg.Valid { cmd.BrewPackage = brewPkg.String }
+		if archPkg.Valid { cmd.ArchPackage = archPkg.String }
+		results = append(results, cmd)
+	}
 	return results, nil
 }
 

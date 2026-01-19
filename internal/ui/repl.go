@@ -139,6 +139,8 @@ func (repl *REPL) handleCommand(input string) error {
 		return repl.syncRegistry()
 	case "update-commands":
 		return repl.updateCommands()
+	case "sync-commands":
+		return repl.syncCommands()
 	case "reset":
 		return repl.resetDatabase()
 	case "uninstall":
@@ -196,16 +198,19 @@ func (repl *REPL) showHelp() error {
   
   run <module_name>       Use a module to do a task
 
-🧠 SEMANTIC SEARCH (AI-Powered):
+🧠 OFFLINE INTELLIGENCE (Pure Go, No CGO):
 
-  model status            Check if semantic model is installed
-  model download          Download the AI model (~23 MB)
-  model enable            Enable AI-powered search
+  model status            Check if hybrid matcher is enabled
+  model enable            Enable TF-IDF + intent + category matching
   model disable           Use only keyword search
-  model refresh           Recompute embeddings after adding modules
+  model refresh           Rebuild TF-IDF index after adding commands
 
-  When enabled, searches understand meaning, not just keywords!
-  "find big files" matches "locate large files", "disk usage", etc.
+  When enabled, searches use:
+  • Text normalization (verb lemmatization, stop words)
+  • Intent extraction (show, find, kill, monitor, etc.)
+  • TF-IDF similarity (like LLM, but deterministic)
+  • Category boost (networking, process, filesystem, etc.)
+  • Fallback ladder (never returns "I don't know")
 
 🌐 KEEPING UP TO DATE:
 
@@ -214,6 +219,9 @@ func (repl *REPL) showHelp() error {
                           
   update-commands         Refresh list of tools on your device
                           (No internet needed - safe anytime)
+                          
+  sync-commands           Sync with registry for enhanced descriptions
+                          (Sends your commands, receives enhancements)
 
 📊 SETTINGS & HISTORY:
 
@@ -742,6 +750,30 @@ func (repl *REPL) ExecuteNonInteractive(input string) error {
 	return repl.handleCommand(input)
 }
 
+// syncCommands syncs local commands with registry's enhanced descriptions
+func (repl *REPL) syncCommands() error {
+	fmt.Println("\n=== Syncing Command Descriptions ===")
+	fmt.Println("This will:")
+	fmt.Println("  • Send your command list to the registry")
+	fmt.Println("  • Receive AI-enhanced descriptions")
+	fmt.Println("  • Update your local database")
+	fmt.Println()
+
+	// Get registry URL
+	registryURL, err := registry.GetRegistryURL(repl.db)
+	if err != nil {
+		return fmt.Errorf("registry not configured: run 'sync' first")
+	}
+
+	// Perform sync
+	if err := commands.SyncEnhancedCommands(repl.db, registryURL); err != nil {
+		return fmt.Errorf("sync failed: %w", err)
+	}
+
+	fmt.Println("\n💡 Run 'model refresh' to rebuild the search index with new descriptions")
+	return nil
+}
+
 // syncRegistry syncs the module registry catalog
 func (repl *REPL) syncRegistry() error {
 	fmt.Println("Syncing module registry...")
@@ -820,7 +852,7 @@ func (repl *REPL) resetDatabase() error {
 	return nil
 }
 
-// handleModelCommand manages the semantic search model
+// handleModelCommand manages the offline intelligence system
 func (repl *REPL) handleModelCommand(args []string) error {
 	if len(args) == 0 {
 		return repl.showModelStatus()
@@ -829,156 +861,88 @@ func (repl *REPL) handleModelCommand(args []string) error {
 	switch args[0] {
 	case "status":
 		return repl.showModelStatus()
-	case "download":
-		return repl.downloadModel()
 	case "enable":
-		return repl.enableSemantic()
+		return repl.enableHybrid()
 	case "disable":
-		repl.detector.DisableSemantic()
-		fmt.Println("✓ Semantic search disabled")
+		repl.detector.DisableHybrid()
+		fmt.Println("✓ Hybrid offline intelligence disabled")
 		return nil
 	case "refresh":
-		return repl.refreshEmbeddings()
+		return repl.refreshHybrid()
 	default:
 		fmt.Println("Model commands:")
-		fmt.Println("  model status    - Show semantic model status")
-		fmt.Println("  model download  - Download all-MiniLM-L6-v2 model")
-		fmt.Println("  model enable    - Enable semantic search")
-		fmt.Println("  model disable   - Disable semantic search")
-		fmt.Println("  model refresh   - Recompute embeddings")
+		fmt.Println("  model status    - Show offline intelligence status")
+		fmt.Println("  model enable    - Enable hybrid TF-IDF matcher")
+		fmt.Println("  model disable   - Disable offline intelligence")
+		fmt.Println("  model refresh   - Rebuild TF-IDF index")
 		return nil
 	}
 }
 
-// showModelStatus displays semantic search model information
+// showModelStatus displays offline intelligence system information
 func (repl *REPL) showModelStatus() error {
-	fmt.Println("\n📊 Semantic Search Model Status")
+	fmt.Println("\n📊 Offline Intelligence Status")
 	fmt.Println("─────────────────────────────────────")
-
-	// Check if model files exist
-	homeDir, _ := os.UserHomeDir()
-	modelPath := homeDir + "/.clipilot/models/model_quantized.onnx"
-	vocabPath := homeDir + "/.clipilot/models/vocab.txt"
-
-	modelExists := false
-	if info, err := os.Stat(modelPath); err == nil {
-		modelExists = true
-		fmt.Printf("Model file: ✓ Found (%d MB)\n", info.Size()/(1024*1024))
-	} else {
-		fmt.Println("Model file: ✗ Not found")
-	}
-
-	if _, err := os.Stat(vocabPath); err == nil {
-		fmt.Println("Vocabulary:  ✓ Found")
-	} else {
-		fmt.Println("Vocabulary:  ✗ Not found")
-	}
 
 	// Check if enabled
-	if repl.detector.IsSemanticEnabled() {
-		fmt.Println("Status:      ✓ Enabled and loaded")
-	} else if modelExists {
-		fmt.Println("Status:      ○ Available but not enabled")
+	if repl.detector.IsHybridEnabled() {
+		fmt.Println("Status:      ✓ Enabled (Hybrid TF-IDF Matcher)")
+		fmt.Println("Method:      Pure Go, no CGO, no external models")
+		fmt.Println("Features:    • Text normalization")
+		fmt.Println("             • Intent extraction")
+		fmt.Println("             • TF-IDF similarity")
+		fmt.Println("             • Category boost")
+	} else {
+		fmt.Println("Status:      ○ Disabled (using keyword search)")
 		fmt.Println("             Run 'model enable' to activate")
-	} else {
-		fmt.Println("Status:      ✗ Not available")
-		fmt.Println("             Run 'model download' to get the model")
 	}
 
-	// Get embedding stats if loaded
-	if repl.detector.IsSemanticEnabled() {
-		// Query embedding counts from database
-		var moduleCount, cmdCount int
-		_ = repl.db.QueryRow("SELECT COUNT(*) FROM module_embeddings").Scan(&moduleCount)
-		_ = repl.db.QueryRow("SELECT COUNT(*) FROM command_embeddings").Scan(&cmdCount)
+	// Get command stats
+	var cmdCount int
+	_ = repl.db.QueryRow("SELECT COUNT(*) FROM commands").Scan(&cmdCount)
 
-		fmt.Printf("\nEmbeddings:\n")
-		fmt.Printf("  Modules:  %d\n", moduleCount)
-		fmt.Printf("  Commands: %d\n", cmdCount)
-	}
+	var commonCount int
+	_ = repl.db.QueryRow("SELECT COUNT(*) FROM common_commands").Scan(&commonCount)
+
+	fmt.Printf("\nIndexed Commands:\n")
+	fmt.Printf("  Installed:  %d\n", cmdCount)
+	fmt.Printf("  Catalog:    %d\n", commonCount)
 
 	fmt.Println()
 	return nil
 }
 
-// downloadModel downloads the semantic model
-func (repl *REPL) downloadModel() error {
-	fmt.Println("\n📥 Downloading Semantic Search Model")
-	fmt.Println("─────────────────────────────────────")
-	fmt.Println("Model: all-MiniLM-L6-v2 (INT8 quantized)")
-	fmt.Println("Size:  ~23 MB")
-	fmt.Println()
+// enableHybrid enables the hybrid offline intelligence matcher
+func (repl *REPL) enableHybrid() error {
+	fmt.Println("\n🔄 Enabling offline intelligence...")
 
-	// Check for download script
-	scriptPath := ""
-	possiblePaths := []string{
-		"./scripts/download_model.sh",
-		"/usr/local/share/clipilot/scripts/download_model.sh",
-		os.Getenv("HOME") + "/.clipilot/scripts/download_model.sh",
+	if err := repl.detector.EnableHybrid(); err != nil {
+		return fmt.Errorf("failed to enable hybrid matcher: %w", err)
 	}
 
-	for _, path := range possiblePaths {
-		if _, err := os.Stat(path); err == nil {
-			scriptPath = path
-			break
-		}
-	}
-
-	if scriptPath != "" {
-		fmt.Printf("Found download script: %s\n", scriptPath)
-		fmt.Println("\nRun the following command to download:")
-		fmt.Printf("\n  bash %s\n\n", scriptPath)
-	} else {
-		fmt.Println("Download manually from Hugging Face:")
-		fmt.Println()
-		fmt.Println("  mkdir -p ~/.clipilot/models")
-		fmt.Println("  cd ~/.clipilot/models")
-		fmt.Println()
-		fmt.Println("  # Download vocabulary")
-		fmt.Println("  curl -LO https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2/resolve/main/vocab.txt")
-		fmt.Println()
-		fmt.Println("  # Download ONNX model (~90MB, will be quantized)")
-		fmt.Println("  curl -L -o model.onnx https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2/resolve/main/onnx/model.onnx")
-		fmt.Println()
-		fmt.Println("  # Quantize to INT8 (requires Python with onnxruntime)")
-		fmt.Println("  python3 -c \"from onnxruntime.quantization import quantize_dynamic, QuantType; quantize_dynamic('model.onnx', 'model_quantized.onnx', weight_type=QuantType.QInt8)\"")
-		fmt.Println()
-	}
-
-	return nil
-}
-
-// enableSemantic enables semantic search
-func (repl *REPL) enableSemantic() error {
-	fmt.Println("\n🔄 Enabling semantic search...")
-
-	if err := repl.detector.EnableSemantic(); err != nil {
-		return fmt.Errorf("failed to enable semantic search: %w", err)
-	}
-
-	fmt.Println("✓ Semantic search enabled!")
-	fmt.Println("  Searches will now use AI-powered similarity matching")
+	fmt.Println("✓ Hybrid matcher enabled!")
+	fmt.Println("  Using TF-IDF + intent detection + category boost")
+	fmt.Println("  No external models or CGO required")
 	fmt.Println()
 
 	return nil
 }
 
-// refreshEmbeddings recomputes all embeddings
-func (repl *REPL) refreshEmbeddings() error {
-	fmt.Println("\n🔄 Refreshing embeddings...")
+// refreshHybrid rebuilds the TF-IDF index
+func (repl *REPL) refreshHybrid() error {
+	fmt.Println("\n🔄 Refreshing hybrid matcher...")
 
-	if !repl.detector.IsSemanticEnabled() {
-		return fmt.Errorf("semantic search not enabled - run 'model enable' first")
+	if !repl.detector.IsHybridEnabled() {
+		return fmt.Errorf("hybrid matcher not enabled - run 'model enable' first")
 	}
 
-	// Get the semantic classifier and refresh
-	// This would require exposing the classifier, for now just reload
-	repl.detector.DisableSemantic()
-	if err := repl.detector.EnableSemantic(); err != nil {
-		return fmt.Errorf("failed to refresh embeddings: %w", err)
+	// Reload the index
+	repl.detector.DisableHybrid()
+	if err := repl.detector.EnableHybrid(); err != nil {
+		return fmt.Errorf("failed to refresh hybrid matcher: %w", err)
 	}
 
-	fmt.Println("✓ Embeddings refreshed!")
+	fmt.Println("✓ Hybrid matcher refreshed!")
 	return nil
 }
 

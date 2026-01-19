@@ -59,8 +59,10 @@ jobs:
       - name: Build binary
         run: |
           echo "Building for ${{ matrix.goos }}-${{ matrix.goarch }}..."
+          # Build with semantic search disabled for cross-platform compatibility
+          # (ONNX Runtime requires CGO and platform-specific libraries)
           CGO_ENABLED=0 GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} GOARM=${{ matrix.goarm }} \
-            go build -ldflags="-s -w" -o ${{ matrix.name }} ./cmd/clipilot
+            go build -tags=nosemantic -ldflags="-s -w" -o ${{ matrix.name }} ./cmd/clipilot
           
           # Verify binary was created
           ls -lh ${{ matrix.name }}
@@ -120,8 +122,9 @@ jobs:
           fi
           
           echo "Building for Android ${{ matrix.goarch }} with CC=$CC..."
-          CGO_ENABLED=1 GOOS=android GOARCH=${{ matrix.goarch }} GOARM=${{ matrix.goarm }} \
-            go build -ldflags="-s -w" -o ${{ matrix.name }} ./cmd/clipilot
+          # Build with semantic search disabled for Android (no ONNX Runtime libraries available)
+          CGO_ENABLED=0 GOOS=android GOARCH=${{ matrix.goarch }} GOARM=${{ matrix.goarm }} \
+            go build -tags=nosemantic -ldflags="-s -w" -o ${{ matrix.name }} ./cmd/clipilot
           
           # Verify binary was created
           ls -lh ${{ matrix.name }}

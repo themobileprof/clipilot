@@ -7,31 +7,30 @@ import (
 	"os/exec"
 	"strings"
 
+	"github.com/themobileprof/clipilot/internal/commands"
 	"github.com/themobileprof/clipilot/internal/interfaces"
 	"github.com/themobileprof/clipilot/pkg/models"
 )
 
 // Detector handles intent detection using multiple strategies
 type Detector struct {
-	db                 *sql.DB
-	keywordThresh      float64
-	llmThresh          float64
-	semanticThresh     float64
-	onlineEnabled      bool
-	semanticClassifier *SemanticClassifier
-	semanticEnabled    bool
+	db            *sql.DB
+	keywordThresh float64
+	llmThresh     float64
+	onlineEnabled bool
+	hybridMatcher *HybridMatcher
+	hybridEnabled bool
 }
 
 // NewDetector creates a new intent detector
 func NewDetector(db *sql.DB) *Detector {
 	return &Detector{
-		db:                 db,
-		keywordThresh:      0.6,
-		llmThresh:          0.6,
-		semanticThresh:     0.5,
-		onlineEnabled:      false,
-		semanticClassifier: nil,
-		semanticEnabled:    false,
+		db:            db,
+		keywordThresh: 0.6,
+		llmThresh:     0.6,
+		onlineEnabled: false,
+		hybridMatcher: nil,
+		hybridEnabled: false,
 	}
 }
 
@@ -44,36 +43,28 @@ func (d *Detector) SetThresholds(keyword, llm float64) {
 	d.llmThresh = llm
 }
 
-// SetSemanticThreshold sets the semantic search threshold
-func (d *Detector) SetSemanticThreshold(threshold float64) {
-	d.semanticThresh = threshold
-	if d.semanticClassifier != nil {
-		d.semanticClassifier.SetThreshold(threshold)
-	}
-}
-
-// EnableSemantic enables semantic search with the given classifier
-func (d *Detector) EnableSemantic() error {
-	if d.semanticClassifier == nil {
-		d.semanticClassifier = NewSemanticClassifier(d.db)
+// EnableHybrid enables the hybrid offline intelligence matcher
+func (d *Detector) EnableHybrid() error {
+	if d.hybridMatcher == nil {
+		d.hybridMatcher = NewHybridMatcher(d.db)
 	}
 
-	if err := d.semanticClassifier.Load(); err != nil {
-		return fmt.Errorf("failed to load semantic classifier: %w", err)
+	if err := d.hybridMatcher.Load(); err != nil {
+		return fmt.Errorf("failed to load hybrid matcher: %w", err)
 	}
 
-	d.semanticEnabled = true
+	d.hybridEnabled = true
 	return nil
 }
 
-// DisableSemantic disables semantic search
-func (d *Detector) DisableSemantic() {
-	d.semanticEnabled = false
+// DisableHybrid disables hybrid matching
+func (d *Detector) DisableHybrid() {
+	d.hybridEnabled = false
 }
 
-// IsSemanticEnabled returns whether semantic search is enabled
-func (d *Detector) IsSemanticEnabled() bool {
-	return d.semanticEnabled && d.semanticClassifier != nil && d.semanticClassifier.IsLoaded()
+// IsHybridEnabled returns whether hybrid matching is enabled
+func (d *Detector) IsHybridEnabled() bool {
+	return d.hybridEnabled && d.hybridMatcher != nil
 }
 
 // SetOnlineEnabled enables/disables online LLM fallback
@@ -81,38 +72,75 @@ func (d *Detector) SetOnlineEnabled(enabled bool) {
 	d.onlineEnabled = enabled
 }
 
-// Detect performs intent detection for COMMANDS only using semantic search
-// Modules are run directly via 'run <module_id>' - not searched
+// Detect performs intent detection using a multi-layered approach with result fusion
+// 1. Hybrid Offline Intelligence (TF-IDF scores)
+// 2. Database FTS Search (Exact/Prefix matches)
+// 3. Result Merging & Re-ranking
 func (d *Detector) Detect(input string) (*models.IntentResult, error) {
-	// Layer 1: Semantic search for commands (if enabled and model is loaded)
-	if d.semanticEnabled && d.semanticClassifier != nil && d.semanticClassifier.IsLoaded() {
-		semanticResult, err := d.semanticClassifier.ClassifyCommands(input)
-		if err == nil && semanticResult.Confidence >= d.semanticThresh {
-			semanticResult.Method = "semantic"
-			return semanticResult, nil
+	candidates := make(map[string]models.Candidate)
+	
+	// Layer 1: Hybrid offline intelligence (TF-IDF + intent + category)
+	if d.hybridEnabled && d.hybridMatcher != nil {
+		hybridResult, err := d.hybridMatcher.Match(input)
+		if err == nil {
+			for _, c := range hybridResult.Candidates {
+				// Normalize score for fusion
+				candidates[c.ModuleID] = c
+			}
 		}
 	}
 
-	// Layer 2: Keyword/DB search for commands (fallback)
-	result, err := d.keywordSearchCommands(input)
-	if err != nil {
-		return nil, fmt.Errorf("keyword search failed: %w", err)
-	}
-
-	if result.Confidence >= d.keywordThresh {
-		result.Method = "keyword"
-		return result, nil
+	// Layer 2: FTS Search (Database Layer) via Indexer
+	// This uses the robust FTS5 tables we added
+	ftsResults, err := d.keywordSearchCommands(input)
+	if err == nil {
+		for _, c := range ftsResults.Candidates {
+			if existing, ok := candidates[c.ModuleID]; ok {
+				// boost existing score if found in FTS (Confirmation Boost)
+				existing.Score = existing.Score + 0.5 // Significant boost for dual-match
+				if existing.Score > 1.0 { existing.Score = 1.0 } // Cap at 1.0 (approximated)
+				
+				// Take description from FTS if it looks better (longer)
+				if len(c.Description) > len(existing.Description) {
+					existing.Description = c.Description
+				}
+				candidates[c.ModuleID] = existing
+			} else {
+				// Add new FTS-only match
+				candidates[c.ModuleID] = c
+			}
+		}
 	}
 
 	// Layer 3: Online LLM fallback (if enabled)
-	if d.onlineEnabled {
+	if d.onlineEnabled && len(candidates) == 0 {
 		// TODO: implement online LLM call
-		_ = d.onlineEnabled // Suppress empty branch warning until implementation
+		_ = d.onlineEnabled 
 	}
 
-	// Return best candidate from keyword search with low confidence
-	if len(result.Candidates) > 0 {
-		return result, nil
+	// Convert map back to list
+	finalCandidates := []models.Candidate{}
+	for _, c := range candidates {
+		finalCandidates = append(finalCandidates, c)
+	}
+
+	// Sort by score
+	for i := 0; i < len(finalCandidates); i++ {
+		for j := i + 1; j < len(finalCandidates); j++ {
+			if finalCandidates[j].Score > finalCandidates[i].Score {
+				finalCandidates[i], finalCandidates[j] = finalCandidates[j], finalCandidates[i]
+			}
+		}
+	}
+
+	// Return top result
+	if len(finalCandidates) > 0 {
+		return &models.IntentResult{
+			ModuleID:   finalCandidates[0].ModuleID,
+			Confidence: finalCandidates[0].Score,
+			Candidates: finalCandidates,
+			Method:     "hybrid_merged",
+		}, nil
 	}
 
 	return &models.IntentResult{
@@ -125,261 +153,49 @@ func (d *Detector) Detect(input string) (*models.IntentResult, error) {
 
 // keywordSearch performs token-based search against intent_patterns
 func (d *Detector) keywordSearch(input string) (*models.IntentResult, error) {
-	tokens := tokenize(input)
-	if len(tokens) == 0 {
-		return &models.IntentResult{
-			Candidates: []models.Candidate{},
-		}, nil
-	}
-
-	// Build scoring map for both modules and commands
-	scores := make(map[string]float64)
-	weights := make(map[string]float64)
-	commandMatches := make(map[string]models.Candidate) // Store command matches separately
-
-	// First, check for direct command matches (highest priority)
-	for _, token := range tokens {
-		rows, err := d.db.Query(`
-			SELECT name, description, has_man
-			FROM commands
-			WHERE name = ? OR name LIKE ?
-			LIMIT 5
-		`, token, token+"%")
-		if err == nil {
-			for rows.Next() {
-				var name, description string
-				var hasMan bool
-				if err := rows.Scan(&name, &description, &hasMan); err == nil {
-					// Commands get very high weight (3.0) to prioritize over modules
-					cmdID := "cmd:" + name
-					scores[cmdID] = 3.0
-					commandMatches[cmdID] = models.Candidate{
-						ModuleID:    cmdID,
-						Name:        name,
-						Description: description,
-						Score:       3.0,
-						Tags:        []string{"command"},
-					}
-				}
-			}
-			rows.Close()
-		}
-	}
-
-	// Query module patterns for each token
-	for _, token := range tokens {
-		rows, err := d.db.Query(`
-			SELECT DISTINCT p.module_id, p.weight, p.pattern_type
-			FROM intent_patterns p
-			WHERE p.pattern LIKE ?
-		`, "%"+token+"%")
-		if err != nil {
-			return nil, fmt.Errorf("pattern query failed: %w", err)
-		}
-
-		for rows.Next() {
-			var moduleID string
-			var weight float64
-			var patternType string
-			if err := rows.Scan(&moduleID, &weight, &patternType); err != nil {
-				rows.Close()
-				return nil, fmt.Errorf("scan failed: %w", err)
-			}
-
-			// Boost weight for exact matches and tags
-			boost := 1.0
-			if patternType == "tag" {
-				boost = 1.5
-			}
-
-			scores[moduleID] += weight * boost
-			weights[moduleID] += weight * boost
-		}
-		rows.Close()
-	}
-
-	// Normalize scores and get candidates
-	candidates := []models.Candidate{}
-
-	// Add command matches first (highest priority)
-	for _, cmd := range commandMatches {
-		candidates = append(candidates, cmd)
-	}
-
-	// Add module matches
-	for moduleID, score := range scores {
-		// Skip command IDs (already added)
-		if strings.HasPrefix(moduleID, "cmd:") {
-			continue
-		}
-
-		normalizedScore := score / float64(len(tokens))
-
-		// Get module details
-		var name, description, tags string
-		err := d.db.QueryRow(`
-			SELECT name, description, COALESCE(tags, '')
-			FROM modules
-			WHERE id = ? AND installed = 1
-		`, moduleID).Scan(&name, &description, &tags)
-		if err != nil {
-			continue // Skip if module not found
-		}
-
-		tagList := []string{}
-		if tags != "" {
-			tagList = strings.Split(tags, ",")
-		}
-
-		candidates = append(candidates, models.Candidate{
-			ModuleID:    moduleID,
-			Name:        name,
-			Description: description,
-			Score:       normalizedScore,
-			Tags:        tagList,
-		})
-	}
-
-	// If no strong matches, check common commands catalog for suggestions
-	if len(candidates) == 0 || (len(candidates) > 0 && candidates[0].Score < 1.5) {
-		commonCmds, err := d.searchCommonCommands(input, 3)
-		if err == nil && len(commonCmds) > 0 {
-			for _, cmd := range commonCmds {
-				candidates = append(candidates, models.Candidate{
-					ModuleID:    "common:" + cmd.Name,
-					Name:        cmd.Name + " (not installed)",
-					Description: cmd.Description + " - " + cmd.InstallCmd,
-					Score:       float64(cmd.Priority) / 100.0 * 2.0, // Convert priority to score
-					Tags:        []string{"installable", cmd.Category},
-				})
-			}
-		}
-	}
-
-	// Sort candidates by score (descending)
-	for i := 0; i < len(candidates); i++ {
-		for j := i + 1; j < len(candidates); j++ {
-			if candidates[j].Score > candidates[i].Score {
-				candidates[i], candidates[j] = candidates[j], candidates[i]
-			}
-		}
-	}
-
-	// Build result
-	result := &models.IntentResult{
-		Candidates: candidates,
-		Method:     "keyword",
-	}
-
-	if len(candidates) > 0 {
-		result.ModuleID = candidates[0].ModuleID
-		result.Confidence = candidates[0].Score
-	}
-
-	return result, nil
+    // This function can remain as is for finding MODULES by pattern
+    // Ideally we should inject FTS here too for module descriptions, but let's focus on commands first
+	return d.keywordSearchCommands(input) // Reuse our enhanced search
 }
 
-// keywordSearchCommands performs token-based search for COMMANDS only (Layer 2)
-// This is the fallback when semantic search is unavailable or has low confidence
+// keywordSearchCommands performs search using the FTS-enabled Indexer
 func (d *Detector) keywordSearchCommands(input string) (*models.IntentResult, error) {
-	tokens := tokenize(input)
-	if len(tokens) == 0 {
-		return &models.IntentResult{
-			Candidates: []models.Candidate{},
-		}, nil
-	}
-
+	indexer := commands.NewIndexer(d.db)
+	
 	candidates := []models.Candidate{}
 
-	// Search for direct command matches
-	for _, token := range tokens {
-		rows, err := d.db.Query(`
-			SELECT name, description, has_man
-			FROM commands
-			WHERE name = ? OR name LIKE ? OR description LIKE ?
-			LIMIT 10
-		`, token, token+"%", "%"+token+"%")
-		if err != nil {
-			continue
-		}
-
-		for rows.Next() {
-			var name, description string
-			var hasMan bool
-			if err := rows.Scan(&name, &description, &hasMan); err == nil {
-				// Calculate score based on match type
-				var score float64
-				if name == token {
-					score = 3.0 // Exact match
-				} else if strings.HasPrefix(name, token) {
-					score = 2.5 // Prefix match
-				} else {
-					score = 2.0 // Description match
-				}
-
-				// Check if already added (deduplicate)
-				found := false
-				for i := range candidates {
-					if candidates[i].Name == name {
-						if score > candidates[i].Score {
-							candidates[i].Score = score
-						}
-						found = true
-						break
-					}
-				}
-
-				if !found {
-					candidates = append(candidates, models.Candidate{
-						ModuleID:    "cmd:" + name,
-						Name:        name,
-						Description: description,
-						Score:       score,
-						Tags:        []string{"command"},
-					})
-				}
-			}
-		}
-		rows.Close()
-	}
-
-	// If no installed commands found, check common commands catalog
-	if len(candidates) == 0 || (len(candidates) > 0 && candidates[0].Score < 2.0) {
-		commonCmds, err := d.searchCommonCommands(input, 5)
-		if err == nil && len(commonCmds) > 0 {
-			for _, cmd := range commonCmds {
-				candidates = append(candidates, models.Candidate{
-					ModuleID:    "common:" + cmd.Name,
-					Name:        cmd.Name + " (not installed)",
-					Description: cmd.Description + " - " + cmd.InstallCmd,
-					Score:       float64(cmd.Priority) / 100.0 * 2.0,
-					Tags:        []string{"installable", cmd.Category},
-				})
-			}
+	// 1. Search Installed Commands (using FTS)
+	cmdResults, err := indexer.SearchCommands(input, 10)
+	if err == nil {
+		for _, cmd := range cmdResults {
+			candidates = append(candidates, models.Candidate{
+				ModuleID:    "cmd:" + cmd.Name,
+				Name:        cmd.Name,
+				Description: cmd.Description,
+				Score:       0.8, // High baseline for FTS match
+				Tags:        []string{"command"},
+			})
 		}
 	}
 
-	// Sort candidates by score (descending)
-	for i := 0; i < len(candidates); i++ {
-		for j := i + 1; j < len(candidates); j++ {
-			if candidates[j].Score > candidates[i].Score {
-				candidates[i], candidates[j] = candidates[j], candidates[i]
-			}
+	// 2. Search Common Commands Catalog (using FTS)
+	commonResults, err := indexer.SearchCommonCommands(input, 5)
+	if err == nil {
+		for _, cmd := range commonResults {
+			candidates = append(candidates, models.Candidate{
+				ModuleID:    "common:" + cmd.Name,
+				Name:        cmd.Name + " (not installed)",
+				Description: cmd.Description + " - " + cmd.GetInstallCommand(),
+				Score:       0.6, // Slightly lower for uninstalled
+				Tags:        []string{"installable", cmd.Category},
+			})
 		}
 	}
 
-	// Build result
-	result := &models.IntentResult{
+	return &models.IntentResult{
 		Candidates: candidates,
-		Method:     "keyword",
-	}
-
-	if len(candidates) > 0 {
-		result.ModuleID = candidates[0].ModuleID
-		result.Confidence = candidates[0].Score
-	}
-
-	return result, nil
+		Method:     "fts",
+	}, nil
 }
 
 // tokenize breaks input into searchable tokens

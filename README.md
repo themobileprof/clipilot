@@ -17,15 +17,16 @@ CLIPilot is an intelligent command-line assistant designed for developers and op
 ## ✨ Features
 
 - **📱 Termux-First Design**: Optimized for Android/Termux as a first-class platform
-- **🔌 Offline-First**: Works without internet connectivity using local keyword search and optional tiny LLM
-- **🎯 Hybrid Intent Detection**: 3-layer pipeline (keyword DB → local LLM → online LLM fallback)
+- **🔌 Offline-First**: Works without internet connectivity using TF-IDF offline intelligence (no CGO, pure Go)
+- **🎯 Hybrid Intent Detection**: TF-IDF + text normalization + intent extraction + category boost
 - **📦 Modular Architecture**: Download and install task modules on demand
 - **🔒 Safety-First**: All commands require explicit user confirmation before execution
-- **💾 Lightweight**: Core binary <20MB, optimized for 2-4GB RAM devices (perfect for phones)
+- **💾 Lightweight**: Core binary <15MB, optimized for 2-4GB RAM devices (perfect for phones)
 - **🗃️ SQLite Backend**: Fast local caching and state persistence (embedded, no installation needed)
 - **🔄 Flow Engine**: Deterministic multi-step workflows with branching and validation
 - **📱 Zero Dependencies**: SQLite is compiled into the binary - just download and run!
 - **📚 Smart Command Discovery**: Automatically indexes system commands from man pages for natural language search
+- **🚀 Cross-Platform**: Linux, macOS, Android/Termux - single Go binary, no CGO required
 
 ## 🏗️ Architecture
 
@@ -43,8 +44,8 @@ CLIPilot is an intelligent command-line assistant designed for developers and op
 └────────┬────────────────────┬─────────────────┬─────────┘
          │                    │                 │
     ┌────▼─────┐       ┌─────▼──────┐    ┌────▼──────┐
-    │ SQLite   │       │ Tiny LLM   │    │  Online   │
-    │  Cache   │       │ (Optional) │    │    LLM    │
+    │ SQLite   │       │  TF-IDF    │    │  Online   │
+    │  Cache   │       │ Matcher    │    │    LLM    │
     └──────────┘       └────────────┘    └───────────┘
 ```
 
@@ -55,10 +56,11 @@ CLIPilot is an intelligent command-line assistant designed for developers and op
    - Weighted keyword matching against patterns table
    - Scores candidates by relevance, tags, and popularity
 
-2. **Layer 2 - Tiny Local LLM** (Optional, 1-10MB model)
-   - Label classifier for ambiguous queries
-   - Returns confidence scores
-   - 100-500ms inference time
+2. **Layer 2 - Offline Intelligence** (Pure Go, no CGO)
+   - TF-IDF similarity matching
+   - Intent extraction (show, find, kill, monitor, etc.)
+   - Category boosting (networking, process, filesystem, etc.)
+   - 10-50ms query time
 
 3. **Layer 3 - Online LLM Fallback** (Opt-in)
    - Triggered when offline layers fail
@@ -494,7 +496,7 @@ docker run -d -p 8080:8080 your-username/clipilot-registry:latest
 
 - Go 1.21 or higher
 - SQLite3
-- (Optional) GCC for CGO if using tiny LLM
+- No CGO required - pure Go implementation
 
 ### Building from Source
 
@@ -590,8 +592,14 @@ export REGISTRY_URL=https://your-registry.com
 # Build the registry server
 go build -o registry ./cmd/registry
 
+# Build the enhancement CLI tool
+go build -o bin/enhance ./cmd/enhance
+
 # Run with admin credentials and custom port
-PORT=8082 ADMIN_PASSWORD=your_secure_password ./registry
+PORT=8082 ADMIN_PASSWORD=your_secure_password GEMINI_API_KEY=your_key ./registry
+
+# Registry auto-discovers commands on first startup (< 50 enhanced commands)
+# Then enhance them: ./bin/enhance --auto --limit=100
 
 # Access at http://localhost:8082 (or your chosen port)
 # For production, set BASE_URL=https://your-domain.com
@@ -599,10 +607,13 @@ PORT=8082 ADMIN_PASSWORD=your_secure_password ./registry
 
 See [docs/REGISTRY.md](docs/REGISTRY.md) for full documentation on:
 - Setting up the registry server
+- Server bootstrap (automatic command discovery)
 - Uploading modules
 - Using ChatGPT to generate modules
 - API documentation
 - Deployment guides
+
+**New:** Registry automatically discovers and submits its own commands on first startup. See [docs/SERVER_BOOTSTRAP.md](docs/SERVER_BOOTSTRAP.md) for details.
 
 ### Uploading Modules to Production Registry
 
@@ -719,7 +730,7 @@ Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) for gu
 - **New Modules**: Add support for more tools and workflows - share them on the registry!
 - **OS Support**: Expand compatibility (Alpine, Fedora, etc.)
 - **Performance**: Optimize for low-memory devices
-- **Tiny LLM**: Improve local classification accuracy
+- **Offline Intelligence Tuning**: Improve TF-IDF weighting and synonym expansion
 - **Documentation**: Improve guides and examples
 - **Registry Features**: Enhance the module registry with search, ratings, categories
 

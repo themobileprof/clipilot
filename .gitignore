@@ -54,6 +54,7 @@ Thumbs.db
 .clipilot/
 data/
 logs/
+tmp/
 
 # Tiny LLM models (large files)
 *.gguf

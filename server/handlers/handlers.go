@@ -20,6 +20,7 @@ import (
 
 	"github.com/themobileprof/clipilot/pkg/models"
 	"github.com/themobileprof/clipilot/server/auth"
+	"github.com/themobileprof/clipilot/server/bootstrap"
 )
 
 //go:embed migration.sql
@@ -69,6 +70,23 @@ func New(cfg Config) *Handlers {
 		log.Fatalf("Failed to run migrations: %v", err)
 	}
 
+	// Run enhanced commands migration if file exists
+	enhancedMigration, err := os.ReadFile("server/migrations/002_enhanced_commands.sql")
+	if err == nil {
+		if _, err := db.Exec(string(enhancedMigration)); err != nil {
+			log.Printf("Warning: enhanced commands migration failed: %v", err)
+		}
+	}
+
+	// Bootstrap: discover and submit server's own commands if low on data
+	// This runs asynchronously to not block server startup
+	go func() {
+		time.Sleep(5 * time.Second) // Wait for server to fully start
+		if err := bootstrapServerCommands(db, 50); err != nil {
+			log.Printf("Warning: bootstrap failed: %v", err)
+		}
+	}()
+
 	// Load templates
 	tmplPattern := filepath.Join(cfg.TemplateDir, "*.html")
 	templates, err := template.ParseGlob(tmplPattern)
@@ -97,6 +115,11 @@ func New(cfg Config) *Handlers {
 		auth:        authMgr,
 		githubOAuth: githubOAuth,
 	}
+}
+
+// bootstrapServerCommands discovers and submits the server's own commands
+func bootstrapServerCommands(db *sql.DB, minCommands int) error {
+	return bootstrap.DiscoverAndSubmitCommands(db, minCommands)
 }
 
 // getGitHubUsername returns GitHub username if user logged in via GitHub, otherwise empty string
@@ -643,4 +666,14 @@ func (h *Handlers) APIListModules(w http.ResponseWriter, r *http.Request) {
 func (h *Handlers) APIGetModule(w http.ResponseWriter, r *http.Request) {
 	// Same as GetModule but with JSON response option
 	h.GetModule(w, r)
+}
+
+// HandleCommandSync wraps the command sync handler
+func (h *Handlers) HandleCommandSync(w http.ResponseWriter, r *http.Request) {
+	HandleCommandSync(h.db)(w, r)
+}
+
+// HandleEnhanceCommand wraps the command enhancement handler
+func (h *Handlers) HandleEnhanceCommand(geminiAPIKey string) http.HandlerFunc {
+	return HandleEnhanceCommand(h.db, geminiAPIKey)
 }

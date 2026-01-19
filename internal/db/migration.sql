@@ -158,6 +158,57 @@ CREATE INDEX IF NOT EXISTS idx_common_commands_name ON common_commands(name);
 CREATE INDEX IF NOT EXISTS idx_common_commands_category ON common_commands(category);
 CREATE INDEX IF NOT EXISTS idx_common_commands_priority ON common_commands(priority DESC);
 
+-- FTS5 Virtual Tables for Enhanced Search
+-- We use independent FTS tables populated via triggers for maximum compatibility and performance
+
+-- FTS for system commands
+CREATE VIRTUAL TABLE IF NOT EXISTS commands_fts USING fts5(
+    name, 
+    description, 
+    tokenize='porter'
+);
+
+-- Triggers to keep commands_fts in sync with commands table
+CREATE TRIGGER IF NOT EXISTS commands_ai AFTER INSERT ON commands BEGIN
+  INSERT INTO commands_fts(name, description) VALUES (new.name, new.description);
+END;
+
+CREATE TRIGGER IF NOT EXISTS commands_ad AFTER DELETE ON commands BEGIN
+  INSERT INTO commands_fts(commands_fts, rowid, name, description) VALUES('delete', old.rowid, old.name, old.description);
+END;
+
+CREATE TRIGGER IF NOT EXISTS commands_au AFTER UPDATE ON commands BEGIN
+  INSERT INTO commands_fts(commands_fts, rowid, name, description) VALUES('delete', old.rowid, old.name, old.description);
+  INSERT INTO commands_fts(name, description) VALUES (new.name, new.description);
+END;
+
+-- FTS for common commands catalog
+CREATE VIRTUAL TABLE IF NOT EXISTS common_commands_fts USING fts5(
+    name, 
+    description, 
+    keywords, 
+    category, 
+    tokenize='porter'
+);
+
+-- Triggers to keep common_commands_fts in sync with common_commands table
+CREATE TRIGGER IF NOT EXISTS common_commands_ai AFTER INSERT ON common_commands BEGIN
+  INSERT INTO common_commands_fts(name, description, keywords, category) 
+  VALUES (new.name, new.description, new.keywords, new.category);
+END;
+
+CREATE TRIGGER IF NOT EXISTS common_commands_ad AFTER DELETE ON common_commands BEGIN
+  INSERT INTO common_commands_fts(common_commands_fts, rowid, name, description, keywords, category) 
+  VALUES('delete', old.rowid, old.name, old.description, old.keywords, old.category);
+END;
+
+CREATE TRIGGER IF NOT EXISTS common_commands_au AFTER UPDATE ON common_commands BEGIN
+  INSERT INTO common_commands_fts(common_commands_fts, rowid, name, description, keywords, category) 
+  VALUES('delete', old.rowid, old.name, old.description, old.keywords, old.category);
+  INSERT INTO common_commands_fts(name, description, keywords, category) 
+  VALUES (new.name, new.description, new.keywords, new.category);
+END;
+
 -- Embedding tables for semantic search (Layer 2)
 -- Pre-computed embeddings are cached here for fast startup
 
