@@ -1,13 +1,18 @@
 package main
 
 import (
+	"bytes"
 	"database/sql"
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io"
 	"log"
+	"net/http"
 	"os"
+	"strings"
 
+	"gopkg.in/yaml.v3"
 	_ "modernc.org/sqlite"
 )
 
@@ -118,8 +123,16 @@ func enhanceBatchCommands(db *sql.DB, filename string) {
 	}
 
 	var commands []CommandToEnhance
-	if err := json.Unmarshal(data, &commands); err != nil {
-		log.Fatalf("Invalid JSON: %v", err)
+	
+	// Check file extension to determine decoder
+	if strings.HasSuffix(filename, ".yaml") || strings.HasSuffix(filename, ".yml") {
+		if err := yaml.Unmarshal(data, &commands); err != nil {
+			log.Fatalf("Invalid YAML: %v", err)
+		}
+	} else {
+		if err := json.Unmarshal(data, &commands); err != nil {
+			log.Fatalf("Invalid JSON: %v", err)
+		}
 	}
 
 	// Filter out already enhanced commands
@@ -208,23 +221,110 @@ func enhanceUnprocessedSubmissions(db *sql.DB, countStr string) {
 }
 
 type Enhancement struct {
-	EnhancedDescription string
-	Keywords            []string
-	Category            string
-	UseCases            []string
+	EnhancedDescription string   `json:"enhanced_description"`
+	Keywords            []string `json:"keywords"`
+	Category            string   `json:"category"`
+	UseCases            []string `json:"use_cases"`
+}
+
+type GeminiRequest struct {
+	Contents []GeminiContent `json:"contents"`
+	GenerationConfig GeminiConfig `json:"generationConfig"`
+}
+
+type GeminiContent struct {
+	Parts []GeminiPart `json:"parts"`
+}
+
+type GeminiPart struct {
+	Text string `json:"text"`
+}
+
+type GeminiConfig struct {
+	ResponseMimeType string `json:"responseMimeType"`
+}
+
+type GeminiResponse struct {
+	Candidates []struct {
+		Content struct {
+			Parts []struct {
+				Text string `json:"text"`
+			} `json:"parts"`
+		} `json:"content"`
+	} `json:"candidates"`
 }
 
 func enhanceCommandDescription(apiKey, name, description string) *Enhancement {
-	// TODO: Implement actual Gemini API call
-	// For now, return placeholder
+	url := "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=" + apiKey
 
-	fmt.Println("  [Calling Gemini API...]")
+	prompt := fmt.Sprintf(`You are an expert Linux system administrator. 
+Enhance the documentation for the command '%s'.
+Original description: "%s"
 
+Provide a JSON response with the following fields:
+- enhanced_description: A clear, concise (under 200 chars), and beginner-friendly description.
+- keywords: A list of 5-10 relevant search keywords (including synonyms).
+- category: One of [file-management, networking, system, development, editors, monitoring, misc].
+- use_cases: A list of 2-3 common example scenarios where this command is used.
+
+Return ONLY the JSON.`, name, description)
+
+	reqBody := GeminiRequest{
+		Contents: []GeminiContent{
+			{
+				Parts: []GeminiPart{
+					{Text: prompt},
+				},
+			},
+		},
+		GenerationConfig: GeminiConfig{
+			ResponseMimeType: "application/json",
+		},
+	}
+
+	jsonBody, _ := json.Marshal(reqBody)
+
+	resp, err := http.Post(url, "application/json", bytes.NewBuffer(jsonBody))
+	if err != nil {
+		log.Printf("Failed to call Gemini API: %v", err)
+		return fallbackEnhancement(description)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		log.Printf("Gemini API error (status %d): %s", resp.StatusCode, string(body))
+		return fallbackEnhancement(description)
+	}
+
+	var geminiResp GeminiResponse
+	if err := json.NewDecoder(resp.Body).Decode(&geminiResp); err != nil {
+		log.Printf("Failed to decode Gemini response: %v", err)
+		return fallbackEnhancement(description)
+	}
+
+	if len(geminiResp.Candidates) == 0 || len(geminiResp.Candidates[0].Content.Parts) == 0 {
+		log.Println("Empty response from Gemini")
+		return fallbackEnhancement(description)
+	}
+
+	responseText := geminiResp.Candidates[0].Content.Parts[0].Text
+	
+	var enhancement Enhancement
+	if err := json.Unmarshal([]byte(responseText), &enhancement); err != nil {
+		log.Printf("Failed to parse JSON from Gemini: %v\nResponse was: %s", err, responseText)
+		return fallbackEnhancement(description)
+	}
+
+	return &enhancement
+}
+
+func fallbackEnhancement(description string) *Enhancement {
 	return &Enhancement{
-		EnhancedDescription: description + " (placeholder)",
-		Keywords:            []string{"keyword1", "keyword2"},
-		Category:            "general",
-		UseCases:            []string{"use case 1"},
+		EnhancedDescription: description,
+		Keywords:            []string{},
+		Category:            "misc",
+		UseCases:            []string{},
 	}
 }
 

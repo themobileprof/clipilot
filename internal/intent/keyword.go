@@ -82,95 +82,67 @@ func (d *Detector) IsOnlineEnabled() bool {
 	return d.onlineEnabled
 }
 
-// Detect performs intent detection using a multi-layered approach with result fusion
-// 1. Hybrid Offline Intelligence (TF-IDF scores)
-// 2. Database FTS Search (Exact/Prefix matches)
-// 3. Result Merging & Re-ranking
+// Detect performs intent detection using live system search (man/apropos)
 func (d *Detector) Detect(input string) (*models.IntentResult, error) {
-	// Start journey logging (handled by caller usually, but we ensure steps are logged)
 	logger := journey.GetLogger()
 	
 	candidates := make(map[string]models.Candidate)
 	
-	// Layer 1: Hybrid Offline Intelligence (TF-IDF + intent + category)
-	startHybrid := time.Now()
-	if d.hybridEnabled && d.hybridMatcher != nil {
-		hybridResult, err := d.hybridMatcher.Match(input)
-		count := 0
-		topScore := 0.0
-		if err == nil {
-			for _, c := range hybridResult.Candidates {
-				// Normalize score for fusion
-				candidates[c.ModuleID] = c
-				count++
-				if c.Score > topScore { topScore = c.Score }
-			}
-		}
-		logger.AddStep("hybrid", count, topScore, time.Since(startHybrid), "")
-	}
-
-	// Layer 2: FTS Search (Database Layer) via Indexer
-	// This uses the robust FTS5 tables we added
-	startFTS := time.Now()
-	ftsResults, err := d.keywordSearchCommands(input)
-	countFTS := 0
-	topScoreFTS := 0.0
+	// Layer 1: Live System Search (apropos)
+	startMan := time.Now()
+	manResults, err := d.searchSystemManPages(input)
+	countMan := 0
+	topScoreMan := 0.0
 	
 	if err == nil {
-		for _, c := range ftsResults.Candidates {
-			countFTS++
-			if c.Score > topScoreFTS { topScoreFTS = c.Score }
-			
-			if existing, ok := candidates[c.ModuleID]; ok {
-				// boost existing score if found in FTS (Confirmation Boost)
-				existing.Score = existing.Score + 0.5 // Significant boost for dual-match
-				if existing.Score > 1.0 { existing.Score = 1.0 } // Cap at 1.0 (approximated)
-				
-				// Take description from FTS if it looks better (longer)
-				if len(c.Description) > len(existing.Description) {
-					existing.Description = c.Description
+		for _, c := range manResults {
+			countMan++
+			if c.Score > topScoreMan { topScoreMan = c.Score }
+			candidates[c.ModuleID] = c
+		}
+	}
+	logger.AddStep("apropos", countMan, topScoreMan, time.Since(startMan), "")
+
+	// Layer 2: Common Commands Catalog (DB) - Intent-based fallback
+	// If live search found nothing or low confidence, search our curated catalog
+	maxScore := topScoreMan
+	if maxScore < 0.6 {
+		startDB := time.Now()
+		// Simple LIKE search on catalog
+		catalogResults, err := d.searchCommonCommands(input, 5)
+		if err == nil {
+			for _, cmd := range catalogResults {
+				// Avoid duplicates if already found installed
+				if _, ok := candidates["cmd:"+cmd.Name]; ok {
+					continue
 				}
-				candidates[c.ModuleID] = existing
-			} else {
-				// Add new FTS-only match
+				
+				score := 0.7 // Good fallback
+				if cmd.Priority > 80 { score += 0.1 }
+				
+				c := models.Candidate{
+					ModuleID:    "common:" + cmd.Name,
+					Name:        cmd.Name + " (not installed)",
+					Description: cmd.Description,
+					Score:       score,
+					Tags:        []string{"catalog", cmd.Category},
+				}
 				candidates[c.ModuleID] = c
 			}
 		}
-	}
-	logger.AddStep("fts", countFTS, topScoreFTS, time.Since(startFTS), "")
-
-	// Convert map back to list (intermediate for checking max score)
-	// We need to re-evaluate max score for the fallback decision
-	maxScore := 0.0
-	for _, c := range candidates {
-		if c.Score > maxScore {
-			maxScore = c.Score
-		}
+		logger.AddStep("catalog", len(catalogResults), 0.7, time.Since(startDB), "")
 	}
 
-	// Layer 3: Online Semantic Search Fallback
-	if d.onlineEnabled && (len(candidates) == 0 || maxScore < 0.4) {
+	// Layer 3: Online Semantic Search Fallback (if enabled)
+	if d.onlineEnabled && len(candidates) == 0 {
 		startRemote := time.Now()
-		// Call remote semantic search
 		remoteResults, err := d.remoteSearch(input)
-		countRemote := 0
-		topScoreRemote := 0.0
-		
-		if err == nil && len(remoteResults) > 0 {
+		if err == nil {
 			for _, c := range remoteResults {
-				countRemote++
-				if c.Score > topScoreRemote { topScoreRemote = c.Score }
-				
-				// Only add if not already present with higher score
-				if existing, ok := candidates[c.ModuleID]; !ok || existing.Score < c.Score {
-					candidates[c.ModuleID] = c
-				}
+				candidates[c.ModuleID] = c
 			}
 		}
-		duration := time.Since(startRemote)
-		status := "success"
-		if err != nil { status = err.Error() }
-		logger.AddStep("remote", countRemote, topScoreRemote, duration, status)
+		logger.AddStep("remote", len(remoteResults), 0, time.Since(startRemote), "")
 	}
 
 	// Convert map back to list
@@ -188,16 +160,14 @@ func (d *Detector) Detect(input string) (*models.IntentResult, error) {
 		}
 	}
 	
-	// Log final candidates
 	logger.SetFinalCandidates(finalCandidates)
 
-	// Return top result
 	if len(finalCandidates) > 0 {
 		return &models.IntentResult{
 			ModuleID:   finalCandidates[0].ModuleID,
 			Confidence: finalCandidates[0].Score,
 			Candidates: finalCandidates,
-			Method:     "hybrid_merged",
+			Method:     "live_search",
 		}, nil
 	}
 
@@ -207,6 +177,121 @@ func (d *Detector) Detect(input string) (*models.IntentResult, error) {
 		Method:     "none",
 		Candidates: []models.Candidate{},
 	}, nil
+}
+
+// searchSystemManPages searches using 'apropos' for each keyword
+func (d *Detector) searchSystemManPages(input string) ([]models.Candidate, error) {
+	tokens := tokenize(input)
+	if len(tokens) == 0 {
+		return nil, nil
+	}
+
+	// Count occurrences of each command across all token searches
+	// matches stores command -> {description, hitCount}
+	type matchInfo struct {
+		description string
+		hits        int
+		exact       bool
+	}
+	matches := make(map[string]*matchInfo)
+
+	for _, token := range tokens {
+		// Run apropos -s 1,8 <token> to search user and admin commands
+		// -s 1,8 helps filter out C function calls (section 2,3)
+		cmd := exec.Command("apropos", "-s", "1,8", token)
+		output, err := cmd.Output()
+		if err != nil {
+			continue 
+		}
+
+		lines := strings.Split(string(output), "\n")
+		for _, line := range lines {
+			line = strings.TrimSpace(line)
+			if line == "" { continue }
+
+			// Parse: name (section) - description
+			parts := strings.SplitN(line, " - ", 2)
+			if len(parts) != 2 { continue }
+
+			left := parts[0]
+			desc := parts[1]
+
+			// Extract command name from "name (1)"
+			// There might be multiple: "bzcmp, bzdiff (1)"
+			names := strings.Split(left, ",")
+			for _, name := range names {
+				name = strings.TrimSpace(name)
+				idx := strings.Index(name, "(")
+				if idx != -1 {
+					name = strings.TrimSpace(name[:idx])
+				}
+				
+				if _, ok := matches[name]; !ok {
+					matches[name] = &matchInfo{description: desc, hits: 0}
+				}
+				matches[name].hits++
+				
+				// Check for exact match with token
+				if strings.EqualFold(name, token) {
+					matches[name].exact = true
+				}
+			}
+		}
+	}
+
+	// Validated candidates
+	candidates := []models.Candidate{}
+	
+	for name, info := range matches {
+		// Verify installation
+		path, err := exec.LookPath(name)
+		if err != nil {
+			continue // Skip if not actually executable
+		}
+		
+		// calculate score
+		score := 0.4
+		
+		// Boost for exact token match
+		if info.exact {
+			score += 0.2
+		}
+		
+		// Boost for multiple token hits (if query had multiple tokens)
+		if len(tokens) > 1 {
+			score += 0.15 * float64(info.hits - 1)
+		}
+		
+		// Boost for priority commands (using catalog data)
+		var priority int
+		if err := d.db.QueryRow("SELECT priority FROM common_commands WHERE name = ?", name).Scan(&priority); err == nil {
+			score += float64(priority) / 300.0 // Priority 100 adds ~0.33
+		}
+		
+		// Boost for exact match with input line
+		if strings.EqualFold(input, name) {
+			score = 1.0
+		}
+
+		// Cap score
+		if score > 1.0 { score = 1.0 }
+
+		// Filter low scores
+		if score < 0.5 { continue }
+
+		candidates = append(candidates, models.Candidate{
+			ModuleID:    "cmd:" + name,
+			Name:        name, 
+			Description: info.description,
+			Score:       score,
+			Tags:        []string{"command", "installed"},
+		})
+		
+		// Ensure path is used
+		_ = path 
+	}
+
+	return candidates, nil
 }
 
 // keywordSearch performs token-based search against intent_patterns
@@ -224,8 +309,10 @@ func (d *Detector) keywordSearchCommands(input string) (*models.IntentResult, er
 
 	// 1. Search Installed Commands (using FTS)
 	cmdResults, err := indexer.SearchCommands(input, 10)
+	foundNames := make(map[string]bool)
 	if err == nil {
 		for _, cmd := range cmdResults {
+			foundNames[cmd.Name] = true
 			candidates = append(candidates, models.Candidate{
 				ModuleID:    "cmd:" + cmd.Name,
 				Name:        cmd.Name,
@@ -240,12 +327,47 @@ func (d *Detector) keywordSearchCommands(input string) (*models.IntentResult, er
 	commonResults, err := indexer.SearchCommonCommands(input, 5)
 	if err == nil {
 		for _, cmd := range commonResults {
+			// Check if already installed
+			isInstalled := false
+			if _, err := exec.LookPath(cmd.Name); err == nil {
+				isInstalled = true
+			}
+
+			// If already found in system index, skip to avoid duplicates
+			// UNLESS the catalog has a better description? 
+			// For now, let's prefer the system index implementation but if missing, use catalog.
+			if foundNames[cmd.Name] {
+				continue
+			}
+
+			if isInstalled {
+				// Installed but not in system index (or low rank there)
+				// Use catalog entry but mark as installed command
+				candidates = append(candidates, models.Candidate{
+					ModuleID:    "cmd:" + cmd.Name,
+					Name:        cmd.Name,
+					Description: cmd.Description,
+					Score:       0.9, 
+					Tags:        []string{"command", "catalog"},
+				})
+				continue
+			}
+
+			// Not installed
+			score := 0.85
+			name := cmd.Name
+			desc := cmd.Description
+			
+			name += " (not installed)"
+			desc += " - " + cmd.GetInstallCommand()
+			score = 0.65 // Slightly lower but still visible
+
 			candidates = append(candidates, models.Candidate{
 				ModuleID:    "common:" + cmd.Name,
-				Name:        cmd.Name + " (not installed)",
-				Description: cmd.Description + " - " + cmd.GetInstallCommand(),
-				Score:       0.6, // Slightly lower for uninstalled
-				Tags:        []string{"installable", cmd.Category},
+				Name:        name,
+				Description: desc,
+				Score:       score,
+				Tags:        []string{"catalog", cmd.Category},
 			})
 		}
 	}
@@ -277,12 +399,67 @@ func tokenize(text string) []string {
 	stopWords := map[string]bool{
 		"the": true, "and": true, "for": true, "with": true,
 		"how": true, "can": true, "what": true, "where": true,
+		"why": true, "does": true, "did": true, "is": true,
+		"are": true, "was": true, "were": true, "be": true,
+		"my": true, "your": true, "his": true, "her": true,
+		"me": true, "i": true, "you": true, "it": true,
+		"want": true, "need": true, "like": true, "to": true,
+		"do": true, "a": true, "an": true, "in": true,
+		"on": true, "at": true, "from": true, "by": true,
+	}
+
+	// Synonyms for better man page matching
+	synonyms := map[string][]string{
+		"folder":   {"directory"},
+		"folders":  {"directory"},
+		"dir":      {"directory"},
+		"make":     {"create", "build"}, // 'make' matches 'make', 'create' matches 'mkdir'
+		"delete":   {"remove"},
+		"del":      {"remove"},
+		"remove":   {"delete"},
+		"move":     {"rename"},
+		"copy":     {"duplicate"},
+		"edit":     {"editor", "modify", "change"},
+		"download": {"fetch", "get", "retrieve"},
+		"web":      {"internet", "url"},
+		"ram":      {"memory"},
+		"mem":      {"memory"},
+		"storage":  {"disk", "space"},
+		"space":    {"disk"},
+		"disk":     {"storage"},
+		"unzip":    {"extract", "archive", "zip"},
+		"zip":      {"archive", "compress"},
+		"config":   {"configuration"},
+		"install":  {"package"},
+		"kill":     {"terminate", "process"},
+		"list":     {"show", "display"},
 	}
 
 	filtered := []string{}
+	seen := make(map[string]bool)
+
+	addToken := func(t string) {
+		if !seen[t] {
+			filtered = append(filtered, t)
+			seen[t] = true
+		}
+	}
+
 	for _, token := range tokens {
-		if len(token) >= 3 && !stopWords[token] {
-			filtered = append(filtered, token)
+		if len(token) < 2 { // Allow 2-char tokens (e.g. 'cp', 'ls', 'ln')
+			continue
+		}
+		if stopWords[token] {
+			continue
+		}
+		
+		addToken(token)
+
+		// Add synonyms
+		if syns, ok := synonyms[token]; ok {
+			for _, s := range syns {
+				addToken(s)
+			}
 		}
 	}
 

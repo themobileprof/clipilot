@@ -75,7 +75,7 @@ func (ch *CommandHelper) showOptionsMenu(info *CommandInfo) error {
 		fmt.Println("What would you like to do?")
 		fmt.Println()
 		fmt.Println("  [u] Show usage/synopsis")
-		fmt.Println("  [e] Show examples")
+		fmt.Println("  [e] Show examples (uses tldr if available)")
 		fmt.Println("  [o] Show options/flags")
 		fmt.Println("  [m] Open full man page")
 		fmt.Println("  [r] Run/type the command")
@@ -129,9 +129,25 @@ func (ch *CommandHelper) showUsage(cmdName string) {
 	fmt.Println()
 }
 
-// showExamples extracts and displays the EXAMPLES section from man
+// showExamples extracts and displays the EXAMPLES section from man or tldr
 func (ch *CommandHelper) showExamples(cmdName string) {
-	fmt.Printf("\n💡 Examples for %s:\n", cmdName)
+	// 1. Try tldr first
+	if _, err := exec.LookPath("tldr"); err == nil {
+		output, err := exec.Command("tldr", cmdName).Output()
+		if err == nil && len(output) > 0 {
+			fmt.Printf("\n💡 Examples for %s (via tldr):\n", cmdName)
+			fmt.Println("─────────────────────────────────────")
+			fmt.Println(string(output))
+			fmt.Println()
+			return
+		}
+	} else {
+		// Suggest tldr
+		fmt.Println("\n(Tip: Install 'tldr' for simplified examples and cheat sheets)")
+	}
+
+	// 2. Fallback to MAN page
+	fmt.Printf("\n💡 Examples for %s (from man page):\n", cmdName)
 	fmt.Println("─────────────────────────────────────")
 
 	section := ch.extractManSection(cmdName, "EXAMPLES")

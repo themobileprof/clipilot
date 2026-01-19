@@ -74,6 +74,7 @@ func (idx *Indexer) RefreshCommandIndex() error {
 		_, err := stmt.Exec(cmdName, description, hasMan, timestamp)
 		if err != nil {
 			// Log but continue on individual command errors
+            fmt.Printf("Error inserting %s: %v\n", cmdName, err)
 			continue
 		}
 
@@ -105,56 +106,128 @@ func (idx *Indexer) RefreshCommandIndex() error {
 	return nil
 }
 
-// discoverCommands returns all executable commands using compgen -c
+// discoverCommands returns all executable commands by scanning PATH
 func (idx *Indexer) discoverCommands() ([]string, error) {
-	// Use bash to run compgen -c (bash builtin)
-	cmd := exec.Command("bash", "-c", "compgen -c | sort -u")
-	output, err := cmd.Output()
-	if err != nil {
-		return nil, fmt.Errorf("compgen failed: %w", err)
+	pathEnv := os.Getenv("PATH")
+	if pathEnv == "" {
+		// Fallback paths if PATH is empty
+		pathEnv = "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 	}
 
-	// Parse output into slice
-	lines := strings.Split(strings.TrimSpace(string(output)), "\n")
+	paths := strings.Split(pathEnv, ":")
+	uniqueCmds := make(map[string]bool)
 
-	// Filter out empty lines and aliases/functions
-	commands := []string{}
-	for _, line := range lines {
-		line = strings.TrimSpace(line)
-		if line == "" {
+	for _, dir := range paths {
+		if dir == "" {
 			continue
 		}
-		// Skip bash builtins that are not useful (like '[', ':', etc.)
-		if len(line) == 1 && !isAlphaNumeric(line) {
+
+		entries, err := os.ReadDir(dir)
+		if err != nil {
+			// Skip unreadable directories
 			continue
 		}
-		commands = append(commands, line)
+
+		for _, entry := range entries {
+			if entry.IsDir() {
+				continue
+			}
+
+			info, err := entry.Info()
+			if err != nil {
+				continue
+			}
+
+			// Check if executable (any execute bit set)
+			if info.Mode()&0111 == 0 {
+				continue
+			}
+
+			name := entry.Name()
+			// Filter out odd filenames or temporary files
+			if len(name) == 0 || name[0] == '.' {
+				continue
+			}
+
+			uniqueCmds[name] = true
+		}
+	}
+
+	if len(uniqueCmds) == 0 {
+		return nil, fmt.Errorf("no commands found in PATH")
+	}
+
+	commands := make([]string, 0, len(uniqueCmds))
+	for cmd := range uniqueCmds {
+		commands = append(commands, cmd)
 	}
 
 	return commands, nil
 }
 
-// getCommandDescription fetches description from whatis
-func (idx *Indexer) getCommandDescription(cmdName string) (string, bool) {
-	// Try whatis first
-	cmd := exec.Command("whatis", cmdName)
+// getCommandDescription fetches the short description of a command
+// Uses whatis and apropos to find the best description
+func (idx *Indexer) getCommandDescription(name string) (string, bool) {
+	// 1. Try whatis (standard and fast)
+	cmd := exec.Command("whatis", name)
 	output, err := cmd.Output()
-	if err == nil && len(output) > 0 {
-		// whatis format: "command (section) - description"
-		// Extract just the description part
-		description := strings.TrimSpace(string(output))
-
-		// Parse whatis output
-		if parts := strings.SplitN(description, " - ", 2); len(parts) == 2 {
-			return strings.TrimSpace(parts[1]), true
+	if err == nil {
+		desc := idx.parseManOutput(string(output), name)
+		if desc != "" {
+			return desc, true
 		}
-
-		// If no " - " separator, return as-is
-		return description, true
 	}
 
-	// No man page available
+	// 2. Try apropos (broader search)
+	cmd = exec.Command("apropos", name)
+	output, err = cmd.Output()
+	if err == nil {
+		desc := idx.parseManOutput(string(output), name)
+		if desc != "" {
+			return desc, true
+		}
+	}
+
 	return "", false
+}
+
+// parseManOutput extracts description from "name (sec) - description" format
+func (idx *Indexer) parseManOutput(output, name string) string {
+	lines := strings.Split(output, "\n")
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		
+		parts := strings.SplitN(line, " - ", 2)
+		if len(parts) != 2 {
+			continue
+		}
+
+		left := parts[0]
+		desc := parts[1]
+
+		// Check if 'name' is in the comma-separated list of commands
+		// e.g. "bzcmp, bzdiff (1)"
+		cmds := strings.Split(left, ",")
+		found := false
+		for _, c := range cmds {
+			c = strings.TrimSpace(c)
+			// Remove section info like " (1)" or "(1)"
+			if idx := strings.Index(c, "("); idx != -1 {
+				c = c[:idx]
+			}
+			c = strings.TrimSpace(c)
+
+			if c == name {
+				found = true
+				break
+			}
+		}
+
+		if found {
+			return strings.TrimSpace(desc)
+		}
+	}
+	return ""
 }
 
 // IsIndexed checks if commands have been indexed
@@ -273,16 +346,37 @@ func buildFTSQuery(input string) string {
     // Remove special FTS characters to prevent syntax errors
     cleaner := strings.NewReplacer("\"", "", "'", "", ":", "", "*", "", "(", "", ")", "")
     input = cleaner.Replace(input)
+    input = strings.ToLower(input)
     
     terms := strings.Fields(input)
     if len(terms) == 0 {
         return ""
     }
     
+    // Common stopwords to filter out for better keyword matching
+    stopWords := map[string]bool{
+        "how": true, "to": true, "do": true, "i": true, "a": true, "an": true, 
+        "the": true, "for": true, "with": true, "my": true, "in": true, 
+        "what": true, "is": true, "where": true, "me": true, "see": true,
+        "show": true, "tell": true, "want": true, "need": true, "check": true,
+        "files": false, // Keep important nouns/verbs
+        "delete": false, "remove": false, "folder": false, "directory": false,
+    }
+
     var queryParts []string
     for _, term := range terms {
+        if stopWords[term] {
+            continue
+        }
         // Use prefix matching for each term
         queryParts = append(queryParts, fmt.Sprintf("\"%s\"*", term))
+    }
+    
+    // If all terms were stopwords, revert to using original terms
+    if len(queryParts) == 0 {
+        for _, term := range terms {
+            queryParts = append(queryParts, fmt.Sprintf("\"%s\"*", term))
+        }
     }
     
     // OR semantics allow finding "list files" -> "list" works, even if "files" doesn't match

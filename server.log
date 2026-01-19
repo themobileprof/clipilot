@@ -1,9 +1,10 @@
+nohup: ignoring input
 CLIPilot Registry v1.0.0
-Starting server on port 8082
+Starting server on port 8081
 Data directory: ./data
 Admin user: admin
 
-2026/01/19 02:04:36 GitHub OAuth not configured (GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET required)
+2026/01/19 17:59:46 GitHub OAuth not configured (GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET required)
 ✓ Server ready at http://localhost:8080
   - Home: /
   - Health: /health
@@ -11,8 +12,5 @@ Admin user: admin
   - Upload: /upload (requires login)
   - API: /api/modules
 
-2026/01/19 02:04:41 Current enhanced commands: 0
-2026/01/19 02:04:41 ⚠️  Low command count (0 < 50), bootstrapping server commands...
-2026/01/19 02:04:43 🔍 Discovered 537 commands on server
-2026/01/19 02:04:43 ✓ Submitted 0 server commands for enhancement
-2026/01/19 02:04:43 💡 Run enhancement tool to process: ./bin/enhance --auto --limit=100
+2026/01/19 17:59:51 Current enhanced commands: 62
+2026/01/19 17:59:51 ✓ Sufficient commands (62 >= 50), skipping bootstrap
