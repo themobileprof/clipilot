@@ -11,7 +11,7 @@ import (
 	"github.com/themobileprof/clipilot/internal/db"
 	"github.com/themobileprof/clipilot/internal/modules"
 	"github.com/themobileprof/clipilot/internal/ui"
-	"github.com/themobileprof/clipilot/pkg/config"
+	"github.com/themobileprof/clipilot/internal/config"
 )
 
 var (

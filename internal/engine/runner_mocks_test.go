@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/themobileprof/clipilot/internal/mocks"
-	"github.com/themobileprof/clipilot/pkg/models"
+	"github.com/themobileprof/clipilot/internal/models"
 	_ "modernc.org/sqlite"
 )
 

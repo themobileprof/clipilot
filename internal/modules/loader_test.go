@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/themobileprof/clipilot/internal/db"
-	"github.com/themobileprof/clipilot/pkg/models"
+	"github.com/themobileprof/clipilot/internal/models"
 )
 
 func setupTestDB(t *testing.T) (*db.DB, func()) {

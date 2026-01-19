@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/themobileprof/clipilot/pkg/models"
+	"github.com/themobileprof/clipilot/internal/models"
 )
 
 // HybridMatcher implements the offline intelligence matching system

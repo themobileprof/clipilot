@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/themobileprof/clipilot/pkg/models"
+	"github.com/themobileprof/clipilot/internal/models"
 )
 
 // Client handles communication with the module registry

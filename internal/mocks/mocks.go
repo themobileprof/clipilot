@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/themobileprof/clipilot/internal/interfaces"
-	"github.com/themobileprof/clipilot/pkg/models"
+	"github.com/themobileprof/clipilot/internal/models"
 )
 
 // MockModuleStore is a mock implementation of ModuleStore for testing

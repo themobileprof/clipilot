@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"github.com/themobileprof/clipilot/internal/interfaces"
-	"github.com/themobileprof/clipilot/pkg/models"
+	"github.com/themobileprof/clipilot/internal/models"
 	"gopkg.in/yaml.v3"
 )
 

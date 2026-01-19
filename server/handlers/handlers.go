@@ -18,7 +18,7 @@ import (
 	"gopkg.in/yaml.v3"
 	_ "modernc.org/sqlite"
 
-	"github.com/themobileprof/clipilot/pkg/models"
+	"github.com/themobileprof/clipilot/internal/models"
 	"github.com/themobileprof/clipilot/server/auth"
 	"github.com/themobileprof/clipilot/server/bootstrap"
 )

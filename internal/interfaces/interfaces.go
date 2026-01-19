@@ -3,7 +3,7 @@ package interfaces
 import (
 	"database/sql"
 
-	"github.com/themobileprof/clipilot/pkg/models"
+	"github.com/themobileprof/clipilot/internal/models"
 )
 
 // IntentClassifier detects user intent from natural language input

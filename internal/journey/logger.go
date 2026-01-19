@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/themobileprof/clipilot/pkg/models"
+	"github.com/themobileprof/clipilot/internal/models"
 )
 
 // Journey represents a search session
