@@ -75,7 +75,13 @@ func New(cfg Config) *Handlers {
 	// Bootstrap: discover and submit server's own commands if low on data
 	// This runs asynchronously to not block server startup
 	go func() {
-		time.Sleep(5 * time.Second) // Wait for server to fully start
+		time.Sleep(2 * time.Second) // Small delay
+
+		// Seed builtin modules
+		if err := bootstrap.SeedBuiltinModules(db, "modules"); err != nil {
+			log.Printf("Warning: failed to seed builtin modules: %v", err)
+		}
+
 		if err := bootstrapServerCommands(db, 50); err != nil {
 			log.Printf("Warning: bootstrap failed: %v", err)
 		}

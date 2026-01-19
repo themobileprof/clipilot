@@ -6,9 +6,65 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/themobileprof/clipilot/internal/models"
+	"gopkg.in/yaml.v3"
 )
+
+// SeedBuiltinModules scans the modules directory and registers them in the database
+func SeedBuiltinModules(db *sql.DB, modulesDir string) error {
+	log.Println("🌱 Seeding builtin modules from", modulesDir)
+
+	entries, err := os.ReadDir(modulesDir)
+	if err != nil {
+		return fmt.Errorf("failed to read modules directory: %w", err)
+	}
+
+	count := 0
+	for _, entry := range entries {
+		if entry.IsDir() || (!strings.HasSuffix(entry.Name(), ".yaml") && !strings.HasSuffix(entry.Name(), ".yml")) {
+			continue
+		}
+
+		path := filepath.Join(modulesDir, entry.Name())
+		data, err := os.ReadFile(path)
+		if err != nil {
+			log.Printf("Warning: failed to read %s: %v", path, err)
+			continue
+		}
+
+		var module models.Module
+		if err := yaml.Unmarshal(data, &module); err != nil {
+			log.Printf("Warning: failed to parse %s: %v", path, err)
+			continue
+		}
+
+		// Insert or update (forcing file path to the builtin location)
+		_, err = db.Exec(`
+			INSERT INTO modules (
+				name, version, description, author, 
+				file_path, original_filename, uploaded_by, uploaded_at
+			) VALUES (?, ?, ?, ?, ?, ?, 'system', CURRENT_TIMESTAMP)
+			ON CONFLICT(name, version) DO UPDATE SET
+				file_path = excluded.file_path,
+				uploaded_by = 'system',
+				description = excluded.description
+		`, module.Name, module.Version, module.Description, module.Metadata.Author, path, entry.Name())
+
+		if err != nil {
+			log.Printf("Warning: failed to seed %s: %v", module.Name, err)
+		} else {
+			count++
+		}
+	}
+
+	log.Printf("✓ Seeded %d builtin modules", count)
+	return nil
+}
+
 
 // DiscoverAndSubmitCommands discovers commands on the server and submits them for enhancement
 func DiscoverAndSubmitCommands(db *sql.DB, minCommands int) error {
