@@ -668,16 +668,6 @@ func (h *Handlers) APIGetModule(w http.ResponseWriter, r *http.Request) {
 	h.GetModule(w, r)
 }
 
-// HandleCommandSync wraps the command sync handler
-func (h *Handlers) HandleCommandSync(w http.ResponseWriter, r *http.Request) {
-	HandleCommandSync(h.db)(w, r)
-}
-
-// HandleEnhanceCommand wraps the command enhancement handler
-func (h *Handlers) HandleEnhanceCommand(geminiAPIKey string) http.HandlerFunc {
-	return HandleEnhanceCommand(h.db, geminiAPIKey)
-}
-
 // HandleSemanticSearch wraps the semantic search handler
 func (h *Handlers) HandleSemanticSearch(geminiAPIKey string) http.HandlerFunc {
 	return HandleSemanticSearch(h.db, geminiAPIKey)
@@ -698,7 +688,7 @@ func (h *Handlers) HealthCheck(w http.ResponseWriter, r *http.Request) {
 	} else {
 		w.WriteHeader(http.StatusOK)
 	}
-	
-	fmt.Fprintf(w, `{"status": "ok", "database": "%s", "timestamp": "%s"}`, 
+
+	fmt.Fprintf(w, `{"status": "ok", "database": "%s", "timestamp": "%s"}`,
 		dbStatus, time.Now().Format(time.RFC3339))
 }
