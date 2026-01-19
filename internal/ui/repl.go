@@ -387,29 +387,40 @@ func (repl *REPL) handleQuery(input string) error {
 	// Check if it's a command (cmd:) or installable (common:)
 	if strings.HasPrefix(top.ModuleID, "cmd:") {
 		cmdName := strings.TrimPrefix(top.ModuleID, "cmd:")
-		fmt.Printf("\n✨ Found command: %s\n", cmdName)
-		fmt.Printf("   %s\n", top.Description)
+		
+		// Conversational opening based on confidence
+		if result.Confidence >= 0.8 {
+			fmt.Printf("\nI found the perfect tool for that: `%s`\n", cmdName)
+			fmt.Printf("It helps you: %s\n", top.Description)
+		} else if result.Confidence >= 0.6 {
+			fmt.Printf("\nYou can use `%s` to do that.\n", cmdName)
+			fmt.Printf("Description: %s\n", top.Description)
+		} else {
+			fmt.Printf("\nI'm not 100%% sure, but `%s` might be what you need.\n", cmdName)
+			fmt.Printf("It is used to: %s\n", top.Description)
+		}
 
 		// Show other related commands if confidence is low
 		if result.Confidence < 0.7 && len(result.Candidates) > 1 {
-			fmt.Println("\n🔍 Other related commands:")
+			fmt.Println("\nYou might also find these useful:")
 			for i := 1; i < len(result.Candidates) && i < 4; i++ {
 				name := result.Candidates[i].Name
 				if strings.HasSuffix(name, " (not installed)") {
 					continue // Skip installable suggestions for now
 				}
-				fmt.Printf("   • %s - %s\n", name, result.Candidates[i].Description)
+				fmt.Printf("   • `%s` - %s\n", name, result.Candidates[i].Description)
 			}
 		}
 
 		// Interactive menu
-		fmt.Println("\nWhat would you like to do?")
-		fmt.Println("  (Not what you need? Choose option 3 to search again)")
-		fmt.Println("  1. See detailed help (man page, usage, examples)")
-		fmt.Println("  2. Just show me the command to use")
-		fmt.Println("  3. Search for different command")
+		fmt.Printf("\nHere is how I can help you with `%s`:\n", cmdName)
+		fmt.Println("  (Not what you need? Choose option 4 to search again)")
+		fmt.Println("  1. Show me examples and usage (recommended)")
+		fmt.Println("  2. Run this command (interactive)")
+		fmt.Println("  3. Just show me the command (and exit assistant)")
+		fmt.Println("  4. No, search for a different command")
 		fmt.Println("  0. Cancel")
-		fmt.Print("\nChoice [1-3, 0]: ")
+		fmt.Print("\nChoice [1-4, 0]: ")
 
 		reader := bufio.NewReader(os.Stdin)
 		response, _ := reader.ReadString('\n')
@@ -421,15 +432,19 @@ func (repl *REPL) handleQuery(input string) error {
 			journey.GetLogger().EndJourney("describe:" + cmdName)
 			return repl.cmdHelper.DescribeCommand(cmdName)
 		case "2":
-			// Just show the command
-			journey.GetLogger().EndJourney("show:" + cmdName)
-			fmt.Printf("\n💡 Command: %s\n", cmdName)
-			fmt.Printf("   Usage: %s --help  (for full options)\n\n", cmdName)
-			return nil
+			// Run command
+			journey.GetLogger().EndJourney("run:" + cmdName)
+			return repl.cmdHelper.RunCommand(cmdName, reader)
 		case "3":
+			// Just show the command and exit
+			journey.GetLogger().EndJourney("show:" + cmdName)
+			fmt.Printf("\nYou can run it like this:\n")
+			fmt.Printf("  %s --help\n\n", cmdName)
+			return fmt.Errorf("exit")
+		case "4":
 			// Prompt for new search
 			journey.GetLogger().EndJourney("retry_search")
-			fmt.Print("\nWhat would you like to search for? ")
+			fmt.Print("\nWhat would you like to search for instead? ")
 			newQuery, _ := reader.ReadString('\n')
 			newQuery = strings.TrimSpace(newQuery)
 			if newQuery != "" {
@@ -446,8 +461,8 @@ func (repl *REPL) handleQuery(input string) error {
 	} else if strings.HasPrefix(top.ModuleID, "common:") {
 		// Installable command suggestion
 		cmdName := strings.TrimPrefix(top.ModuleID, "common:")
-		fmt.Printf("\n💡 The command '%s' is not installed, but available:\n", cmdName)
-		fmt.Printf("   %s\n\n", top.Description)
+		fmt.Printf("\nThat looks like a job for `%s`, but it's not installed yet.\n", cmdName)
+		fmt.Printf("Description: %s\n\n", top.Description)
 		return nil
 	}
 
@@ -714,33 +729,21 @@ func (repl *REPL) showLogs() error {
 
 // updateCommands indexes all available system commands
 func (repl *REPL) updateCommands() error {
-	fmt.Println("\n=== Indexing System Commands ===")
+	fmt.Println("\n=== Updating Command Catalog ===")
 
-	// Check if man is available
-	if !repl.checkManAvailable() {
-		return fmt.Errorf("man command not found - please install man pages first")
-	}
-
-	// Create indexer and run
+	// Create indexer
 	indexer := commands.NewIndexer(repl.db)
 
-	// Index installed commands
-	if err := indexer.RefreshCommandIndex(); err != nil {
-		return fmt.Errorf("indexing failed: %w", err)
-	}
-
 	// Load common commands catalog
-	fmt.Println("\nLoading common commands catalog...")
+	fmt.Println("Loading common commands catalog (for ranking priority)...")
 	if err := indexer.LoadCommonCommands(); err != nil {
 		fmt.Printf("Warning: failed to load common commands: %v\n", err)
 	} else {
 		fmt.Println("✓ Common commands catalog loaded")
 	}
 
-	// Show summary
-	count := indexer.GetCommandCount()
-	fmt.Printf("\n💡 Indexed %d commands with descriptions from man pages\n", count)
-	fmt.Println("   You can now search for any command using natural language!")
+	fmt.Println("\n💡 System commands are now discovered in real-time using 'apropos'.")
+	fmt.Println("   No need to index them manually anymore!")
 
 	return nil
 }

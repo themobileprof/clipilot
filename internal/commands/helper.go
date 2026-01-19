@@ -34,37 +34,55 @@ func (ch *CommandHelper) DescribeCommand(cmdName string) error {
 	}
 
 	// Display basic info
-	fmt.Printf("\n")
-	fmt.Printf("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n")
-	fmt.Printf("📦 Command: %s\n", info.Name)
-	fmt.Printf("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n")
-	fmt.Printf("📝 %s\n", info.Description)
+	// Display conversational intro
+	fmt.Printf("\nOkay, let's look at `%s`.\n", info.Name)
+	fmt.Printf("It is described as: %s\n", info.Description)
 	fmt.Printf("\n")
 
 	// Show options menu
 	return ch.showOptionsMenu(info)
 }
 
-// getCommandInfo retrieves command info from database
+// getCommandInfo retrieves command info directly from system (whatis)
 func (ch *CommandHelper) getCommandInfo(name string) (*CommandInfo, error) {
-	var info CommandInfo
-	err := ch.db.QueryRow(`
-		SELECT name, COALESCE(description, ''), COALESCE(has_man, 0)
-		FROM commands WHERE name = ?
-	`, name).Scan(&info.Name, &info.Description, &info.HasMan)
-
-	if err == sql.ErrNoRows {
-		// Check if command exists but not indexed
-		if ch.commandExists(name) {
-			return &CommandInfo{
-				Name:        name,
-				Description: "Command exists but description not indexed",
-				HasMan:      ch.hasManPage(name),
-			}, nil
-		}
-		return nil, fmt.Errorf("command not found")
+	// 1. Check if command exists
+	if !ch.commandExists(name) {
+		return nil, fmt.Errorf("command not found in system")
 	}
-	return &info, err
+	
+	description := "System command (no description available)"
+	
+	// 2. Try whatis for description
+	cmd := exec.Command("whatis", name)
+	output, err := cmd.Output()
+	if err == nil {
+		desc := ch.parseWhatisOutput(string(output), name)
+		if desc != "" {
+			description = desc
+		}
+	}
+	
+	return &CommandInfo{
+		Name:        name,
+		Description: description,
+		HasMan:      ch.hasManPage(name),
+	}, nil
+}
+
+// parseWhatisOutput extracts description from whatis output
+func (ch *CommandHelper) parseWhatisOutput(output, name string) string {
+	lines := strings.Split(output, "\n")
+	for _, line := range lines {
+		parts := strings.SplitN(line, " - ", 2)
+		if len(parts) == 2 {
+			// Check if left side contains the name
+			left := parts[0]
+			if strings.Contains(left, name) {
+				return strings.TrimSpace(parts[1])
+			}
+		}
+	}
+	return ""
 }
 
 // showOptionsMenu displays interactive options for the command
@@ -99,7 +117,10 @@ func (ch *CommandHelper) showOptionsMenu(info *CommandInfo) error {
 		case "m", "man":
 			ch.openManPage(info.Name)
 		case "r", "run":
-			return ch.runCommand(info.Name, reader)
+			if err := ch.RunCommand(info.Name, reader); err != nil {
+				return err
+			}
+			// Command ran, stay in menu so user can see output or run again
 		case "q", "quit", "back", "":
 			return nil
 		default:
@@ -211,8 +232,8 @@ func (ch *CommandHelper) openManPage(cmdName string) {
 	}
 }
 
-// runCommand allows user to type and execute the command
-func (ch *CommandHelper) runCommand(cmdName string, reader *bufio.Reader) error {
+// RunCommand allows user to type and execute the command
+func (ch *CommandHelper) RunCommand(cmdName string, reader *bufio.Reader) error {
 	fmt.Printf("\n🚀 Run %s\n", cmdName)
 	fmt.Println("─────────────────────────────────────")
 	fmt.Println("Type your command (or press Enter to run with no arguments):")
