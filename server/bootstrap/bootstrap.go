@@ -93,19 +93,85 @@ func DiscoverAndSubmitCommands(db *sql.DB, minCommands int) error {
 func discoverServerCommands() (map[string]string, error) {
 	commands := make(map[string]string)
 
-	// Get all commands from PATH
-	cmdList, err := getCommandsFromPATH()
-	if err != nil {
-		return nil, err
+	// 1. Start with essential commands (Robust Seeding)
+	// This ensures we always have high-quality data even in minimal environments
+	essential := getEssentialCommands()
+	for name, desc := range essential {
+		commands[name] = desc
 	}
 
-	// Get descriptions using whatis (if available)
-	for _, cmdName := range cmdList {
-		description := getCommandDescription(cmdName)
-		commands[cmdName] = description
+	// 2. Discover local commands from PATH
+	cmdList, err := getCommandsFromPATH()
+	if err == nil {
+		// Get descriptions using whatis (if available)
+		for _, cmdName := range cmdList {
+			// Don't overwrite essential commands with potentially poorer descriptions
+			if _, exists := commands[cmdName]; exists {
+				continue
+			}
+			
+			description := getCommandDescription(cmdName)
+			commands[cmdName] = description
+		}
+	} else {
+		log.Printf("Warning: PATH discovery failed, relying on essential commands: %v", err)
 	}
 
 	return commands, nil
+}
+
+// getEssentialCommands returns a hardcoded list of high-value commands
+// Used for robust seeding when local discovery is limited
+func getEssentialCommands() map[string]string {
+	return map[string]string{
+		"ls":      "list directory contents",
+		"cp":      "copy files and directories",
+		"mv":      "move (rename) files",
+		"rm":      "remove files or directories",
+		"mkdir":   "make directories",
+		"rmdir":   "remove empty directories",
+		"cd":      "change shell working directory",
+		"pwd":     "print name of current/working directory",
+		"cat":     "concatenate files and print on the standard output",
+		"less":    "opposite of more - file viewer",
+		"grep":    "print lines that match patterns",
+		"find":    "search for files in a directory hierarchy",
+		"tar":     "an archiving utility",
+		"zip":     "package and compress (archive) files",
+		"unzip":   "list, test and extract compressed files in a ZIP archive",
+		"ssh":     "OpenSSH remote login client",
+		"scp":     "OpenSSH secure file copy",
+		"rsync":   "a fast, versatile, remote (and local) file-copying tool",
+		"curl":    "transfer a URL",
+		"wget":    "The non-interactive network downloader",
+		"git":     "the stupid content tracker",
+		"docker":  "Docker image and container command line interface",
+		"ps":      "report a snapshot of the current processes",
+		"top":     "display Linux processes",
+		"htop":    "interactive process viewer",
+		"kill":    "send a signal to a process",
+		"killall": "kill processes by name",
+		"chmod":   "change file mode bits",
+		"chown":   "change file owner and group",
+		"sudo":    "execute a command as another user",
+		"df":      "report file system disk space usage",
+		"du":      "estimate file space usage",
+		"free":    "Display amount of free and used memory in the system",
+		"ip":      "show / manipulate routing, network devices, interfaces and tunnels",
+		"ping":    "send ICMP ECHO_REQUEST to network hosts",
+		"netstat": "Print network connections, routing tables, interface statistics",
+		"ss":      "another utility to investigate sockets",
+		"nmap":    "Network exploration tool and security / port scanner",
+		"man":     "an interface to the system reference manuals",
+		"whatis":  "display one-line manual page descriptions",
+		"history": "GNU History Library",
+		"echo":    "display a line of text",
+		"touch":   "change file timestamps",
+		"head":    "output the first part of files",
+		"tail":    "output the last part of files",
+		"sed":     "stream editor for filtering and transforming text",
+		"awk":     "pattern scanning and processing language",
+	}
 }
 
 // getCommandsFromPATH gets all executable commands from PATH

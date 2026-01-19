@@ -869,12 +869,27 @@ func (repl *REPL) handleModelCommand(args []string) error {
 		return nil
 	case "refresh":
 		return repl.refreshHybrid()
+	case "online":
+		if len(args) < 2 {
+			return fmt.Errorf("usage: model online <on|off>")
+		}
+		if args[1] == "on" {
+			repl.detector.SetOnlineEnabled(true)
+			fmt.Println("✓ Online semantic search enabled (will use server fallback)")
+		} else if args[1] == "off" {
+			repl.detector.SetOnlineEnabled(false)
+			fmt.Println("✓ Online semantic search disabled")
+		} else {
+			return fmt.Errorf("invalid argument: use 'on' or 'off'")
+		}
+		return nil
 	default:
 		fmt.Println("Model commands:")
 		fmt.Println("  model status    - Show offline intelligence status")
 		fmt.Println("  model enable    - Enable hybrid TF-IDF matcher")
 		fmt.Println("  model disable   - Disable offline intelligence")
 		fmt.Println("  model refresh   - Rebuild TF-IDF index")
+		fmt.Println("  model online    - Toggle online semantic search (on/off)")
 		return nil
 	}
 }
@@ -895,6 +910,14 @@ func (repl *REPL) showModelStatus() error {
 	} else {
 		fmt.Println("Status:      ○ Disabled (using keyword search)")
 		fmt.Println("             Run 'model enable' to activate")
+	}
+
+	// Check online status
+	if repl.detector.IsOnlineEnabled() {
+		fmt.Println("Online:      ✓ Enabled (Server Fallback)")
+	} else {
+		fmt.Println("Online:      ○ Disabled")
+		fmt.Println("             Run 'model online on' to activate")
 	}
 
 	// Get command stats

@@ -677,3 +677,28 @@ func (h *Handlers) HandleCommandSync(w http.ResponseWriter, r *http.Request) {
 func (h *Handlers) HandleEnhanceCommand(geminiAPIKey string) http.HandlerFunc {
 	return HandleEnhanceCommand(h.db, geminiAPIKey)
 }
+
+// HandleSemanticSearch wraps the semantic search handler
+func (h *Handlers) HandleSemanticSearch(geminiAPIKey string) http.HandlerFunc {
+	return HandleSemanticSearch(h.db, geminiAPIKey)
+}
+
+// HealthCheck returns server health status
+func (h *Handlers) HealthCheck(w http.ResponseWriter, r *http.Request) {
+	// Check DB connection
+	dbStatus := "up"
+	if err := h.db.Ping(); err != nil {
+		dbStatus = "down"
+		log.Printf("Health check failed: DB is down: %v", err)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	if dbStatus == "down" {
+		w.WriteHeader(http.StatusServiceUnavailable)
+	} else {
+		w.WriteHeader(http.StatusOK)
+	}
+	
+	fmt.Fprintf(w, `{"status": "ok", "database": "%s", "timestamp": "%s"}`, 
+		dbStatus, time.Now().Format(time.RFC3339))
+}

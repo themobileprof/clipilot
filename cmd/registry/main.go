@@ -10,7 +10,10 @@ import (
 	"path/filepath"
 	"strings"
 
+	"time"
+
 	"github.com/themobileprof/clipilot/server/handlers"
+	"github.com/themobileprof/clipilot/server/middleware"
 )
 
 var (
@@ -77,6 +80,7 @@ func main() {
 
 	// Public routes
 	mux.HandleFunc("/", h.Home)
+	mux.HandleFunc("/health", h.HealthCheck) // Health check
 	mux.HandleFunc("/modules", h.ListModules)
 	mux.HandleFunc("/modules/", h.GetModule)
 	mux.HandleFunc("/api/modules", h.APIListModules)
@@ -96,8 +100,12 @@ func main() {
 	// Command sync endpoint (public)
 	mux.HandleFunc("/api/commands/sync", h.HandleCommandSync)
 
-	// Command enhancement endpoint (admin only)
 	geminiAPIKey := getEnv("GEMINI_API_KEY", "")
+
+	// Semantic search endpoint (public)
+	mux.HandleFunc("/api/commands/search", h.HandleSemanticSearch(geminiAPIKey))
+
+	// Command enhancement endpoint (admin only)
 	if geminiAPIKey != "" {
 		mux.HandleFunc("/api/commands/enhance", h.RequireAuth(h.HandleEnhanceCommand(geminiAPIKey)))
 	}
@@ -110,6 +118,9 @@ func main() {
 	// Static files
 	mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir(staticDir))))
 
+	// Initialize Rate Limiter: 60 requests per minute
+	rateLimiter := middleware.NewRateLimiter(60, 1*time.Minute)
+
 	// Start server
 	addr := ":" + port
 	if baseURL == "" {
@@ -117,12 +128,14 @@ func main() {
 	}
 	fmt.Printf("✓ Server ready at %s\n", baseURL)
 	fmt.Println("  - Home: /")
+	fmt.Println("  - Health: /health")
 	fmt.Println("  - Modules: /modules")
 	fmt.Println("  - Upload: /upload (requires login)")
 	fmt.Println("  - API: /api/modules")
 	fmt.Println()
 
-	if err := http.ListenAndServe(addr, mux); err != nil {
+	// Wrap mux with rate limiter
+	if err := http.ListenAndServe(addr, rateLimiter.Limit(mux)); err != nil {
 		log.Fatalf("Server failed: %v", err)
 	}
 }

@@ -1,8 +1,11 @@
 package intent
 
 import (
+	"bytes"
 	"database/sql"
+	"encoding/json"
 	"fmt"
+	"net/http"
 	"os"
 	"os/exec"
 	"strings"
@@ -72,6 +75,11 @@ func (d *Detector) SetOnlineEnabled(enabled bool) {
 	d.onlineEnabled = enabled
 }
 
+// IsOnlineEnabled returns whether online fallback is enabled
+func (d *Detector) IsOnlineEnabled() bool {
+	return d.onlineEnabled
+}
+
 // Detect performs intent detection using a multi-layered approach with result fusion
 // 1. Hybrid Offline Intelligence (TF-IDF scores)
 // 2. Database FTS Search (Exact/Prefix matches)
@@ -112,10 +120,26 @@ func (d *Detector) Detect(input string) (*models.IntentResult, error) {
 		}
 	}
 
-	// Layer 3: Online LLM fallback (if enabled)
-	if d.onlineEnabled && len(candidates) == 0 {
-		// TODO: implement online LLM call
-		_ = d.onlineEnabled 
+	// Layer 3: Online Semantic Search Fallback
+	// Check if we have strong candidates
+	maxScore := 0.0
+	for _, c := range candidates {
+		if c.Score > maxScore {
+			maxScore = c.Score
+		}
+	}
+
+	if d.onlineEnabled && (len(candidates) == 0 || maxScore < 0.4) {
+		// Call remote semantic search
+		remoteResults, err := d.remoteSearch(input)
+		if err == nil && len(remoteResults) > 0 {
+			for _, c := range remoteResults {
+				// Only add if not already present with higher score
+				if existing, ok := candidates[c.ModuleID]; !ok || existing.Score < c.Score {
+					candidates[c.ModuleID] = c
+				}
+			}
+		}
 	}
 
 	// Convert map back to list
@@ -321,4 +345,63 @@ func getInstallCommand(aptPkg, pkgPkg, dnfPkg, brewPkg, archPkg string) string {
 	}
 
 	return ""
+}
+
+// remoteSearch calls the server's semantic search endpoint
+func (d *Detector) remoteSearch(query string) ([]models.Candidate, error) {
+	serverURL := os.Getenv("CLIPILOT_SERVER_URL")
+	if serverURL == "" {
+		serverURL = "http://localhost:8080"
+	}
+	
+	apiURL := fmt.Sprintf("%s/api/commands/search", serverURL)
+	
+	reqBody, _ := json.Marshal(map[string]string{
+		"query": query,
+	})
+	
+	resp, err := http.Post(apiURL, "application/json", bytes.NewBuffer(reqBody))
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("server error: %s", resp.Status)
+	}
+	
+	// Define response structure locally to match server response
+	type geminiEnhancement struct {
+		EnhancedDescription string   `json:"enhanced_description"`
+		Keywords            []string `json:"keywords"`
+		Category            string   `json:"category"`
+		UseCases            []string `json:"use_cases"`
+	}
+	
+	var data struct {
+		Candidates []geminiEnhancement `json:"candidates"`
+	}
+	
+	if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
+		return nil, err
+	}
+	
+	candidates := []models.Candidate{}
+	for _, c := range data.Candidates {
+		// Use first keyword as command name if possible, or fallback
+		name := "unknown"
+		if len(c.Keywords) > 0 {
+			name = c.Keywords[0]
+		}
+		
+		candidates = append(candidates, models.Candidate{
+			ModuleID:    "remote:" + name,
+			Name:        name + " (AI Suggested)",
+			Description: c.EnhancedDescription,
+			Score:       0.9, // High confidence for AI result
+			Tags:        append(c.Keywords, "ai-suggested"),
+		})
+	}
+	
+	return candidates, nil
 }

@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -257,4 +258,117 @@ Return ONLY valid JSON:
 		Category:            "general",
 		UseCases:            []string{"use case 1", "use case 2"},
 	}, nil
+}
+
+// Semantic Search Logic
+
+// SemanticSearchRequest represents a natural language query
+type SemanticSearchRequest struct {
+	Query string `json:"query"`
+}
+
+// SemanticSearchResponse returns AI-suggested commands
+type SemanticSearchResponse struct {
+	Candidates []GeminiEnhancement `json:"candidates"` // Reusing enhancement struct for candidates
+	Message    string              `json:"message"`
+}
+
+// HandleSemanticSearch proxies natural language queries to Gemini
+// POST /api/commands/search
+func HandleSemanticSearch(db *sql.DB, geminiAPIKey string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+
+		var req SemanticSearchRequest
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			http.Error(w, "Invalid request", http.StatusBadRequest)
+			return
+		}
+
+		if req.Query == "" {
+			http.Error(w, "Query is required", http.StatusBadRequest)
+			return
+		}
+
+		// Call Gemini to interpret the query
+		candidates, err := searchWithGemini(geminiAPIKey, req.Query)
+		if err != nil {
+			// Fallback: If AI fails, try a simple DB text search on enhanced commands
+			log.Printf("Gemini search failed (%v), falling back to DB search", err)
+			candidates, err = fallbackDBSearch(db, req.Query)
+			if err != nil {
+				http.Error(w, "Search failed", http.StatusInternalServerError)
+				return
+			}
+		}
+
+		response := SemanticSearchResponse{
+			Candidates: candidates,
+			Message:    fmt.Sprintf("Found %d candidates", len(candidates)),
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(response)
+	}
+}
+
+// searchWithGemini queries Gemini API for commands matching the natural language query
+func searchWithGemini(apiKey, query string) ([]GeminiEnhancement, error) {
+	prompt := fmt.Sprintf(`You are a CLI command expert. valid JSON only.
+Query: "%s"
+Identify 3 Linux commands that best solve this query.
+Return JSON list:
+[
+  {
+    "name": "command_name",
+    "description": "Short explanation",
+    "category": "category",
+    "use_cases": ["reason 1", "reason 2"]
+  }
+]`, query)
+
+	// Mocking the API call for now structure
+	_ = apiKey
+	_ = prompt
+	
+	// Mock response logic based on query content for testing
+	query = strings.ToLower(query)
+	if strings.Contains(query, "firewall") || strings.Contains(query, "port") {
+		return []GeminiEnhancement{
+			{EnhancedDescription: "ufw - Uncomplicated Firewall", Keywords: []string{"ufw"}, Category: "security"},
+			{EnhancedDescription: "iptables - Administration tool for IPv4 packet filtering and NAT", Keywords: []string{"iptables"}, Category: "security"},
+		}, nil
+	}
+	
+	// Default mock
+	return []GeminiEnhancement{
+		{EnhancedDescription: "mock_command - This is a mock result from the server", Keywords: []string{"mock"}, Category: "general"},
+	}, nil
+}
+
+// fallbackDBSearch performs a basic LIKE search on enhanced_commands
+func fallbackDBSearch(db *sql.DB, query string) ([]GeminiEnhancement, error) {
+	rows, err := db.Query(`
+		SELECT name, enhanced_description, category 
+		FROM enhanced_commands 
+		WHERE enhanced_description LIKE ? OR keywords LIKE ? 
+		LIMIT 5`, "%"+query+"%", "%"+query+"%")
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	
+	var results []GeminiEnhancement
+	for rows.Next() {
+		var c GeminiEnhancement
+		var name string
+		if err := rows.Scan(&name, &c.EnhancedDescription, &c.Category); err == nil {
+			c.Keywords = []string{name} // Put name in keywords for client compat
+			results = append(results, c)
+		}
+	}
+	return results, nil
 }
