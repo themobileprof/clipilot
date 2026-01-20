@@ -21,10 +21,8 @@ import (
 	"github.com/themobileprof/clipilot/internal/models"
 	"github.com/themobileprof/clipilot/server/auth"
 	"github.com/themobileprof/clipilot/server/bootstrap"
+	"github.com/themobileprof/clipilot/server/migrations"
 )
-
-//go:embed migration.sql
-var migrationSQL string
 
 type Config struct {
 	UploadsDir         string
@@ -66,7 +64,11 @@ func New(cfg Config) *Handlers {
 	}
 
 	// Run migrations
-	if _, err := db.Exec(migrationSQL); err != nil {
+	initialSchema, err := migrations.GetInitialSchema()
+	if err != nil {
+		log.Fatalf("Failed to load initial schema: %v", err)
+	}
+	if _, err := db.Exec(initialSchema); err != nil {
 		log.Fatalf("Failed to run migrations: %v", err)
 	}
 

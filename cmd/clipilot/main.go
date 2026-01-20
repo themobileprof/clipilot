@@ -47,7 +47,7 @@ func main() {
 
 	if showVersion {
 		fmt.Printf("CLIPilot v%s\n", version)
-		fmt.Println("Lightweight CLI Assistant for Linux")
+		fmt.Println("Offline CLI Assistant for Linux")
 		return
 	}
 

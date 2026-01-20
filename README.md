@@ -245,7 +245,29 @@ clipilot modules list
 clipilot modules install docker_setup
 ```
 
-## 🧩 Module System
+## � Offline Intelligence & Advanced Features
+
+CLIPilot includes powerful features for enhanced detection and connectivity, which are opt-in or configurable.
+
+### Offline Hybrid Matcher
+Enable the local TF-IDF based hybrid matcher for smarter command detection without internet. This uses text normalization and vector-like similarity search purely in Go.
+
+- `model enable` - Activate TF-IDF + intent detection
+- `model disable` - Revert to standard keyword matching
+- `model status` - Check current status
+- `model refresh` - Rebuild the local index
+
+### Online Semantic Search
+Enable fallback to the server's LLM-based semantic search for complex queries when local detection fails.
+
+- `model online on` - Enable online fallback (requires internet)
+- `model online off` - Disable online fallback
+
+### Catalog & Registry Management
+- `update-commands` - Re-scan local man pages and populate the "common commands" catalog. **Run this after installing new system tools.**
+- `sync` - Download the latest certified modules from the official registry.
+
+## �🧩 Module System
 
 ### Module Structure
 
