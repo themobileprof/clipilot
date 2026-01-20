@@ -354,13 +354,12 @@ func (d *Detector) keywordSearchCommands(input string) (*models.IntentResult, er
 			}
 
 			// Not installed
-			score := 0.85
 			name := cmd.Name
-			desc := cmd.Description
+			description := cmd.Description
 			
 			name += " (not installed)"
-			desc += " - " + cmd.GetInstallCommand()
-			score = 0.65 // Slightly lower but still visible
+			description += " - " + cmd.GetInstallCommand()
+			score := 0.65 // Slightly lower but still visible
 
 			candidates = append(candidates, models.Candidate{
 				ModuleID:    "common:" + cmd.Name,

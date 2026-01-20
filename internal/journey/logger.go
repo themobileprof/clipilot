@@ -121,8 +121,8 @@ func (l *Logger) EndJourney(selection string) {
 	defer f.Close()
 
 	data, _ := json.Marshal(l.current)
-	f.Write(data)
-	f.WriteString("\n")
+	_, _ = f.Write(data)
+	_, _ = f.WriteString("\n")
 
 	l.current = nil // Reset
 }

@@ -65,7 +65,7 @@ func HandleSemanticSearch(db *sql.DB, geminiAPIKey string) http.HandlerFunc {
 				Cached:     true,
 			}
 			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(response)
+			_ = json.NewEncoder(w).Encode(response)
 			return
 		}
 
@@ -89,7 +89,7 @@ func HandleSemanticSearch(db *sql.DB, geminiAPIKey string) http.HandlerFunc {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(response)
+		_ = json.NewEncoder(w).Encode(response)
 	}
 }
 

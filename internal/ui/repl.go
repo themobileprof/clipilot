@@ -760,21 +760,7 @@ func (repl *REPL) updateCommands() error {
 	return nil
 }
 
-// checkManAvailable verifies man command is installed
-func (repl *REPL) checkManAvailable() bool {
-	var cmdExists bool
-	err := repl.db.QueryRow(`
-		SELECT COUNT(*) > 0 FROM commands WHERE name = 'man'
-	`).Scan(&cmdExists)
 
-	if err == nil && cmdExists {
-		return true
-	}
-
-	// Fallback: check if man command exists via system
-	// This will be true on first run before indexing
-	return true // We'll let the indexer fail if man is truly unavailable
-}
 
 // ExecuteNonInteractive runs a command non-interactively
 func (repl *REPL) ExecuteNonInteractive(input string) error {
