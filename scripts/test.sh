@@ -90,7 +90,7 @@ case "${1:-all}" in
     
     config)
         echo "Running config tests..."
-        run_test "Config Tests" "go test -v ./pkg/config"
+        run_test "Config Tests" "go test -v ./internal/config"
         ;;
     
     ci)
@@ -107,7 +107,7 @@ case "${1:-all}" in
     
     quick)
         echo "Running quick test (no race detector)..."
-        run_test "Quick Tests" "go test ./internal/... ./pkg/..."
+        run_test "Quick Tests" "go test ./internal/..."
         ;;
     
     verbose)

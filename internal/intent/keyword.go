@@ -103,7 +103,24 @@ func (d *Detector) Detect(input string) (*models.IntentResult, error) {
 	}
 	logger.AddStep("apropos", countMan, topScoreMan, time.Since(startMan), "")
 
-	// Layer 2: Common Commands Catalog (DB) - Intent-based fallback
+	// Layer 2: Keyword Search (Modules & Cached Commands)
+	// This covers intent_patterns and FTS on local DB
+	kwResults, err := d.keywordSearch(input)
+	if err == nil {
+		for _, c := range kwResults.Candidates {
+			// Don't overwrite higher score from apropos if exists, but usually keyword is better structured
+			if existing, ok := candidates[c.ModuleID]; ok {
+				if c.Score > existing.Score {
+					candidates[c.ModuleID] = c
+				}
+			} else {
+				candidates[c.ModuleID] = c
+			}
+		}
+		// logger.AddStep("keyword", len(kwResults.Candidates), 0, 0, "") 
+	}
+
+	// Layer 3: Common Commands Catalog (DB) - Intent-based fallback
 	// If live search found nothing or low confidence, search our curated catalog
 	maxScore := topScoreMan
 	if maxScore < 0.6 {
@@ -296,9 +313,69 @@ func (d *Detector) searchSystemManPages(input string) ([]models.Candidate, error
 
 // keywordSearch performs token-based search against intent_patterns
 func (d *Detector) keywordSearch(input string) (*models.IntentResult, error) {
-    // This function can remain as is for finding MODULES by pattern
-    // Ideally we should inject FTS here too for module descriptions, but let's focus on commands first
-	return d.keywordSearchCommands(input) // Reuse our enhanced search
+	tokens := tokenize(input)
+	if len(tokens) == 0 {
+		return &models.IntentResult{Candidates: []models.Candidate{}}, nil
+	}
+
+	// 1. Search Intent Patterns for Modules
+	query := `
+		SELECT m.id, m.name, m.version, m.description, p.weight
+		FROM intent_patterns p
+		JOIN modules m ON p.module_id = m.id
+		WHERE p.pattern LIKE ?
+	`
+	
+	candidates := []models.Candidate{}
+	seen := make(map[string]bool)
+
+	for _, token := range tokens {
+		rows, err := d.db.Query(query, "%"+token+"%")
+		if err != nil {
+			continue
+		}
+		// Don't defer inside loop, close manually
+		
+		for rows.Next() {
+			var modID, modName, modVer, modDesc string
+			var weight float64
+			if err := rows.Scan(&modID, &modName, &modVer, &modDesc, &weight); err != nil {
+				continue
+			}
+
+			if seen[modID] { continue }
+			seen[modID] = true
+
+			candidates = append(candidates, models.Candidate{
+				ModuleID:    modID,
+				Name:        modName,
+				Description: modDesc,
+				Score:       0.7 * weight,
+				Tags:        []string{"module", "keyword"},
+			})
+		}
+		rows.Close()
+	}
+
+	// 2. Also search commands
+	cmdRes, err := d.keywordSearchCommands(input)
+	if err == nil && cmdRes != nil {
+		candidates = append(candidates, cmdRes.Candidates...)
+	}
+
+	// Calculate top confidence
+	var maxConf float64
+	for _, c := range candidates {
+		if c.Score > maxConf {
+			maxConf = c.Score
+		}
+	}
+
+	return &models.IntentResult{
+		Candidates: candidates,
+		Confidence: maxConf,
+		Method:     "hybrid",
+	}, nil
 }
 
 // keywordSearchCommands performs search using the FTS-enabled Indexer

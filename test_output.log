@@ -1,0 +1,37 @@
+?   	github.com/themobileprof/clipilot/cmd/clipilot	[no test files]
+?   	github.com/themobileprof/clipilot/cmd/registry	[no test files]
+ok  	github.com/themobileprof/clipilot/internal/commands	(cached)
+ok  	github.com/themobileprof/clipilot/internal/config	(cached)
+ok  	github.com/themobileprof/clipilot/internal/db	(cached)
+ok  	github.com/themobileprof/clipilot/internal/engine	(cached)
+--- FAIL: TestTokenize (0.00s)
+    keyword_test.go:122: For input "install mysql database": expected 3 tokens, got 4
+    keyword_test.go:127: For input "copy_file from source to destination": expected token "file" at position 1, got "duplicate"
+    keyword_test.go:127: For input "copy_file from source to destination": expected token "from" at position 2, got "file"
+    keyword_test.go:122: For input "Setup Git Config": expected 3 tokens, got 4
+    keyword_test.go:122: For input "ab cd ef": expected 0 tokens, got 3
+--- FAIL: TestDetectWithNoModules (0.12s)
+    keyword_test.go:149: Expected empty module ID, got cmd:install
+    keyword_test.go:153: Expected confidence 0.0, got 0.600000
+    keyword_test.go:157: Expected 0 candidates, got 11
+--- FAIL: TestDetectWithCommand (0.09s)
+    keyword_test.go:187: Expected at least one candidate
+    keyword_test.go:191: Expected non-zero confidence
+--- FAIL: TestKeywordSearchModule (0.02s)
+    keyword_test.go:248: Expected at least one candidate
+    keyword_test.go:252: Expected non-zero confidence
+FAIL
+FAIL	github.com/themobileprof/clipilot/internal/intent	0.313s
+?   	github.com/themobileprof/clipilot/internal/interfaces	[no test files]
+?   	github.com/themobileprof/clipilot/internal/journey	[no test files]
+?   	github.com/themobileprof/clipilot/internal/mocks	[no test files]
+?   	github.com/themobileprof/clipilot/internal/models	[no test files]
+ok  	github.com/themobileprof/clipilot/internal/modules	(cached)
+?   	github.com/themobileprof/clipilot/internal/registry	[no test files]
+?   	github.com/themobileprof/clipilot/internal/ui	[no test files]
+?   	github.com/themobileprof/clipilot/server/auth	[no test files]
+?   	github.com/themobileprof/clipilot/server/bootstrap	[no test files]
+?   	github.com/themobileprof/clipilot/server/handlers	[no test files]
+?   	github.com/themobileprof/clipilot/server/middleware	[no test files]
+?   	github.com/themobileprof/clipilot/server/migrations	[no test files]
+FAIL
