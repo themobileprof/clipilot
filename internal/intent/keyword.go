@@ -364,7 +364,7 @@ func (d *Detector) keywordSearchCommands(input string) (*models.IntentResult, er
 			candidates = append(candidates, models.Candidate{
 				ModuleID:    "common:" + cmd.Name,
 				Name:        name,
-				Description: desc,
+				Description: description,
 				Score:       score,
 				Tags:        []string{"catalog", cmd.Category},
 			})
