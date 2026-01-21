@@ -74,71 +74,11 @@ jobs:
           name: ${{ matrix.name }}
           path: ${{ matrix.name }}
 
-  build-android:
-    name: Build Android Binaries
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        include:
-          - goarch: arm64
-            name: clipilot-android-arm64
-            ndk_arch: aarch64
-          - goarch: arm
-            goarm: 7
-            name: clipilot-android-armv7
-            ndk_arch: armv7a
 
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: '1.24'
-
-      - name: Install Android NDK
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y wget unzip
-          wget https://dl.google.com/android/repository/android-ndk-r26d-linux.zip
-          unzip -q android-ndk-r26d-linux.zip
-          echo "NDK_HOME=$PWD/android-ndk-r26d" >> $GITHUB_ENV
-
-      - name: Get dependencies
-        run: go mod download
-
-      - name: Build Android binary
-        run: |
-          export PATH=$NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin:$PATH
-          
-          # Set up compiler based on architecture
-          if [ "${{ matrix.goarch }}" = "arm64" ]; then
-            export CC=aarch64-linux-android21-clang
-            export CXX=aarch64-linux-android21-clang++
-          else
-            export CC=armv7a-linux-androideabi21-clang
-            export CXX=armv7a-linux-androideabi21-clang++
-          fi
-          
-          echo "Building for Android ${{ matrix.goarch }} with CC=$CC..."
-          # Build with semantic search disabled for Android (no ONNX Runtime libraries available)
-          CGO_ENABLED=0 GOOS=android GOARCH=${{ matrix.goarch }} GOARM=${{ matrix.goarm }} \
-            go build -tags=nosemantic -ldflags="-s -w" -o ${{ matrix.name }} ./cmd/clipilot
-          
-          # Verify binary was created
-          ls -lh ${{ matrix.name }}
-          chmod +x ${{ matrix.name }}
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ matrix.name }}
-          path: ${{ matrix.name }}
 
   release:
     name: Create Release
-    needs: [build, build-android, build-modules]
+    needs: [build, build-modules]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
