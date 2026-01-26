@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -421,7 +420,7 @@ func (idx *Indexer) LoadCommonCommands() error {
 	if len(commonCommandsYaml) == 0 {
 		return fmt.Errorf("embedded common commands data is empty")
 	}
-	data = commonCommandsYaml
+	data := commonCommandsYaml
 
 	// Parse YAML
 	var commands []CommonCommand
