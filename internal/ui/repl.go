@@ -476,6 +476,12 @@ func (repl *REPL) handleQuery(input string, retryCount int) error {
 		fmt.Printf("\nThat looks like a job for `%s`, but it's not installed yet.\n", cmdName)
 		fmt.Printf("Description: %s\n\n", top.Description)
 		return nil
+	} else {
+		// It's a runnable module
+		fmt.Printf("\nI found a module that can help: `%s`\n", top.Name)
+		fmt.Printf("Description: %s\n", top.Description)
+		fmt.Printf("To run it, type: run %s\n", top.ModuleID)
+		return nil
 	}
 
 	return nil

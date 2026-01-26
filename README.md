@@ -140,22 +140,6 @@ tar -xzf clipilot-modules.tar.gz
 clipilot --init --load=~/.clipilot/modules
 ```
 
-#### From Source (For Developers)
-```bash
-git clone https://github.com/themobileprof/clipilot.git
-cd clipilot
-go mod download
-go build -o clipilot ./cmd/clipilot
-sudo mv clipilot /usr/local/bin/
-
-# Download modules and initialize
-mkdir -p ~/.clipilot/modules
-cp modules/*.yaml ~/.clipilot/modules/
-clipilot --init --load=~/.clipilot/modules
-```
-
-
-
 ### First Run
 
 ```bash
@@ -512,46 +496,15 @@ docker run -d -p 8080:8080 your-username/clipilot-registry:latest
 - **Command Visibility**: See exactly what will run before confirming
 - **Dry-Run Mode**: Preview all actions without execution
 
-## 🧪 Development
+## 🤝 Contributing
 
-### Prerequisites
+We love contributions! If you're interested in building modules, fixing bugs, or improving the documentation, please check out our [Contributing Guide](CONTRIBUTING.md).
 
-- Go 1.21 or higher
-- SQLite3
-- No CGO required - pure Go implementation
-
-### Building from Source
-
-```bash
-# Clone repository
-git clone https://github.com/themobileprof/clipilot.git
-cd clipilot
-
-# Install dependencies
-go mod download
-
-# Build binary
-go build -o clipilot ./cmd/clipilot
-
-# Run locally
-./clipilot --init --load=modules
-./clipilot
-```
-
-### Running Tests
-
-```bash
-# Unit tests
-go test ./internal/... ./pkg/...
-
-# Integration tests
-go test -tags=integration ./...
-
-# With coverage
-go test -cover ./...
-go test -coverprofile=coverage.out ./...
-go tool cover -html=coverage.out
-```
+It covers:
+- Setting up your development environment
+- Building from source
+- Creating custom modules
+- Running tests
 
 
 ## 🌐 Community Module Registry
