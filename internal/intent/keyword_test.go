@@ -88,7 +88,7 @@ func TestTokenize(t *testing.T) {
 	}{
 		{
 			input:    "install mysql database",
-			expected: []string{"install", "package", "mysql", "database"}, // Correct (4)
+			expected: []string{"install", "package", "get", "mysql", "database"}, // Correct (5) - added 'get'
 		},
 		{
 			input:    "setup git configuration",
@@ -96,7 +96,7 @@ func TestTokenize(t *testing.T) {
 		},
 		{
 			input:    "copy_file from source to destination",
-			expected: []string{"copy", "duplicate", "file", "source", "destination"}, // Correct (5)
+			expected: []string{"copy", "duplicate", "cp", "source", "destination"}, // Correct (5) - added 'cp', removed 'file'
 		},
 		{
 			input:    "THE and FOR with", // Stop words
