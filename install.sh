@@ -299,7 +299,14 @@ if [ "$IS_TERMUX" = true ]; then
     
     # Build man database
     if command -v mandb &> /dev/null; then
-        mandb -q >/dev/null 2>&1 && echo -e "${GREEN}✓ Man database built${NC}"
+        echo "Building man database (this may take a moment)..."
+        if mandb -q >/dev/null 2>&1; then
+            echo -e "${GREEN}✓ Man database built${NC}"
+        else
+            echo -e "${YELLOW}⚠️  Man database build warning (search might be limited)${NC}"
+        fi
+    else
+        echo -e "${YELLOW}⚠️  'mandb' not found - system command search will be limited${NC}"
     fi
 else
     # Regular Linux: Check for man-db
