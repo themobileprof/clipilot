@@ -292,9 +292,15 @@ if [ "$IS_TERMUX" = true ]; then
     # Termux: Ensure man and man-pages are installed
     echo "Checking/Installing man pages..."
     pkg update -y
-    pkg install -y man man-pages
+    pkg install -y man
 
-    echo -e "${GREEN}✓ Verification: $(command -v man)${NC}"
+    # Strictly verify installation
+    if ! command -v man &> /dev/null; then
+        echo -e "${RED}✗ Failed to install 'man' automatically.${NC}"
+        echo -e "${YELLOW}Please run the following command manually and then restart the installer:${NC}"
+        echo -e "\n    pkg install man\n"
+        exit 1
+    fi
     
     # Build man database
     echo "Building man database..."

@@ -2,6 +2,7 @@ package commands
 
 import (
 	"database/sql"
+	_ "embed"
 	"fmt"
 	"os"
 	"os/exec"
@@ -11,6 +12,9 @@ import (
 
 	"gopkg.in/yaml.v3"
 )
+
+//go:embed common_commands.yaml
+var commonCommandsYaml []byte
 
 // Indexer handles command discovery and indexing
 type Indexer struct {
@@ -412,29 +416,12 @@ type CommonCommand struct {
 
 // LoadCommonCommands loads common commands catalog into database
 func (idx *Indexer) LoadCommonCommands() error {
-	// Read from filesystem
-	var data []byte
-	var err error
-
-	// Try current working directory first
-	cwd, _ := os.Getwd()
-	dataPath := filepath.Join(cwd, "data", "common_commands.yaml")
-	data, err = os.ReadFile(dataPath)
-	if err != nil {
-		// Try relative to executable
-		execPath, _ := os.Executable()
-		dataPath = filepath.Join(filepath.Dir(execPath), "..", "data", "common_commands.yaml")
-		data, err = os.ReadFile(dataPath)
-		if err != nil {
-			// Try ~/.clipilot/data/common_commands.yaml
-			homeDir, _ := os.UserHomeDir()
-			dataPath = filepath.Join(homeDir, ".clipilot", "data", "common_commands.yaml")
-			data, err = os.ReadFile(dataPath)
-			if err != nil {
-				return fmt.Errorf("failed to read common commands data from any path: %w", err)
-			}
-		}
+	// Read from embedded data
+	// data is predefined via go:embed
+	if len(commonCommandsYaml) == 0 {
+		return fmt.Errorf("embedded common commands data is empty")
 	}
+	data = commonCommandsYaml
 
 	// Parse YAML
 	var commands []CommonCommand

@@ -12,6 +12,7 @@ import (
 	"github.com/themobileprof/clipilot/internal/modules"
 	"github.com/themobileprof/clipilot/internal/ui"
 	"github.com/themobileprof/clipilot/internal/config"
+	"github.com/themobileprof/clipilot/internal/commands"
 )
 
 var (
@@ -126,6 +127,12 @@ func initializeDB(database *db.DB, modulesDir string) error {
 
 	// Database is already initialized in db.New()
 	fmt.Println("✓ Database initialized")
+
+	// Load common commands catalog
+	fmt.Print("Loading common commands... ")
+	if err := commands.NewIndexer(database.Conn()).LoadCommonCommands(); err != nil {
+		fmt.Printf("Warning: failed to load common commands: %v\n", err)
+	}
 
 	// Load modules if directory specified
 	if modulesDir != "" {

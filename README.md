@@ -75,7 +75,6 @@ CLIPilot is an intelligent command-line assistant designed for developers and op
 CLIPilot is designed with Termux as a **first-class platform**! Pure Go binaries work instantly:
 
 ```bash
-# One-line install (downloads pre-built binary, no compilation!)
 curl -fsSL https://raw.githubusercontent.com/themobileprof/clipilot/main/install.sh | bash
 ```
 

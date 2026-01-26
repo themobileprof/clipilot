@@ -88,41 +88,56 @@ func (d *Detector) Detect(input string) (*models.IntentResult, error) {
 	
 	candidates := make(map[string]models.Candidate)
 	
-	// Layer 1: Live System Search (apropos)
-	startMan := time.Now()
-	manResults, err := d.searchSystemManPages(input)
-	countMan := 0
-	topScoreMan := 0.0
-	
+	// Layer 1: Keyword Search (Modules & Cached/Common Commands)
+	// This covers intent_patterns and FTS on local DB (Curated List).
+	// We prioritize this because it uses our clean, vetted descriptions.
+	kwResults, err := d.keywordSearch(input)
+	var topScoreKW float64
 	if err == nil {
-		for _, c := range manResults {
-			countMan++
-			if c.Score > topScoreMan { topScoreMan = c.Score }
+		for _, c := range kwResults.Candidates {
+			if c.Score > topScoreKW { topScoreKW = c.Score }
 			candidates[c.ModuleID] = c
 		}
 	}
-	logger.AddStep("apropos", countMan, topScoreMan, time.Since(startMan), "")
 
-	// Layer 2: Keyword Search (Modules & Cached Commands)
-	// This covers intent_patterns and FTS on local DB
-	kwResults, err := d.keywordSearch(input)
-	if err == nil {
-		for _, c := range kwResults.Candidates {
-			// Don't overwrite higher score from apropos if exists, but usually keyword is better structured
-			if existing, ok := candidates[c.ModuleID]; ok {
-				if c.Score > existing.Score {
+	// Optimization: If we found a high-confidence match (e.g. curated command installed locally),
+	// bypass the slow and potentially fragile system man page search.
+	// Common commands (cp, ls, git) will typically score >= 0.8 via FTS if installed.
+	runApropos := true
+	if topScoreKW >= 0.85 {
+		runApropos = false
+		logger.AddStep("keyword_hit", len(kwResults.Candidates), topScoreKW, 0, "bypassed_man")
+	}
+
+	var topScoreMan float64
+	// Layer 2: Live System Search (apropos) - Fallback for unknown commands
+	if runApropos {
+		startMan := time.Now()
+		manResults, err := d.searchSystemManPages(input)
+		countMan := 0
+		
+		if err == nil {
+			for _, c := range manResults {
+				countMan++
+				if c.Score > topScoreMan { topScoreMan = c.Score }
+				// Only add if better than existing
+				if existing, ok := candidates[c.ModuleID]; ok {
+					if c.Score > existing.Score {
+						candidates[c.ModuleID] = c
+					}
+				} else {
 					candidates[c.ModuleID] = c
 				}
-			} else {
-				candidates[c.ModuleID] = c
 			}
 		}
-		// logger.AddStep("keyword", len(kwResults.Candidates), 0, 0, "") 
+		logger.AddStep("apropos", countMan, topScoreMan, time.Since(startMan), "")
 	}
 
 	// Layer 3: Common Commands Catalog (DB) - Intent-based fallback
-	// If live search found nothing or low confidence, search our curated catalog
-	maxScore := topScoreMan
+	// If live search found nothing or low confidence, search our curated catalog for NOT installed suggestions
+	maxScore := topScoreKW
+	if topScoreMan > maxScore { maxScore = topScoreMan }
+
 	if maxScore < 0.6 {
 		startDB := time.Now()
 		// Simple LIKE search on catalog
