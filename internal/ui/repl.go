@@ -484,7 +484,7 @@ func (repl *REPL) handleQuery(input string, retryCount int) error {
 		return nil
 	}
 
-	return nil
+
 }
 
 // handleModulesCommand handles module management commands
