@@ -359,7 +359,7 @@ func buildFTSQuery(input string) string {
         "the": true, "for": true, "with": true, "my": true, "in": true, 
         "what": true, "is": true, "where": true, "me": true, "see": true,
         "show": true, "tell": true, "want": true, "need": true, "check": true,
-        "files": false, // Keep important nouns/verbs
+        "files": true, "file": true, "output": true,
         "delete": false, "remove": false, "folder": false, "directory": false,
     }
 

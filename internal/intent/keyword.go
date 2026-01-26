@@ -472,6 +472,7 @@ func tokenize(text string) []string {
 	tokens := strings.Fields(text)
 
 	// Filter short tokens and common stop words
+	// Filter short tokens and common stop words
 	stopWords := map[string]bool{
 		"the": true, "and": true, "for": true, "with": true,
 		"how": true, "can": true, "what": true, "where": true,
@@ -482,21 +483,23 @@ func tokenize(text string) []string {
 		"want": true, "need": true, "like": true, "to": true,
 		"do": true, "a": true, "an": true, "in": true,
 		"on": true, "at": true, "from": true, "by": true,
+		// Generic nouns that cause false positives
+		"file": true, "files": true, "output": true,
 	}
 
 	// Synonyms for better man page matching
 	synonyms := map[string][]string{
-		"folder":   {"directory"},
+		"folder":   {"directory", "dir"},
 		"folders":  {"directory"},
 		"dir":      {"directory"},
-		"make":     {"create", "build"}, // 'make' matches 'make', 'create' matches 'mkdir'
-		"delete":   {"remove"},
-		"del":      {"remove"},
-		"remove":   {"delete"},
-		"move":     {"rename"},
-		"copy":     {"duplicate"},
-		"edit":     {"editor", "modify", "change"},
-		"download": {"fetch", "get", "retrieve"},
+		"make":     {"create", "build", "mkdir"}, 
+		"delete":   {"remove", "rm"},
+		"del":      {"remove", "rm"},
+		"remove":   {"delete", "rm"},
+		"move":     {"rename", "mv"},
+		"copy":     {"duplicate", "cp"},
+		"edit":     {"editor", "modify", "change", "nano", "vim"},
+		"download": {"fetch", "get", "retrieve", "wget", "curl"},
 		"web":      {"internet", "url"},
 		"ram":      {"memory"},
 		"mem":      {"memory"},
@@ -506,9 +509,9 @@ func tokenize(text string) []string {
 		"unzip":    {"extract", "archive", "zip"},
 		"zip":      {"archive", "compress"},
 		"config":   {"configuration"},
-		"install":  {"package"},
+		"install":  {"package", "get"},
 		"kill":     {"terminate", "process"},
-		"list":     {"show", "display"},
+		"list":     {"show", "display", "ls"},
 	}
 
 	filtered := []string{}
