@@ -288,25 +288,22 @@ echo -e "${GREEN}✓ Binary verified${NC}"
 echo ""
 echo "📚 Installing man pages for command indexing..."
 if [ "$IS_TERMUX" = true ]; then
-    # Termux: Install man and man-pages
-    if ! command -v man &> /dev/null; then
-        pkg update -y >/dev/null 2>&1
-        pkg install -y man man-pages >/dev/null 2>&1
-        echo -e "${GREEN}✓ Installed man and man-pages${NC}"
-    else
-        echo -e "${GREEN}✓ man already installed${NC}"
-    fi
+    # Termux: Ensure man and man-pages are installed
+    echo "Checking/Installing man pages..."
+    pkg update -y
+    pkg install -y man man-pages
+
+    echo -e "${GREEN}✓ Verification: $(command -v man)${NC}"
     
     # Build man database
+    echo "Building man database..."
     if command -v mandb &> /dev/null; then
-        echo "Building man database (this may take a moment)..."
-        if mandb -q >/dev/null 2>&1; then
-            echo -e "${GREEN}✓ Man database built${NC}"
-        else
-            echo -e "${YELLOW}⚠️  Man database build warning (search might be limited)${NC}"
-        fi
+        mandb && echo -e "${GREEN}✓ Man database built (mandb)${NC}"
+    elif command -v makewhatis &> /dev/null; then
+        makewhatis && echo -e "${GREEN}✓ Man database built (makewhatis)${NC}"
     else
-        echo -e "${YELLOW}⚠️  'mandb' not found - system command search will be limited${NC}"
+        echo -e "${YELLOW}⚠️  Neither 'mandb' nor 'makewhatis' found.${NC}"
+        echo -e "${YELLOW}   Search capabilities will be limited.${NC}"
     fi
 else
     # Regular Linux: Check for man-db
