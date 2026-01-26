@@ -92,11 +92,13 @@ jobs:
       - name: Prepare release assets
         run: |
           mkdir -p release
+          echo "Preparing assets..."
           find ./artifacts -type f -exec cp {} ./release/ \;
           cd release
           for file in *; do
-            tar czf "${file}.tar.gz" "$file"
-            sha256sum "${file}.tar.gz" > "${file}.tar.gz.sha256"
+            # Skip checksums if they were copied (modules has one)
+            if [[ "$file" == *.sha256 ]]; then continue; fi
+            sha256sum "$file" > "${file}.sha256"
           done
           ls -lh
 

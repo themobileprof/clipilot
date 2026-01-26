@@ -103,7 +103,7 @@ fi
 DOWNLOAD_URL=""
 if [ -n "$RELEASE_DATA" ] && ! echo "$RELEASE_DATA" | grep -q "Not Found"; then
     # Extract download URL for the binary
-    DOWNLOAD_URL=$(echo "$RELEASE_DATA" | grep "browser_download_url.*${BINARY_NAME}.tar.gz\"" | cut -d '"' -f 4)
+    DOWNLOAD_URL=$(echo "$RELEASE_DATA" | grep "browser_download_url.*${BINARY_NAME}\"" | cut -d '"' -f 4)
 fi
 
 if [ -z "$DOWNLOAD_URL" ]; then
@@ -188,16 +188,17 @@ if [ -z "$DOWNLOAD_URL" ]; then
 else
     echo "Downloading from: $DOWNLOAD_URL"
 
-    # Download and extract binary
+    # Download binary
     TMP_DIR=$(mktemp -d)
     if command -v curl &> /dev/null; then
-        curl -fsSL "$DOWNLOAD_URL" -o "${TMP_DIR}/clipilot.tar.gz"
+        curl -fsSL "$DOWNLOAD_URL" -o "${TMP_DIR}/clipilot"
     elif command -v wget &> /dev/null; then
-        wget -q "$DOWNLOAD_URL" -O "${TMP_DIR}/clipilot.tar.gz"
+        wget -q "$DOWNLOAD_URL" -O "${TMP_DIR}/clipilot"
     fi
 
-    tar -xzf "${TMP_DIR}/clipilot.tar.gz" -C "$TMP_DIR"
-    mv "${TMP_DIR}/${BINARY_NAME}" "${INSTALL_DIR}/clipilot"
+    # No extraction needed for raw binaries
+    chmod +x "${TMP_DIR}/clipilot"
+    mv "${TMP_DIR}/clipilot" "${INSTALL_DIR}/clipilot"
     echo -e "${GREEN}✓ Binary installed${NC}"
 fi
 
