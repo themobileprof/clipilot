@@ -415,53 +415,38 @@ func (d *Detector) keywordSearchCommands(input string) (*models.IntentResult, er
 		}
 	}
 
-	// 2. Search Common Commands Catalog (using FTS)
-	commonResults, err := indexer.SearchCommonCommands(input, 5)
-	if err == nil {
-		for _, cmd := range commonResults {
-			// Check if already installed
-			isInstalled := false
-			if _, err := exec.LookPath(cmd.Name); err == nil {
-				isInstalled = true
-			}
+	// 2. Search Common Commands Catalog (In-Memory)
+	// This uses the curated list which is faster and guaranteed to happen
+	if catalog, err := commands.GetCatalog(); err == nil {
+		catalogResults := catalog.Search(input)
+		for _, res := range catalogResults {
+			cmd := res.Command
+			isInstalled := res.Installed
 
-			// If already found in system index, skip to avoid duplicates
-			// UNLESS the catalog has a better description? 
-			// For now, let's prefer the system index implementation but if missing, use catalog.
 			if foundNames[cmd.Name] {
 				continue
 			}
 
 			if isInstalled {
-				// Installed but not in system index (or low rank there)
-				// Use catalog entry but mark as installed command
+				// Installed command found in catalog
 				candidates = append(candidates, models.Candidate{
 					ModuleID:    "cmd:" + cmd.Name,
 					Name:        cmd.Name,
 					Description: cmd.Description,
-					Score:       0.9, 
+					Score:       res.Score, 
 					Tags:        []string{"command", "catalog"},
 				})
 				continue
 			}
 
-			// Not installed
-			name := cmd.Name
-			description := cmd.Description
-			
-			name += " (not installed)"
-			description += " - " + cmd.GetInstallCommand()
-			score := 0.65 // Slightly lower but still visible
-
-			candidates = append(candidates, models.Candidate{
-				ModuleID:    "common:" + cmd.Name,
-				Name:        name,
-				Description: description,
-				Score:       score,
-				Tags:        []string{"catalog", cmd.Category},
-			})
+			// Not installed - handled by searchCommonCommands / Detect fallback usually,
+			// but if we want to show them here?
+			// Detect's fallback logic uses searchCommonCommands specifically for "not installed" items.
+			// Here (in keywordSearchCommands) we typically only return *runnable* things (cmd: or module).
+			// So we skip "not installed" here.
 		}
 	}
+
 
 	return &models.IntentResult{
 		Candidates: candidates,
@@ -562,46 +547,28 @@ func tokenize(text string) []string {
 
 // searchCommonCommands searches installable commands from catalog
 func (d *Detector) searchCommonCommands(query string, limit int) ([]commonCommandSuggestion, error) {
-	query = strings.ToLower(query)
-
-	rows, err := d.db.Query(`
-		SELECT name, description, category, priority,
-		       apt_package, pkg_package, dnf_package, brew_package, arch_package
-		FROM common_commands
-		WHERE name LIKE ? OR description LIKE ? OR keywords LIKE ?
-		ORDER BY priority DESC, name
-		LIMIT ?
-	`, "%"+query+"%", "%"+query+"%", "%"+query+"%", limit)
-
+	catalog, err := commands.GetCatalog()
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
 
-	results := []commonCommandSuggestion{}
-	for rows.Next() {
-		var cmd commonCommandSuggestion
-		var aptPkg, pkgPkg, dnfPkg, brewPkg, archPkg sql.NullString
+	results := catalog.Search(query)
+	var suggestions []commonCommandSuggestion
 
-		err := rows.Scan(
-			&cmd.Name, &cmd.Description, &cmd.Category, &cmd.Priority,
-			&aptPkg, &pkgPkg, &dnfPkg, &brewPkg, &archPkg,
-		)
-		if err != nil {
-			continue
-		}
-
-		// Determine install command for current OS
-		cmd.InstallCmd = getInstallCommand(
-			aptPkg.String, pkgPkg.String, dnfPkg.String, brewPkg.String, archPkg.String,
-		)
-
-		if cmd.InstallCmd != "" {
-			results = append(results, cmd)
-		}
+	for _, r := range results {
+		cmd := r.Command
+		suggestions = append(suggestions, commonCommandSuggestion{
+			Name:        cmd.Name,
+			Description: cmd.Description,
+			Category:    cmd.Category,
+			Priority:    cmd.Priority,
+			InstallCmd: getInstallCommand(
+				cmd.AptPackage, cmd.PkgPackage, cmd.DnfPackage, 
+				cmd.BrewPackage, cmd.ArchPackage,
+			),
+		})
 	}
-
-	return results, nil
+	return suggestions, nil
 }
 
 type commonCommandSuggestion struct {

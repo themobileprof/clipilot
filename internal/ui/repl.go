@@ -749,16 +749,11 @@ func (repl *REPL) showLogs() error {
 func (repl *REPL) updateCommands() error {
 	fmt.Println("\n=== Updating Command Catalog ===")
 
-	// Create indexer
-	indexer := commands.NewIndexer(repl.db)
+
 
 	// Load common commands catalog
-	fmt.Println("Loading common commands catalog (for ranking priority)...")
-	if err := indexer.LoadCommonCommands(); err != nil {
-		fmt.Printf("Warning: failed to load common commands: %v\n", err)
-	} else {
-		fmt.Println("✓ Common commands catalog loaded")
-	}
+	// Common commands are embedded
+	fmt.Println("✓ Common commands catalog is built-in and ready.")
 
 	fmt.Println("\n💡 System commands are now discovered in real-time using 'apropos'.")
 	fmt.Println("   No need to index them manually anymore!")

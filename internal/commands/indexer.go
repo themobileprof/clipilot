@@ -2,18 +2,12 @@ package commands
 
 import (
 	"database/sql"
-	_ "embed"
 	"fmt"
 	"os"
 	"os/exec"
 	"strings"
 	"time"
-
-	"gopkg.in/yaml.v3"
 )
-
-//go:embed common_commands.yaml
-var commonCommandsYaml []byte
 
 // Indexer handles command discovery and indexing
 type Indexer struct {
@@ -77,7 +71,7 @@ func (idx *Indexer) RefreshCommandIndex() error {
 		_, err := stmt.Exec(cmdName, description, hasMan, timestamp)
 		if err != nil {
 			// Log but continue on individual command errors
-            fmt.Printf("Error inserting %s: %v\n", cmdName, err)
+			fmt.Printf("Error inserting %s: %v\n", cmdName, err)
 			continue
 		}
 
@@ -269,12 +263,6 @@ func (idx *Indexer) SearchCommands(query string, limit int) ([]CommandInfo, erro
 
 	// We join with the main table to get metadata like has_man
 	// FTS5 rank is lower is better (usually), but depends on configuration. 
-	// Default bm25 returns negative score? No, usually lower is more relevant? 
-	// Wait, FTS5 'rank' column value depends on function. Default is bm25. 
-	// BM25 returns a score where lower is better (more negative) by default implementation in some versions?
-	// Actually standard FTS5 bm25() returns a value where *more negative* is better? 
-	// No, usually higher is better.
-	// Let's rely on 'ORDER BY rank'. 
 	
 	rows, err := idx.db.Query(`
 		SELECT c.name, c.description, c.has_man
@@ -316,7 +304,7 @@ func (idx *Indexer) SearchCommands(query string, limit int) ([]CommandInfo, erro
 // searchCommandsFallback uses simple LIKE search
 func (idx *Indexer) searchCommandsFallback(query string, limit int) ([]CommandInfo, error) {
     query = strings.ToLower(query)
-    rows, err := idx.db.Query(`
+	rows, err := idx.db.Query(`
 		SELECT name, description, has_man
 		FROM commands
 		WHERE name LIKE ? OR description LIKE ?
@@ -392,285 +380,4 @@ type CommandInfo struct {
 	Description string
 	HasMan      bool
 	HasHelp     *bool // NULL = unknown, false = no, true = yes
-}
-
-// isAlphaNumeric checks if string contains only alphanumeric characters
-
-
-// CommonCommand represents a command from the catalog
-type CommonCommand struct {
-	Name          string `yaml:"name"`
-	Description   string `yaml:"description"`
-	Category      string `yaml:"category"`
-	Keywords      string `yaml:"keywords"`
-	AptPackage    string `yaml:"apt_package"`
-	PkgPackage    string `yaml:"pkg_package"`
-	DnfPackage    string `yaml:"dnf_package"`
-	BrewPackage   string `yaml:"brew_package"`
-	ArchPackage   string `yaml:"arch_package"`
-	AlternativeTo string `yaml:"alternative_to"`
-	Homepage      string `yaml:"homepage"`
-	Priority      int    `yaml:"priority"`
-}
-
-// LoadCommonCommands loads common commands catalog into database
-func (idx *Indexer) LoadCommonCommands() error {
-	// Read from embedded data
-	// data is predefined via go:embed
-	if len(commonCommandsYaml) == 0 {
-		return fmt.Errorf("embedded common commands data is empty")
-	}
-	data := commonCommandsYaml
-
-	// Parse YAML
-	var commands []CommonCommand
-	if err := yaml.Unmarshal(data, &commands); err != nil {
-		return fmt.Errorf("failed to parse common commands YAML: %w", err)
-	}
-
-	// Begin transaction
-	tx, err := idx.db.Begin()
-	if err != nil {
-		return fmt.Errorf("failed to begin transaction: %w", err)
-	}
-	defer func() {
-		_ = tx.Rollback() // Ignore error - might be committed
-	}()
-
-	// Prepare insert statement
-	stmt, err := tx.Prepare(`
-		INSERT INTO common_commands (
-			name, description, category, keywords,
-			apt_package, pkg_package, dnf_package, brew_package, arch_package,
-			alternative_to, homepage, priority
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-		ON CONFLICT(name) DO UPDATE SET
-			description = excluded.description,
-			category = excluded.category,
-			keywords = excluded.keywords,
-			apt_package = excluded.apt_package,
-			pkg_package = excluded.pkg_package,
-			dnf_package = excluded.dnf_package,
-			brew_package = excluded.brew_package,
-			arch_package = excluded.arch_package,
-			alternative_to = excluded.alternative_to,
-			homepage = excluded.homepage,
-			priority = excluded.priority
-	`)
-	if err != nil {
-		return fmt.Errorf("failed to prepare statement: %w", err)
-	}
-	defer stmt.Close()
-
-	// Insert commands
-	for _, cmd := range commands {
-		_, err := stmt.Exec(
-			cmd.Name, cmd.Description, cmd.Category, cmd.Keywords,
-			cmd.AptPackage, cmd.PkgPackage, cmd.DnfPackage, cmd.BrewPackage, cmd.ArchPackage,
-			cmd.AlternativeTo, cmd.Homepage, cmd.Priority,
-		)
-		if err != nil {
-			return fmt.Errorf("failed to insert command %s: %w", cmd.Name, err)
-		}
-	}
-
-	if err := tx.Commit(); err != nil {
-		return fmt.Errorf("failed to commit transaction: %w", err)
-	}
-
-	fmt.Printf("✓ Loaded %d common commands into catalog\n", len(commands))
-	return nil
-}
-
-// SearchCommonCommands searches for commands in the catalog using FTS
-func (idx *Indexer) SearchCommonCommands(query string, limit int) ([]CommonCommandInfo, error) {
-	ftsQuery := buildFTSQuery(query)
-    if ftsQuery == "" {
-        return []CommonCommandInfo{}, nil
-    }
-
-	rows, err := idx.db.Query(`
-		SELECT c.name, c.description, c.category, c.keywords, 
-		       c.apt_package, c.pkg_package, c.dnf_package, c.brew_package, c.arch_package,
-		       c.alternative_to, c.homepage, c.priority
-		FROM common_commands c
-        JOIN common_commands_fts f ON c.name = f.name
-		WHERE common_commands_fts MATCH ?
-		ORDER BY rank
-		LIMIT ?
-	`, ftsQuery, limit)
-
-    // Fallback if table missing
-    if err != nil && strings.Contains(err.Error(), "no such table") {
-        return idx.searchCommonCommandsFallback(query, limit)
-    }
-	if err != nil {
-		return nil, fmt.Errorf("search failed: %w", err)
-	}
-	defer rows.Close()
-
-	results := []CommonCommandInfo{}
-	for rows.Next() {
-		var cmd CommonCommandInfo
-		var keywords, alternativeTo, homepage sql.NullString
-		var aptPkg, pkgPkg, dnfPkg, brewPkg, archPkg sql.NullString
-
-		err := rows.Scan(
-			&cmd.Name, &cmd.Description, &cmd.Category, &keywords,
-			&aptPkg, &pkgPkg, &dnfPkg, &brewPkg, &archPkg,
-			&alternativeTo, &homepage, &cmd.Priority,
-		)
-		if err != nil {
-			continue
-		}
-
-		if keywords.Valid {
-			cmd.Keywords = keywords.String
-		}
-		if alternativeTo.Valid {
-			cmd.AlternativeTo = alternativeTo.String
-		}
-		if homepage.Valid {
-			cmd.Homepage = homepage.String
-		}
-		if aptPkg.Valid {
-			cmd.AptPackage = aptPkg.String
-		}
-		if pkgPkg.Valid {
-			cmd.PkgPackage = pkgPkg.String
-		}
-		if dnfPkg.Valid {
-			cmd.DnfPackage = dnfPkg.String
-		}
-		if brewPkg.Valid {
-			cmd.BrewPackage = brewPkg.String
-		}
-		if archPkg.Valid {
-			cmd.ArchPackage = archPkg.String
-		}
-
-		results = append(results, cmd)
-	}
-
-	return results, nil
-}
-
-// searchCommonCommandsFallback uses LIKE
-func (idx *Indexer) searchCommonCommandsFallback(query string, limit int) ([]CommonCommandInfo, error) {
-    query = strings.ToLower(query)
-	rows, err := idx.db.Query(`
-		SELECT name, description, category, keywords, 
-		       apt_package, pkg_package, dnf_package, brew_package, arch_package,
-		       alternative_to, homepage, priority
-		FROM common_commands
-		WHERE name LIKE ? OR description LIKE ? OR keywords LIKE ? OR category LIKE ?
-		ORDER BY priority DESC, name
-		LIMIT ?
-	`, "%"+query+"%", "%"+query+"%", "%"+query+"%", "%"+query+"%", limit)
-
-	if err != nil {
-		return nil, fmt.Errorf("search failed: %w", err)
-	}
-	defer rows.Close()
-
-	results := []CommonCommandInfo{}
-	for rows.Next() {
-		var cmd CommonCommandInfo
-		var keywords, alternativeTo, homepage sql.NullString
-		var aptPkg, pkgPkg, dnfPkg, brewPkg, archPkg sql.NullString
-
-		err := rows.Scan(
-			&cmd.Name, &cmd.Description, &cmd.Category, &keywords,
-			&aptPkg, &pkgPkg, &dnfPkg, &brewPkg, &archPkg,
-			&alternativeTo, &homepage, &cmd.Priority,
-		)
-		if err != nil {
-			continue
-		}
-        if keywords.Valid { cmd.Keywords = keywords.String }
-		if alternativeTo.Valid { cmd.AlternativeTo = alternativeTo.String }
-		if homepage.Valid { cmd.Homepage = homepage.String }
-		if aptPkg.Valid { cmd.AptPackage = aptPkg.String }
-		if pkgPkg.Valid { cmd.PkgPackage = pkgPkg.String }
-		if dnfPkg.Valid { cmd.DnfPackage = dnfPkg.String }
-		if brewPkg.Valid { cmd.BrewPackage = brewPkg.String }
-		if archPkg.Valid { cmd.ArchPackage = archPkg.String }
-		results = append(results, cmd)
-	}
-	return results, nil
-}
-
-// CommonCommandInfo represents detailed info about a common command
-type CommonCommandInfo struct {
-	Name          string
-	Description   string
-	Category      string
-	Keywords      string
-	AptPackage    string
-	PkgPackage    string
-	DnfPackage    string
-	BrewPackage   string
-	ArchPackage   string
-	AlternativeTo string
-	Homepage      string
-	Priority      int
-}
-
-// GetInstallCommand returns the install command for the current OS
-func (cmd *CommonCommandInfo) GetInstallCommand() string {
-	// Detect OS and package manager
-	// Check for Termux
-	if isTermux() {
-		if cmd.PkgPackage != "" {
-			return fmt.Sprintf("pkg install %s", cmd.PkgPackage)
-		}
-	}
-
-	// Check for apt (Debian/Ubuntu)
-	if commandExists("apt-get") || commandExists("apt") {
-		if cmd.AptPackage != "" {
-			return fmt.Sprintf("sudo apt install %s", cmd.AptPackage)
-		}
-	}
-
-	// Check for dnf (Fedora/RHEL)
-	if commandExists("dnf") {
-		if cmd.DnfPackage != "" {
-			return fmt.Sprintf("sudo dnf install %s", cmd.DnfPackage)
-		}
-	}
-
-	// Check for brew (macOS)
-	if commandExists("brew") {
-		if cmd.BrewPackage != "" {
-			return fmt.Sprintf("brew install %s", cmd.BrewPackage)
-		}
-	}
-
-	// Check for pacman (Arch Linux)
-	if commandExists("pacman") {
-		if cmd.ArchPackage != "" {
-			return fmt.Sprintf("sudo pacman -S %s", cmd.ArchPackage)
-		}
-	}
-
-	return ""
-}
-
-// Helper functions
-func isTermux() bool {
-	// Check TERMUX_VERSION environment variable
-	if exec.Command("sh", "-c", "[ -n \"$TERMUX_VERSION\" ]").Run() == nil {
-		return true
-	}
-	// Check PREFIX environment variable
-	if exec.Command("sh", "-c", "[ -n \"$PREFIX\" ]").Run() == nil {
-		return true
-	}
-	return false
-}
-
-func commandExists(cmd string) bool {
-	_, err := exec.LookPath(cmd)
-	return err == nil
 }

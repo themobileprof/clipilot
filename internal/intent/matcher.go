@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/themobileprof/clipilot/internal/commands"
 	"github.com/themobileprof/clipilot/internal/models"
 )
 
@@ -60,31 +61,21 @@ func (m *HybridMatcher) Load() error {
 		})
 	}
 
-	// Load common commands (installable suggestions)
-	rows, err = m.db.Query(`
-		SELECT name, description, category, COALESCE(keywords, '')
-		FROM common_commands
-		ORDER BY priority DESC
-		LIMIT 100
-	`)
-	if err == nil {
-		defer rows.Close()
-		for rows.Next() {
-			var name, description, category, keywordStr string
-			if err := rows.Scan(&name, &description, &category, &keywordStr); err != nil {
-				continue
-			}
-
-			keywords := strings.Split(keywordStr, ",")
-			if keywordStr == "" {
-				keywords = extractKeywords(description)
+	// Load common commands (installable suggestions) from In-Memory Catalog
+	if catalog, err := commands.GetCatalog(); err == nil {
+		for _, cmd := range catalog.Commands {
+			keywords := extractKeywords(cmd.Description)
+			if cmd.Keywords != "" {
+				// Merge explicit keywords
+				more := strings.Split(cmd.Keywords, ",")
+				keywords = append(keywords, more...)
 			}
 
 			m.tfidf.AddDocument(Document{
-				ID:          "common:" + name,
-				Name:        name,
-				Category:    category,
-				Description: description,
+				ID:          "common:" + cmd.Name,
+				Name:        cmd.Name,
+				Category:    cmd.Category,
+				Description: cmd.Description,
 				Keywords:    keywords,
 			})
 		}
