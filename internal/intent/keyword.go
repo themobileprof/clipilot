@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -213,6 +214,19 @@ func (d *Detector) Detect(input string) (*models.IntentResult, error) {
 
 // searchSystemManPages searches using 'apropos' for each keyword
 func (d *Detector) searchSystemManPages(input string) ([]models.Candidate, error) {
+	// Helper to safely resolve paths on Termux (avoiding faccessat2 crash)
+	safeResolve := func(bin string) string {
+		for _, dir := range filepath.SplitList(os.Getenv("PATH")) {
+			if dir == "" { dir = "." }
+			path := filepath.Join(dir, bin)
+			info, err := os.Stat(path)
+			if err == nil && !info.IsDir() && info.Mode()&0111 != 0 {
+				return path
+			}
+		}
+		return ""
+	}
+
 	tokens := tokenize(input)
 	if len(tokens) == 0 {
 		return nil, nil
@@ -230,7 +244,14 @@ func (d *Detector) searchSystemManPages(input string) ([]models.Candidate, error
 	for _, token := range tokens {
 		// Run apropos -s 1,8 <token> to search user and admin commands
 		// -s 1,8 helps filter out C function calls (section 2,3)
-		cmd := exec.Command("apropos", "-s", "1,8", token)
+		
+		// Use safeResolve instead of LookPath/exec.Command default
+		binPath := safeResolve("apropos")
+		if binPath == "" {
+			continue // apropos not found
+		}
+
+		cmd := exec.Command(binPath, "-s", "1,8", token)
 		output, err := cmd.Output()
 		if err != nil {
 			continue 
