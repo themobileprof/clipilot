@@ -4,9 +4,10 @@ import (
 	"database/sql"
 	"fmt"
 	"os"
-	"os/exec"
 	"strings"
 	"time"
+
+	"github.com/themobileprof/clipilot/internal/utils/safeexec"
 )
 
 // Indexer handles command discovery and indexing
@@ -166,7 +167,7 @@ func (idx *Indexer) discoverCommands() ([]string, error) {
 // Uses whatis and apropos to find the best description
 func (idx *Indexer) getCommandDescription(name string) (string, bool) {
 	// 1. Try whatis (standard and fast)
-	cmd := exec.Command("whatis", name)
+	cmd := safeexec.Command("whatis", name)
 	output, err := cmd.Output()
 	if err == nil {
 		desc := idx.parseManOutput(string(output), name)
@@ -176,7 +177,7 @@ func (idx *Indexer) getCommandDescription(name string) (string, bool) {
 	}
 
 	// 2. Try apropos (broader search)
-	cmd = exec.Command("apropos", name)
+	cmd = safeexec.Command("apropos", name)
 	output, err = cmd.Output()
 	if err == nil {
 		desc := idx.parseManOutput(string(output), name)

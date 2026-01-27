@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -16,6 +15,7 @@ import (
 	"github.com/themobileprof/clipilot/internal/interfaces"
 	"github.com/themobileprof/clipilot/internal/journey"
 	"github.com/themobileprof/clipilot/internal/models"
+	"github.com/themobileprof/clipilot/internal/utils/safeexec"
 )
 
 // Detector handles intent detection using multiple strategies
@@ -215,17 +215,7 @@ func (d *Detector) Detect(input string) (*models.IntentResult, error) {
 // searchSystemManPages searches using 'apropos' for each keyword
 func (d *Detector) searchSystemManPages(input string) ([]models.Candidate, error) {
 	// Helper to safely resolve paths on Termux (avoiding faccessat2 crash)
-	safeResolve := func(bin string) string {
-		for _, dir := range filepath.SplitList(os.Getenv("PATH")) {
-			if dir == "" { dir = "." }
-			path := filepath.Join(dir, bin)
-			info, err := os.Stat(path)
-			if err == nil && !info.IsDir() && info.Mode()&0111 != 0 {
-				return path
-			}
-		}
-		return ""
-	}
+	// safeResolve logic removed in favor of centralized safeexec package
 
 	tokens := tokenize(input)
 	if len(tokens) == 0 {
@@ -245,9 +235,9 @@ func (d *Detector) searchSystemManPages(input string) ([]models.Candidate, error
 		// Run apropos -s 1,8 <token> to search user and admin commands
 		// -s 1,8 helps filter out C function calls (section 2,3)
 		
-		// Use safeResolve instead of LookPath/exec.Command default
-		binPath := safeResolve("apropos")
-		if binPath == "" {
+		// Use safeexec.LookPath instead of exec.LookPath default
+		binPath, err := safeexec.LookPath("apropos")
+		if err != nil {
 			continue // apropos not found
 		}
 

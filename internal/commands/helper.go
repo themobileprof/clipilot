@@ -8,6 +8,8 @@ import (
 	"os/exec"
 	"regexp"
 	"strings"
+
+	"github.com/themobileprof/clipilot/internal/utils/safeexec"
 )
 
 // CommandHelper provides interactive help for system commands
@@ -53,7 +55,7 @@ func (ch *CommandHelper) getCommandInfo(name string) (*CommandInfo, error) {
 	description := "System command (no description available)"
 	
 	// 2. Try whatis for description
-	cmd := exec.Command("whatis", name)
+	cmd := safeexec.Command("whatis", name)
 	output, err := cmd.Output()
 	if err == nil {
 		desc := ch.parseWhatisOutput(string(output), name)
@@ -153,8 +155,8 @@ func (ch *CommandHelper) showUsage(cmdName string) {
 // showExamples extracts and displays the EXAMPLES section from man or tldr
 func (ch *CommandHelper) showExamples(cmdName string) {
 	// 1. Try tldr first
-	if _, err := exec.LookPath("tldr"); err == nil {
-		output, err := exec.Command("tldr", cmdName).Output()
+	if _, err := safeexec.LookPath("tldr"); err == nil {
+		output, err := safeexec.Command("tldr", cmdName).Output()
 		if err == nil && len(output) > 0 {
 			fmt.Printf("\n💡 Examples for %s (via tldr):\n", cmdName)
 			fmt.Println("─────────────────────────────────────")
@@ -199,7 +201,7 @@ func (ch *CommandHelper) showOptions(cmdName string) {
 
 	if section == "" {
 		// Fallback: try --help
-		output, err := exec.Command(cmdName, "--help").CombinedOutput()
+		output, err := safeexec.Command(cmdName, "--help").CombinedOutput()
 		if err == nil && len(output) > 0 {
 			// Extract lines that look like options
 			lines := strings.Split(string(output), "\n")
@@ -221,7 +223,7 @@ func (ch *CommandHelper) showOptions(cmdName string) {
 func (ch *CommandHelper) openManPage(cmdName string) {
 	fmt.Printf("\nOpening man page for %s...\n", cmdName)
 
-	cmd := exec.Command("man", cmdName)
+	cmd := safeexec.Command("man", cmdName)
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
@@ -255,7 +257,7 @@ func (ch *CommandHelper) RunCommand(cmdName string, reader *bufio.Reader) error 
 	fmt.Println("─────────────────────────────────────")
 
 	// Execute via shell for proper argument parsing
-	cmd := exec.Command("sh", "-c", fullCmd)
+	cmd := safeexec.Command("sh", "-c", fullCmd)
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
@@ -276,7 +278,7 @@ func (ch *CommandHelper) RunCommand(cmdName string, reader *bufio.Reader) error 
 
 func (ch *CommandHelper) extractManSection(cmdName, sectionName string) string {
 	// Run man with col to strip formatting
-	cmd := exec.Command("sh", "-c", fmt.Sprintf("man %s 2>/dev/null | col -bx", cmdName))
+	cmd := safeexec.Command("sh", "-c", fmt.Sprintf("man %s 2>/dev/null | col -bx", cmdName))
 	output, err := cmd.Output()
 	if err != nil {
 		return ""
@@ -334,22 +336,22 @@ func (ch *CommandHelper) parseManSection(text, sectionName string) string {
 // hasManPage checks if a man page exists for the command
 func (ch *CommandHelper) hasManPage(name string) bool {
 	// Check for man command first
-	_, err := exec.LookPath("man")
+	_, err := safeexec.LookPath("man")
 	if err != nil {
 		return false
 	}
 	
-	cmd := exec.Command("man", "-w", name)
+	cmd := safeexec.Command("man", "-w", name)
 	err = cmd.Run()
 	return err == nil
 }
 
 // extractHelpUsage extracts usage from --help output
 func (ch *CommandHelper) extractHelpUsage(cmdName string) string {
-	output, err := exec.Command(cmdName, "--help").CombinedOutput()
+	output, err := safeexec.Command(cmdName, "--help").CombinedOutput()
 	if err != nil {
 		// Try -h
-		output, err = exec.Command(cmdName, "-h").CombinedOutput()
+		output, err = safeexec.Command(cmdName, "-h").CombinedOutput()
 		if err != nil {
 			return ""
 		}
@@ -383,7 +385,7 @@ func (ch *CommandHelper) extractHelpUsage(cmdName string) string {
 
 // commandExists checks if a command exists in PATH
 func (ch *CommandHelper) commandExists(name string) bool {
-	_, err := exec.LookPath(name)
+	_, err := safeexec.LookPath(name)
 	return err == nil
 }
 

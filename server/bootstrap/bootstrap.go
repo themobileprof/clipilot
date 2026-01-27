@@ -5,12 +5,12 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/themobileprof/clipilot/internal/models"
+	"github.com/themobileprof/clipilot/internal/utils/safeexec"
 	yaml "gopkg.in/yaml.v3"
 )
 
@@ -233,7 +233,7 @@ func getEssentialCommands() map[string]string {
 // getCommandsFromPATH gets all executable commands from PATH
 func getCommandsFromPATH() ([]string, error) {
 	// Use compgen -c to list all commands (bash built-in)
-	cmd := exec.Command("bash", "-c", "compgen -c | sort -u | head -500")
+	cmd := safeexec.Command("bash", "-c", "compgen -c | sort -u | head -500")
 	output, err := cmd.Output()
 	if err != nil {
 		// Fallback: manually scan PATH directories (limited)
@@ -310,7 +310,7 @@ func scanPATHDirectories() []string {
 // getCommandDescription gets description from whatis
 func getCommandDescription(cmdName string) string {
 	// Try whatis first (with timeout)
-	cmd := exec.Command("whatis", cmdName)
+	cmd := safeexec.Command("whatis", cmdName)
 	output, err := cmd.Output()
 	if err == nil {
 		lines := strings.Split(string(output), "\n")
@@ -324,7 +324,7 @@ func getCommandDescription(cmdName string) string {
 	}
 
 	// Simple fallback - just mark as available
-	if _, err := exec.LookPath(cmdName); err == nil {
+	if _, err := safeexec.LookPath(cmdName); err == nil {
 		return "Command line utility"
 	}
 

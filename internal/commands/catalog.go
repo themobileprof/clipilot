@@ -3,11 +3,10 @@ package commands
 import (
 	_ "embed"
 	"fmt"
-	"os"
-	"path/filepath"
 	"strings"
 	"sync"
 
+	"github.com/themobileprof/clipilot/internal/utils/safeexec"
 	yaml "gopkg.in/yaml.v3"
 )
 
@@ -95,23 +94,9 @@ func (c *Catalog) Search(query string) []SearchResult {
 			return val
 		}
 
-		// Termux/Android Crash Fix:
-		// Go >1.20 exec.LookPath calls faccessat2 which is blocked by seccomp on some Android versions.
-		// We use a manual PATH walk with os.Stat which uses safer stat/fstat syscalls.
-		pathEnv := os.Getenv("PATH")
-		found := false
-		for _, dir := range filepath.SplitList(pathEnv) {
-			if dir == "" {
-				dir = "."
-			}
-			path := filepath.Join(dir, name)
-			info, err := os.Stat(path)
-			// Check if file exists, is not a dir, and is executable (bit 0111)
-			if err == nil && !info.IsDir() && info.Mode()&0111 != 0 {
-				found = true
-				break
-			}
-		}
+		// Use safeexec.LookPath to resolve paths safely on Termux
+		_, err := safeexec.LookPath(name)
+		found := err == nil
 
 		installedCache[name] = found
 		return found

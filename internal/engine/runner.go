@@ -5,12 +5,12 @@ import (
 	"database/sql"
 	"fmt"
 	"os"
-	"os/exec"
 	"strings"
 	"time"
 
 	"github.com/themobileprof/clipilot/internal/interfaces"
 	"github.com/themobileprof/clipilot/internal/models"
+	"github.com/themobileprof/clipilot/internal/utils/safeexec"
 )
 
 // Runner executes module flows
@@ -270,7 +270,7 @@ func (r *Runner) evaluateCondition(ctx *models.ExecutionContext, cond *models.Co
 
 // runCommand executes a shell command
 func (r *Runner) runCommand(command string) (string, error) {
-	cmd := exec.Command("bash", "-c", command)
+	cmd := safeexec.Command("bash", "-c", command)
 	output, err := cmd.CombinedOutput()
 	return string(output), err
 }

@@ -7,7 +7,6 @@ import (
 	"io"
 	"net/http"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
@@ -18,6 +17,7 @@ import (
 	"github.com/themobileprof/clipilot/internal/journey"
 	"github.com/themobileprof/clipilot/internal/modules"
 	"github.com/themobileprof/clipilot/internal/registry"
+	"github.com/themobileprof/clipilot/internal/utils/safeexec"
 )
 
 // REPL represents the interactive command-line interface
@@ -1092,7 +1092,7 @@ rm -f "$0"
 	fmt.Println()
 
 	// Execute the cleanup script in background and exit
-	cmd := exec.Command("bash", tmpScript)
+	cmd := safeexec.Command("bash", tmpScript)
 	if err := cmd.Start(); err != nil {
 		os.Remove(tmpScript)
 		return fmt.Errorf("failed to start uninstall: %w", err)
