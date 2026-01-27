@@ -287,7 +287,7 @@ func (d *Detector) searchSystemManPages(input string) ([]models.Candidate, error
 	
 	for name, info := range matches {
 		// Verify installation
-		path, err := exec.LookPath(name)
+		path, err := safeexec.LookPath(name)
 		if err != nil {
 			continue // Skip if not actually executable
 		}
@@ -609,28 +609,28 @@ func getInstallCommand(aptPkg, pkgPkg, dnfPkg, brewPkg, archPkg string) string {
 	}
 
 	// Check for apt (Debian/Ubuntu)
-	if _, err := exec.LookPath("apt"); err == nil {
+	if _, err := safeexec.LookPath("apt"); err == nil {
 		if aptPkg != "" {
 			return "sudo apt install " + aptPkg
 		}
 	}
 
 	// Check for dnf (Fedora/RHEL)
-	if _, err := exec.LookPath("dnf"); err == nil {
+	if _, err := safeexec.LookPath("dnf"); err == nil {
 		if dnfPkg != "" {
 			return "sudo dnf install " + dnfPkg
 		}
 	}
 
 	// Check for brew (macOS)
-	if _, err := exec.LookPath("brew"); err == nil {
+	if _, err := safeexec.LookPath("brew"); err == nil {
 		if brewPkg != "" {
 			return "brew install " + brewPkg
 		}
 	}
 
 	// Check for pacman (Arch Linux)
-	if _, err := exec.LookPath("pacman"); err == nil {
+	if _, err := safeexec.LookPath("pacman"); err == nil {
 		if archPkg != "" {
 			return "sudo pacman -S " + archPkg
 		}

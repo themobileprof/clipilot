@@ -257,7 +257,7 @@ CREATE INDEX idx_common_commands_priority ON common_commands(priority DESC);
 
 3. **OS Detection**: `internal/intent/keyword.go` → `getInstallCommand()`
    - Checks `TERMUX_VERSION` env var
-   - Uses `exec.LookPath()` to detect package managers
+   - Uses `safeexec.LookPath()` to detect package managers
    - Returns appropriate install command
 
 4. **Integration**: `internal/intent/keyword.go` → `keywordSearch()`
