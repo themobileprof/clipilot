@@ -193,7 +193,9 @@ func resetDatabase(dbPath string, modulesDir string) error {
 			_, _ = fmt.Scanln(&modResp)
 			if modResp == "" || strings.ToLower(modResp) == "y" || strings.ToLower(modResp) == "yes" {
 				if err := os.RemoveAll(defaultDir); err == nil {
-					os.MkdirAll(defaultDir, 0755)
+					if err := os.MkdirAll(defaultDir, 0755); err != nil {
+						fmt.Printf("Warning: failed to recreate modules dir: %v\n", err)
+					}
 					fmt.Println("✓ Local modules cache cleared")
 				} else {
 					fmt.Printf("Warning: failed to clear modules: %v\n", err)

@@ -454,10 +454,6 @@ func (d *Detector) keywordSearchCommands(input string) (*models.IntentResult, er
 				Tags:        []string{"command"},
 			})
 		}
-	} else {
-		// Log warning but continue - resilience property
-		// This ensures CLIPilot works even if SQLite is dead
-		// fmt.Printf("Warning: System index search failed: %v\n", err)
 	}
 
 

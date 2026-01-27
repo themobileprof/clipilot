@@ -15,7 +15,7 @@ import (
 	"time"
 
 	"golang.org/x/oauth2"
-	"gopkg.in/yaml.v3"
+	yaml "gopkg.in/yaml.v3"
 	_ "modernc.org/sqlite"
 
 	"github.com/themobileprof/clipilot/internal/models"

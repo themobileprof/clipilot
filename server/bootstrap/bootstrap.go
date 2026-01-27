@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/themobileprof/clipilot/internal/models"
-	"gopkg.in/yaml.v3"
+	yaml "gopkg.in/yaml.v3"
 )
 
 // SeedBuiltinModules scans the modules directory and registers them in the database

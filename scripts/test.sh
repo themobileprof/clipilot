@@ -39,8 +39,33 @@ run_test() {
 # Parse command line arguments
 case "${1:-all}" in
     all)
+        echo "Running static analysis (vet)..."
+        if ! run_test "Go Vet" "go vet ./..."; then
+            echo -e "${YELLOW}⚠️  Static analysis failed. Fix issues above.${NC}"
+            exit 1
+        fi
+        
         echo "Running all unit tests..."
         run_test "All Unit Tests" "go test ./..."
+        ;;
+
+    lint)
+        echo "Running linter..."
+        LINT_CMD=""
+        if [ -f "./bin/golangci-lint" ]; then
+            LINT_CMD="./bin/golangci-lint run"
+        elif command -v golangci-lint &> /dev/null; then
+            LINT_CMD="golangci-lint run"
+        fi
+
+        if [ -n "$LINT_CMD" ]; then
+             run_test "Linter" "$LINT_CMD"
+        else
+             echo -e "${YELLOW}⚠️  golangci-lint not found.${NC}"
+             echo -e "To install: curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b ./bin v1.64.4"
+             # Fallback to vet
+             run_test "Go Vet" "go vet ./..."
+        fi
         ;;
     
     coverage)

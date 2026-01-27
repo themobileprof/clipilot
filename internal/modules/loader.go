@@ -9,7 +9,7 @@ import (
 
 	"github.com/themobileprof/clipilot/internal/interfaces"
 	"github.com/themobileprof/clipilot/internal/models"
-	"gopkg.in/yaml.v3"
+	yaml "gopkg.in/yaml.v3"
 )
 
 // Loader handles module loading and storage
