@@ -291,8 +291,8 @@ echo "📚 Installing man pages for command indexing..."
 if [ "$IS_TERMUX" = true ]; then
     # Termux: Ensure man and man-pages are installed
     echo "Checking/Installing man pages..."
-    pkg update -y
-    pkg install -y man
+    pkg update -y > /dev/null 2>&1
+    pkg install -y man > /dev/null 2>&1
 
     # Strictly verify installation
     if ! command -v man &> /dev/null; then
