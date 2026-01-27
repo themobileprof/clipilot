@@ -385,42 +385,24 @@ func (repl *REPL) handleQuery(input string, retryCount int) error {
 		cmdName := strings.TrimPrefix(top.ModuleID, "cmd:")
 		
 		// Conversational opening based on confidence
-		if result.Confidence >= 0.8 {
-			fmt.Printf("\nI found the perfect tool for that: `%s`\n", cmdName)
-			fmt.Printf("It helps you: %s\n", top.Description)
-		} else if result.Confidence >= 0.6 {
-			fmt.Printf("\nYou can use `%s` to do that.\n", cmdName)
-			fmt.Printf("Description: %s\n", top.Description)
-		} else {
-			fmt.Printf("\nI'm not 100%% sure, but `%s` might be what you need.\n", cmdName)
-			fmt.Printf("It is used to: %s\n", top.Description)
-		}
 
-		// Show other related commands if confidence is low
-		if result.Confidence < 0.7 && len(result.Candidates) > 1 {
-			fmt.Println("\nYou might also find these useful:")
-			for i := 1; i < len(result.Candidates) && i < 4; i++ {
-				name := result.Candidates[i].Name
-				if strings.HasSuffix(name, " (not installed)") {
-					continue // Skip installable suggestions for now
-				}
-				fmt.Printf("   • `%s` - %s\n", name, result.Candidates[i].Description)
-			}
-		}
+		// Conversational opening based on confidence
+		// Using strict user-requested format
+		fmt.Printf("\n✓ Command found: %s\n", cmdName)
+		fmt.Println(strings.Repeat("─", 24))
+		fmt.Printf("Purpose : %s\n\n", top.Description)
 
-		// Interactive menu
-		fmt.Printf("\nHere is how I can help you with `%s`:\n", cmdName)
-		fmt.Println("  (Not what you need? Choose option 4 to search again)")
-		fmt.Println("  1. Show me examples and usage (recommended)")
-		fmt.Println("  2. Run this command (interactive)")
-		fmt.Println("  3. Just show me the command (and exit assistant)")
-		fmt.Println("  4. No, search for a different command")
+		fmt.Println("What would you like to do?")
+		fmt.Println("  1) Show examples and usage  (recommended)")
+		fmt.Println("  2) Run the command          (interactive)")
+		fmt.Println("  3) Show command only        (exit)")
+		fmt.Println("  4) Search for another command")
 		
 		if retryCount >= 2 {
-			fmt.Println("  5. Ask the community (Search Server)")
+			fmt.Println("  5) Ask the community        (Search Server)")
 		}
 
-		fmt.Println("  0. Cancel")
+		fmt.Println("  0) Cancel")
 		
 		promptRange := "1-4, 0"
 		if retryCount >= 2 {
