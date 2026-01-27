@@ -181,24 +181,45 @@ func resetDatabase(dbPath string, modulesDir string) error {
 
 	fmt.Println("✓ Database recreated")
 
-	// Load modules if directory specified
+	// Determine default modules directory
+	homeDir, _ := os.UserHomeDir()
+	defaultDir := filepath.Join(homeDir, ".clipilot", "modules")
+
+	// Check if we should clear local modules cache (preventing stale data)
+	if modulesDir == "" {
+		if _, err := os.Stat(defaultDir); err == nil {
+			fmt.Print("⚠️  Clear local modules cache (recommended)? [Y/n]: ")
+			var modResp string
+			_, _ = fmt.Scanln(&modResp)
+			if modResp == "" || strings.ToLower(modResp) == "y" || strings.ToLower(modResp) == "yes" {
+				if err := os.RemoveAll(defaultDir); err == nil {
+					os.MkdirAll(defaultDir, 0755)
+					fmt.Println("✓ Local modules cache cleared")
+				} else {
+					fmt.Printf("Warning: failed to clear modules: %v\n", err)
+				}
+			}
+		}
+	}
+
+	// Load modules if directory specified or still exists
 	if modulesDir != "" {
 		if err := loadModulesFromDir(database, modulesDir); err != nil {
 			return fmt.Errorf("failed to load modules: %w", err)
 		}
 	} else {
-		// Try to load from default location
-		homeDir, _ := os.UserHomeDir()
-		defaultDir := filepath.Join(homeDir, ".clipilot", "modules")
-		if _, err := os.Stat(defaultDir); err == nil {
+		// Try to load from default location (if not cleared)
+		if matches, _ := filepath.Glob(filepath.Join(defaultDir, "*.yaml")); len(matches) > 0 {
 			if err := loadModulesFromDir(database, defaultDir); err != nil {
 				fmt.Printf("Warning: failed to load default modules: %v\n", err)
 			}
+		} else {
+			fmt.Println("ℹ️  No local modules found (cache empty).")
 		}
 	}
 
 	fmt.Println("\n✓ Database reset successfully!")
-	fmt.Println("💡 Run 'clipilot sync' to get modules from the registry.")
+	fmt.Println("💡 Run 'clipilot sync' to get fresh modules from the registry.")
 	return nil
 }
 

@@ -1,8 +1,8 @@
 -- CLIPilot Database Schema
 -- SQLite3 migration for modular CLI assistant
 
--- Enable WAL mode for better concurrency and performance
-PRAGMA journal_mode=WAL;
+-- Enable standard journal mode for maximum compatibility (prevents SIGSYS on Termux)
+PRAGMA journal_mode=DELETE;
 PRAGMA synchronous=NORMAL;
 
 -- Modules metadata table

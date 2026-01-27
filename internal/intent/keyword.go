@@ -399,33 +399,14 @@ func (d *Detector) keywordSearchCommands(input string) (*models.IntentResult, er
 	
 	candidates := []models.Candidate{}
 
-	// 1. Search Installed Commands (using FTS)
-	cmdResults, err := indexer.SearchCommands(input, 10)
+	// 1. Search Common Commands Catalog (In-Memory)
+	// PRIMARY SOURCE: Quick, reliable, works even if DB is broken
 	foundNames := make(map[string]bool)
-	if err == nil {
-		for _, cmd := range cmdResults {
-			foundNames[cmd.Name] = true
-			candidates = append(candidates, models.Candidate{
-				ModuleID:    "cmd:" + cmd.Name,
-				Name:        cmd.Name,
-				Description: cmd.Description,
-				Score:       0.8, // High baseline for FTS match
-				Tags:        []string{"command"},
-			})
-		}
-	}
-
-	// 2. Search Common Commands Catalog (In-Memory)
-	// This uses the curated list which is faster and guaranteed to happen
 	if catalog, err := commands.GetCatalog(); err == nil {
 		catalogResults := catalog.Search(input)
 		for _, res := range catalogResults {
 			cmd := res.Command
 			isInstalled := res.Installed
-
-			if foundNames[cmd.Name] {
-				continue
-			}
 
 			if isInstalled {
 				// Installed command found in catalog
@@ -436,15 +417,47 @@ func (d *Detector) keywordSearchCommands(input string) (*models.IntentResult, er
 					Score:       res.Score, 
 					Tags:        []string{"command", "catalog"},
 				})
+				foundNames[cmd.Name] = true
 				continue
 			}
 
-			// Not installed - handled by searchCommonCommands / Detect fallback usually,
-			// but if we want to show them here?
-			// Detect's fallback logic uses searchCommonCommands specifically for "not installed" items.
-			// Here (in keywordSearchCommands) we typically only return *runnable* things (cmd: or module).
-			// So we skip "not installed" here.
+			// Not installed - we still add high-confidence matches as suggestions
+			// but mark them clearly
+			if res.Score > 0.8 {
+				candidates = append(candidates, models.Candidate{
+					ModuleID:    "common:" + cmd.Name,
+					Name:        cmd.Name + " (not installed)",
+					Description: cmd.Description,
+					Score:       res.Score - 0.1, // Slight penalty
+					Tags:        []string{"catalog", "installable"},
+				})
+			}
 		}
+	}
+
+	// 2. Search Installed System Commands (SQLite FTS)
+	// SECONDARY SOURCE: Covers the thousands of other system commands not in catalog
+	// We only run this to find *other* commands.
+	cmdResults, err := indexer.SearchCommands(input, 10)
+	if err == nil {
+		for _, cmd := range cmdResults {
+			// Skip if we already found a better version in the catalog
+			if foundNames[cmd.Name] {
+				continue
+			}
+			
+			candidates = append(candidates, models.Candidate{
+				ModuleID:    "cmd:" + cmd.Name,
+				Name:        cmd.Name,
+				Description: cmd.Description,
+				Score:       0.8, // High baseline for FTS match
+				Tags:        []string{"command"},
+			})
+		}
+	} else {
+		// Log warning but continue - resilience property
+		// This ensures CLIPilot works even if SQLite is dead
+		// fmt.Printf("Warning: System index search failed: %v\n", err)
 	}
 
 
