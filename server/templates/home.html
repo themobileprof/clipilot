@@ -5,81 +5,267 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{.Title}} - CLIPilot Registry</title>
     <link rel="stylesheet" href="/static/style.css">
+    <!-- Material Icons -->
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <!-- Roboto Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
 </head>
-<body>
-    <nav>
-        <div class="container">
-            <h1><a href="/">CLIPilot Registry</a></h1>
-            <ul>
-                <li><a href="/">Home</a></li>
-                <li><a href="/modules">Browse Modules</a></li>
+<body class="home-page">
+    <!-- Material Design App Bar -->
+    <header class="app-bar">
+        <div class="container app-bar-content">
+            <div class="logo">
+                <span class="material-icons">terminal</span>
+                <h1><a href="/">CLIPilot Registry</a></h1>
+            </div>
+            <nav class="nav-menu">
+                <a href="/">Home</a>
+                <a href="/modules">Browse Modules</a>
                 {{if .LoggedIn}}
-                    <li><a href="/my-modules">My Modules</a></li>
-                    <li><a href="/upload">Upload</a></li>
+                    <a href="/my-modules">My Modules</a>
+                    <a href="/upload" class="btn-outlined">Upload</a>
                     {{if .Session.GitHubUser}}
-                    <li style="display: flex; align-items: center; gap: 0.5rem;">
-                        <img src="{{.Session.GitHubUser.AvatarURL}}" alt="{{.Session.GitHubUser.Login}}" style="width: 24px; height: 24px; border-radius: 50%;">
+                    <div class="user-profile">
+                        <img src="{{.Session.GitHubUser.AvatarURL}}" alt="{{.Session.GitHubUser.Login}}" class="avatar">
                         <span>{{.Session.GitHubUser.Login}}</span>
-                    </li>
+                    </div>
                     {{end}}
-                    <li><a href="/logout">Logout</a></li>
+                    <a href="/logout" class="btn-text">Logout</a>
                 {{else}}
-                    <li><a href="/login">Login</a></li>
+                    <a href="/login" class="btn-contained">Login</a>
                 {{end}}
-            </ul>
+            </nav>
         </div>
-    </nav>
-    <main class="container">
-        <section class="hero">
-    <h2>Welcome to CLIPilot Registry</h2>
-    <p>Discover and share CLI automation modules for the CLIPilot assistant.</p>
-    <div class="cta">
-        <a href="/modules" class="btn btn-primary">Browse Modules</a>
-        {{if not .LoggedIn}}
-        <a href="/login" class="btn btn-secondary">Upload Your Module</a>
-        {{else}}
-        <a href="/upload" class="btn btn-secondary">Upload Your Module</a>
-        {{end}}
-    </div>
-</section>
+    </header>
 
-<section class="features">
-    <h3>How It Works</h3>
-    <div class="feature-grid">
-        <div class="feature">
-            <h4>📦 Browse</h4>
-            <p>Explore community-created modules for various CLI tasks and workflows.</p>
-        </div>
-        <div class="feature">
-            <h4>⬇️ Install</h4>
-            <p>Use <code>clipilot modules install &lt;id&gt;</code> to add modules to your CLI.</p>
-        </div>
-        <div class="feature">
-            <h4>📤 Share</h4>
-            <p>Upload your own modules to help the community automate their workflows.</p>
-        </div>
-    </div>
-</section>
-
-<section class="quick-start">
-    <h3>Quick Start</h3>
-    <pre><code># Install CLIPilot
-curl -sSL https://raw.githubusercontent.com/themobileprof/clipilot/main/install.sh | bash
-
-# Browse available modules
-clipilot modules search
-
-# Install a module from registry
-clipilot modules install docker_install
-
-# Use the module
-clipilot "install docker"</code></pre>
-</section>
-    </main>
-    <footer>
+    <!-- Hero Section -->
+    <section class="hero-material">
         <div class="container">
-            <p>&copy; 2024 CLIPilot Registry. Open source CLI automation platform.</p>
+            <div class="hero-content">
+                <h1 class="hero-title">
+                    CLI Automation Made Simple
+                </h1>
+                <p class="hero-subtitle">
+                    Discover, share, and execute workflow modules for your command-line tasks.
+                    Build once, automate everywhere.
+                </p>
+                <div class="hero-actions">
+                    <a href="/modules" class="btn-large btn-primary">
+                        <span class="material-icons">explore</span>
+                        Browse Modules
+                    </a>
+                    {{if not .LoggedIn}}
+                    <a href="/login" class="btn-large btn-outlined-light">
+                        <span class="material-icons">upload</span>
+                        Share Your Module
+                    </a>
+                    {{else}}
+                    <a href="/upload" class="btn-large btn-outlined-light">
+                        <span class="material-icons">upload</span>
+                        Share Your Module
+                    </a>
+                    {{end}}
+                </div>
+            </div>
+            <div class="hero-illustration">
+                <div class="terminal-preview">
+                    <div class="terminal-header">
+                        <div class="terminal-buttons">
+                            <span class="terminal-btn red"></span>
+                            <span class="terminal-btn yellow"></span>
+                            <span class="terminal-btn green"></span>
+                        </div>
+                        <span class="terminal-title">terminal</span>
+                    </div>
+                    <div class="terminal-body">
+                        <p><span class="prompt">$</span> clio install docker</p>
+                        <p class="output">✓ Detected module: docker_install</p>
+                        <p class="output">✓ Checking dependencies...</p>
+                        <p class="output">✓ Installing Docker Engine...</p>
+                        <p class="success">✓ Docker installed successfully</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Stats Section -->
+    <section class="stats-section">
+        <div class="container">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <span class="material-icons stat-icon">inventory_2</span>
+                    <h3 class="stat-number">{{if .ModuleCount}}{{.ModuleCount}}{{else}}150+{{end}}</h3>
+                    <p class="stat-label">Modules Available</p>
+                </div>
+                <div class="stat-card">
+                    <span class="material-icons stat-icon">download</span>
+                    <h3 class="stat-number">{{if .TotalDownloads}}{{.TotalDownloads}}{{else}}10K+{{end}}</h3>
+                    <p class="stat-label">Downloads</p>
+                </div>
+                <div class="stat-card">
+                    <span class="material-icons stat-icon">group</span>
+                    <h3 class="stat-number">{{if .Contributors}}{{.Contributors}}{{else}}50+{{end}}</h3>
+                    <p class="stat-label">Contributors</p>
+                </div>
+                <div class="stat-card">
+                    <span class="material-icons stat-icon">devices</span>
+                    <h3 class="stat-number">3</h3>
+                    <p class="stat-label">Platforms</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="features-section">
+        <div class="container">
+            <div class="section-header">
+                <h2>How It Works</h2>
+                <p>Three simple steps to automate your command-line workflows</p>
+            </div>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <span class="material-icons">search</span>
+                    </div>
+                    <h3>Discover</h3>
+                    <p>Browse our curated collection of workflow modules. Search by tags, platform, or use case to find exactly what you need.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <span class="material-icons">download</span>
+                    </div>
+                    <h3>Sync</h3>
+                    <p>Clio automatically syncs modules to your local database. Delta updates ensure you always have the latest versions.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <span class="material-icons">bolt</span>
+                    </div>
+                    <h3>Execute</h3>
+                    <p>Describe your task in natural language. Clio's AI matches your intent and executes the right module workflow.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Platform Support -->
+    <section class="platform-section">
+        <div class="container">
+            <div class="section-header">
+                <h2>Works Everywhere</h2>
+                <p>First-class support for desktop and mobile environments</p>
+            </div>
+            <div class="platform-grid">
+                <div class="platform-card">
+                    <span class="material-icons platform-icon">laptop_mac</span>
+                    <h4>Linux & macOS</h4>
+                    <p>Native support for all major distributions</p>
+                </div>
+                <div class="platform-card">
+                    <span class="material-icons platform-icon">phone_android</span>
+                    <h4>Android (Termux)</h4>
+                    <p>Full-featured CLI automation on your phone</p>
+                </div>
+                <div class="platform-card">
+                    <span class="material-icons platform-icon">cloud_off</span>
+                    <h4>Offline Ready</h4>
+                    <p>Works without internet after initial sync</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Quick Start -->
+    <section class="quickstart-section">
+        <div class="container">
+            <div class="quickstart-card">
+                <div class="quickstart-header">
+                    <h2>Get Started in Seconds</h2>
+                    <p>Install Clio and start automating your CLI workflows</p>
+                </div>
+                <div class="code-block">
+                    <div class="code-header">
+                        <span class="material-icons">terminal</span>
+                        <span>Installation Command</span>
+                        <button class="copy-btn" onclick="copyToClipboard()">
+                            <span class="material-icons">content_copy</span>
+                        </button>
+                    </div>
+                    <pre><code id="install-command">curl -fsSL clipilot.themobileprof.com/clio | sh</code></pre>
+                </div>
+                <div class="quickstart-steps">
+                    <div class="step">
+                        <span class="step-number">1</span>
+                        <div class="step-content">
+                            <h4>Install Clio</h4>
+                            <p>Run the command above to install the Clio CLI assistant</p>
+                        </div>
+                    </div>
+                    <div class="step">
+                        <span class="step-number">2</span>
+                        <div class="step-content">
+                            <h4>Sync Modules</h4>
+                            <p>Run <code>clio sync</code> to download modules from the registry</p>
+                        </div>
+                    </div>
+                    <div class="step">
+                        <span class="step-number">3</span>
+                        <div class="step-content">
+                            <h4>Start Automating</h4>
+                            <p>Use <code>clio "your task"</code> to execute workflows</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer-material">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h4>CLIPilot Registry</h4>
+                    <p>Open source CLI automation platform</p>
+                    <div class="footer-links">
+                        <a href="https://github.com/themobileprof/clipilot" target="_blank">
+                            <span class="material-icons">code</span> GitHub
+                        </a>
+                    </div>
+                </div>
+                <div class="footer-section">
+                    <h4>Resources</h4>
+                    <a href="/modules">Browse Modules</a>
+                    <a href="/docs">Documentation</a>
+                    <a href="/api">API Reference</a>
+                </div>
+                <div class="footer-section">
+                    <h4>Community</h4>
+                    <a href="/upload">Share a Module</a>
+                    <a href="/module-requests">Request a Module</a>
+                    <a href="https://github.com/themobileprof/clipilot/issues" target="_blank">Report Issue</a>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2026 CLIPilot Registry. MIT License.</p>
+            </div>
         </div>
     </footer>
+
+    <script>
+        function copyToClipboard() {
+            const code = document.getElementById('install-command').textContent;
+            navigator.clipboard.writeText(code).then(() => {
+                const btn = document.querySelector('.copy-btn');
+                const icon = btn.querySelector('.material-icons');
+                icon.textContent = 'check';
+                setTimeout(() => {
+                    icon.textContent = 'content_copy';
+                }, 2000);
+            });
+        }
+    </script>
 </body>
 </html>

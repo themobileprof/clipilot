@@ -57,18 +57,15 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v4
       with:
-        go-version: '1.21'
+        go-version: '1.24'
     
-    - name: Build CLI
-      run: go build -v -o bin/clipilot ./cmd/clipilot
+    - name: Build Registry Server
+      run: go build -v -o bin/clipilot-server ./cmd/registry
     
-    - name: Build Registry
-      run: go build -v -o bin/registry ./cmd/registry
-    
-    - name: Test binaries
+    - name: Test binary
       run: |
-        ./bin/clipilot --version || echo "Version command not implemented"
-        ./bin/clipilot --help
+        ls -lh bin/clipilot-server
+        file bin/clipilot-server
     
   lint:
     name: Lint

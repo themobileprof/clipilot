@@ -80,11 +80,40 @@ func main() {
 
 	// Public routes
 	mux.HandleFunc("/", h.Home)
-	mux.HandleFunc("/health", h.HealthCheck) // Health check
+	mux.HandleFunc("/health", h.APIv1Health) // Enhanced health check
 	mux.HandleFunc("/modules", h.ListModules)
 	mux.HandleFunc("/modules/", h.GetModule)
+
+	// Legacy API endpoints
 	mux.HandleFunc("/api/modules", h.APIListModules)
 	mux.HandleFunc("/api/modules/", h.APIGetModule)
+
+	// New v1 API endpoints for Clio
+	mux.HandleFunc("/api/v1/modules", func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/api/v1/modules" {
+			h.APIv1ListModules(w, r)
+		} else {
+			http.NotFound(w, r)
+		}
+	})
+	mux.HandleFunc("/api/v1/modules/changed", h.APIv1ChangedModules)
+	mux.HandleFunc("/api/v1/modules/", func(w http.ResponseWriter, r *http.Request) {
+		// Route to appropriate handler based on path suffix
+		path := strings.TrimPrefix(r.URL.Path, "/api/v1/modules/")
+		parts := strings.Split(path, "/")
+
+		if path == "changed" {
+			h.APIv1ChangedModules(w, r)
+		} else if len(parts) >= 2 && parts[1] == "download" {
+			h.APIv1DownloadModule(w, r)
+		} else if len(parts) >= 2 && parts[1] == "dependencies" {
+			h.APIv1ModuleDependencies(w, r)
+		} else if len(parts) == 1 && parts[0] != "" {
+			h.APIv1GetModule(w, r)
+		} else {
+			http.NotFound(w, r)
+		}
+	})
 
 	// Auth routes
 	mux.HandleFunc("/login", h.Login)
@@ -107,6 +136,12 @@ func main() {
 	mux.HandleFunc("/api/module-request/", h.APIUpdateModuleRequest)
 	mux.HandleFunc("/module-requests", h.ModuleRequestsPage)
 
+	// Install script endpoints (for Clio client installation)
+	mux.HandleFunc("/clio", h.GetInstallScript)                         // Public - serves latest install script
+	mux.HandleFunc("/api/install-script/upload", h.UploadInstallScript) // Admin only - upload new script
+	mux.HandleFunc("/api/install-scripts", h.ListInstallScripts)        // Admin only - list all scripts
+	mux.HandleFunc("/api/install-scripts/", h.ActivateInstallScript)    // Admin only - activate specific version
+
 	// Static files
 	mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir(staticDir))))
 
@@ -123,7 +158,11 @@ func main() {
 	fmt.Println("  - Health: /health")
 	fmt.Println("  - Modules: /modules")
 	fmt.Println("  - Upload: /upload (requires login)")
-	fmt.Println("  - API: /api/modules")
+	fmt.Println("  - API (legacy): /api/modules")
+	fmt.Println("  - API v1: /api/v1/modules")
+	fmt.Println("  - API v1 Delta Sync: /api/v1/modules/changed")
+	fmt.Println("  - Clio Install: /clio (public)")
+	fmt.Println("  - Clio Upload: /api/install-script/upload (admin)")
 	fmt.Println()
 
 	// Wrap mux with rate limiter
