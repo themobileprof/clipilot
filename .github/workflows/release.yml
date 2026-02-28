@@ -140,7 +140,7 @@ jobs:
                 -H "Authorization: Bearer $API_KEY" \
                 -F "script_file=@/tmp/clio-install.sh" \
                 -F "version=$SCRIPT_VERSION" \
-                -w "\n%{http_code}" \
+                -w $'\n%{http_code}' \
                 -s)
               
               HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
