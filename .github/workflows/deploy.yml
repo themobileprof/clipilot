@@ -104,6 +104,60 @@ jobs:
             echo "Container can be accessed at: http://clipilot-registry:8080 (Docker DNS)"
             echo "Or via IP: http://$CONTAINER_IP:8080"
             
+            # Download and upload Clio install script
+            echo ""
+            echo "📥 Fetching Clio install script from GitHub..."
+            curl -fsSL https://raw.githubusercontent.com/themobileprof/clio/main/install.sh -o /tmp/clio-install.sh
+            
+            if [ -f /tmp/clio-install.sh ]; then
+              echo "📤 Uploading install script to registry..."
+              # Extract version from script (look for VERSION= line)
+              SCRIPT_VERSION=$(grep -m1 '^VERSION=' /tmp/clio-install.sh | cut -d'=' -f2 | tr -d '"' || echo "auto")
+              
+              # Get admin credentials from env file
+              ADMIN_USER=$(grep ADMIN_USER /tmp/clipilot-registry.env | cut -d'=' -f2 || echo "admin")
+              ADMIN_PASS=$(grep ADMIN_PASS /tmp/clipilot-registry.env | cut -d'=' -f2)
+              
+              # First, create an API key for CI/CD if ADMIN_API_KEY not in secrets
+              # For now, we'll use docker exec to insert directly into DB
+              echo "Creating temporary API key..."
+              API_KEY="cicd-$(date +%s)-$(openssl rand -hex 16)"
+              API_KEY_HASH=$(echo -n "$API_KEY" | sha256sum | awk '{print $1}')
+              
+              docker exec clipilot-registry sqlite3 /app/data/clipilot.db <<EOF
+INSERT OR IGNORE INTO api_keys (user_id, key_hash, name, created_at)
+SELECT id, '$API_KEY_HASH', 'cicd-deploy-$(date +%Y%m%d)', datetime('now')
+FROM users WHERE username = '$ADMIN_USER' AND role = 'admin';
+EOF
+              
+              # Upload to API using Bearer token
+              RESPONSE=$(curl -X POST http://localhost:8082/api/install-script/upload \
+                -H "Authorization: Bearer $API_KEY" \
+                -F "script_file=@/tmp/clio-install.sh" \
+                -F "version=$SCRIPT_VERSION" \
+                -w "\n%{http_code}" \
+                -s)
+              
+              HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+              BODY=$(echo "$RESPONSE" | head -n-1)
+              
+              if [ "$HTTP_CODE" = "201" ] || [ "$HTTP_CODE" = "200" ]; then
+                echo "✅ Install script uploaded successfully"
+                echo "$BODY"
+                echo ""
+                echo "📍 Available at: http://clipilot.themobileprof.com/clio"
+              else
+                echo "⚠️  Warning: Upload returned HTTP $HTTP_CODE"
+                echo "$BODY"
+                echo "Deployment continues anyway"
+              fi
+              
+              # Cleanup temp files
+              rm -f /tmp/clio-install.sh
+            else
+              echo "⚠️  Warning: Could not fetch install script from GitHub, but deployment continues"
+            fi
+            
             # Clean up
             rm /tmp/clipilot-registry.env
             

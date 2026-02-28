@@ -2,32 +2,69 @@
 
 ## Changes Made
 
-Updated [server/templates/home.html](../server/templates/home.html) to emphasize Clio's key features:
+Updated [server/templates/home.html](../server/templates/home.html) to emphasize Clio's key features, with **command search** as the primary use case.
 
 ### Key Messaging Now Prominent:
+- ✅ **"Don't know the command? Just ask"** - Command search is the most common use
+- ✅ **Man page search** - Clio searches man pages and explains commands
 - ✅ **"Perfect for beginners"** - Natural language interface, no command memorization
 - ✅ **Works offline** - After initial sync, runs completely locally
 - ✅ **Android (Termux) support** - Full support highlighted as first-class platform
-- ✅ **Example usage** - Shows real conversational examples with Clio
+- ✅ **Example usage** - Shows real command search and automation examples
 
 ### Hero Section Updated:
-**Before:** "CLI Automation Made Simple"  
-**After:** "Clio: Your AI CLI Assistant"
+**Title:** "Clio: Your AI CLI Assistant"
 
-**Before:** Generic description about workflows  
-**After:** "Perfect for beginners. Just describe what you want in plain English—Clio handles the commands. Works offline on Linux, macOS, and Android (Termux)."
+**Subtitle:** "Don't know the command? Just ask. Clio searches man pages and explains commands in plain English. Perfect for beginners. Works offline on Linux, macOS, and Android (Termux)."
+
+### Primary Use Case: Command Search
+
+**Section:** "Most Common Use: Finding Commands"
+
+Shows 4 command search examples:
+- 💬 "how do I compress a file?" → 🤖 `tar -czf archive.tar.gz file` with explanation
+- 💬 "what command shows disk space?" → 🤖 `df -h` with usage examples
+- 💬 "how to change file permissions?" → 🤖 `chmod` with practical examples
+- 💬 "how do I search inside files?" → 🤖 `grep -r "pattern" .` with explanation
+
+### Secondary Use Case: Automation
+
+**Section:** "Automation Workflows"
+
+Shows 3 multi-step automation examples:
+- 💬 "install docker" → 🤖 Detects OS, adds repo, installs, starts service
+- 💬 "backup my documents folder" → 🤖 Creates timestamped backup
+- 💬 "setup python dev environment" → 🤖 Installs Python, pip, virtualenv, packages
 
 ### Features Section:
-Changed from "How It Works" (3 generic steps) to practical benefits:
-1. **Natural Language** - For beginners, no syntax to learn
+1. **Command Search** (First feature) - Most common use, search man pages
 2. **Offline Ready** - Works without internet
 3. **Works Everywhere** - Including Android/Termux
 
-### New Example Usage Section:
-Shows conversational examples:
-- 💬 "install python development tools" → 🤖 Installs Python, pip, virtualenv
-- 💬 "backup my documents folder" → 🤖 Creates timestamped backup
-- 💬 "find large files over 1GB" → 🤖 Scans and lists files
+---
+
+## Automatic Clio Install Script Sync
+
+The deployment workflows now **automatically fetch and upload** the latest Clio install script during deployment:
+
+### What Happens on Deploy:
+
+1. **Fetch**: Downloads `install.sh` from `https://raw.githubusercontent.com/themobileprof/clio/main/install.sh`
+2. **Extract Version**: Reads `VERSION=` from the script
+3. **Create API Key**: Generates temporary CI/CD API key in the database
+4. **Upload**: POSTs to `/api/install-script/upload` with Bearer token auth
+5. **Activate**: Script becomes available at **clipilot.themobileprof.com/clio**
+
+### Benefits:
+- ✅ Always serves the latest Clio install script
+- ✅ No manual upload needed after Clio updates
+- ✅ Automatic on every deployment (hotfix and release)
+- ✅ Graceful failure - deployment continues if upload fails
+
+### Implementation:
+Both workflows updated:
+- [.github/workflows/deploy.yml](../.github/workflows/deploy.yml) - Manual hotfix deployments
+- [.github/workflows/release.yml](../.github/workflows/release.yml) - Tag-based releases
 
 ---
 
