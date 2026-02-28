@@ -157,7 +157,9 @@ func (h *Handlers) APIv1ListModules(w http.ResponseWriter, r *http.Request) {
 		"offset":  offset,
 	}
 
-	json.NewEncoder(w).Encode(response)
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		log.Printf("Failed to encode response: %v", err)
+	}
 }
 
 // APIv1GetModule handles GET /api/v1/modules/:id
@@ -185,12 +187,14 @@ func (h *Handlers) APIv1GetModule(w http.ResponseWriter, r *http.Request) {
 
 	if err == sql.ErrNoRows {
 		w.WriteHeader(http.StatusNotFound)
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		if err := json.NewEncoder(w).Encode(map[string]interface{}{
 			"error": map[string]string{
 				"code":    "MODULE_NOT_FOUND",
 				"message": fmt.Sprintf("Module '%s' does not exist", moduleID),
 			},
-		})
+		}); err != nil {
+			log.Printf("Failed to encode error response: %v", err)
+		}
 		return
 	}
 
@@ -234,7 +238,9 @@ func (h *Handlers) APIv1GetModule(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	json.NewEncoder(w).Encode(module)
+	if err := json.NewEncoder(w).Encode(module); err != nil {
+		log.Printf("Failed to encode module: %v", err)
+	}
 }
 
 // APIv1DownloadModule handles GET /api/v1/modules/:id/download
@@ -295,7 +301,9 @@ func (h *Handlers) APIv1DownloadModule(w http.ResponseWriter, r *http.Request) {
 		}
 	}()
 
-	w.Write(content)
+	if _, err := w.Write(content); err != nil {
+		log.Printf("Failed to write content: %v", err)
+	}
 }
 
 // APIv1ChangedModules handles GET /api/v1/modules/changed for delta sync
@@ -360,7 +368,9 @@ func (h *Handlers) APIv1ChangedModules(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		log.Printf("Failed to encode changed modules response: %v", err)
+	}
 }
 
 // APIv1ModuleDependencies handles GET /api/v1/modules/:id/dependencies
@@ -408,7 +418,9 @@ func (h *Handlers) APIv1ModuleDependencies(w http.ResponseWriter, r *http.Reques
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		log.Printf("Failed to encode dependencies response: %v", err)
+	}
 }
 
 // APIv1Health handles GET /health with enhanced information
@@ -443,5 +455,7 @@ func (h *Handlers) APIv1Health(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	}
 
-	json.NewEncoder(w).Encode(response)
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		log.Printf("Failed to encode health response: %v", err)
+	}
 }

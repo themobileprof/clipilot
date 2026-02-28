@@ -61,10 +61,12 @@ func (h *Handlers) UploadInstallScript(w http.ResponseWriter, r *http.Request) {
 	if !authorized {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusUnauthorized)
-		json.NewEncoder(w).Encode(map[string]string{
+		if err := json.NewEncoder(w).Encode(map[string]string{
 			"error": "Unauthorized. Admin access required.",
 			"hint":  "Use session authentication or provide a valid API key with admin role.",
-		})
+		}); err != nil {
+			log.Printf("Failed to encode unauthorized response: %v", err)
+		}
 		return
 	}
 
@@ -173,13 +175,15 @@ func (h *Handlers) UploadInstallScript(w http.ResponseWriter, r *http.Request) {
 	// Return success response
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	if err := json.NewEncoder(w).Encode(map[string]interface{}{
 		"success":  true,
 		"version":  version,
 		"checksum": checksum,
 		"filename": filename,
 		"message":  "Install script uploaded successfully",
-	})
+	}); err != nil {
+		log.Printf("Failed to encode upload response: %v", err)
+	}
 }
 
 // GetInstallScript serves the latest active install script at GET /clio
@@ -239,7 +243,7 @@ func (h *Handlers) GetInstallScript(w http.ResponseWriter, r *http.Request) {
 
 	// Set response headers
 	w.Header().Set("Content-Type", "text/x-shellscript")
-	w.Header().Set("Content-Disposition", fmt.Sprintf("inline; filename=\"install.sh\""))
+	w.Header().Set("Content-Disposition", "inline; filename=\"install.sh\"")
 	w.Header().Set("X-Script-Version", version)
 	w.Header().Set("X-Script-Checksum", checksum)
 	w.Header().Set("Cache-Control", "public, max-age=3600") // Cache for 1 hour
@@ -255,7 +259,10 @@ func (h *Handlers) GetInstallScript(w http.ResponseWriter, r *http.Request) {
 
 	// Serve content
 	w.WriteHeader(http.StatusOK)
-	w.Write(content)
+	if _, err := w.Write(content); err != nil {
+		log.Printf("Failed to write install script: %v", err)
+		return
+	}
 
 	log.Printf("Served install script: version=%s, size=%d bytes", version, len(content))
 }
@@ -267,7 +274,9 @@ func (h *Handlers) ListInstallScripts(w http.ResponseWriter, r *http.Request) {
 	if !h.auth.IsAdmin(r) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusUnauthorized)
-		json.NewEncoder(w).Encode(map[string]string{"error": "Admin access required"})
+		if err := json.NewEncoder(w).Encode(map[string]string{"error": "Admin access required"}); err != nil {
+			log.Printf("Failed to encode unauthorized response: %v", err)
+		}
 		return
 	}
 
@@ -307,10 +316,12 @@ func (h *Handlers) ListInstallScripts(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	if err := json.NewEncoder(w).Encode(map[string]interface{}{
 		"scripts": scripts,
 		"count":   len(scripts),
-	})
+	}); err != nil {
+		log.Printf("Failed to encode scripts list: %v", err)
+	}
 }
 
 // ActivateInstallScript sets a specific version as active
@@ -325,7 +336,9 @@ func (h *Handlers) ActivateInstallScript(w http.ResponseWriter, r *http.Request)
 	if !h.auth.IsAdmin(r) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusUnauthorized)
-		json.NewEncoder(w).Encode(map[string]string{"error": "Admin access required"})
+		if err := json.NewEncoder(w).Encode(map[string]string{"error": "Admin access required"}); err != nil {
+			log.Printf("Failed to encode unauthorized response: %v", err)
+		}
 		return
 	}
 
@@ -363,10 +376,12 @@ func (h *Handlers) ActivateInstallScript(w http.ResponseWriter, r *http.Request)
 	log.Printf("Activated install script ID: %s", scriptID)
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	if err := json.NewEncoder(w).Encode(map[string]interface{}{
 		"success": true,
 		"message": "Install script activated",
-	})
+	}); err != nil {
+		log.Printf("Failed to encode activation response: %v", err)
+	}
 }
 
 // hashAPIKey creates a SHA256 hash of an API key for storage/comparison
