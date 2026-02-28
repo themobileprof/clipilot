@@ -43,11 +43,11 @@
         <div class="container">
             <div class="hero-content">
                 <h1 class="hero-title">
-                    CLI Automation Made Simple
+                    Clio: Your AI CLI Assistant
                 </h1>
                 <p class="hero-subtitle">
-                    Discover, share, and execute workflow modules for your command-line tasks.
-                    Build once, automate everywhere.
+                    <strong>Don't know the command? Just ask.</strong> Clio searches man pages and explains commands in plain English.
+                    <br><strong>Perfect for beginners.</strong> Works <strong>offline</strong> on Linux, macOS, and <strong>Android (Termux)</strong>.
                 </p>
                 <div class="hero-actions">
                     <a href="/modules" class="btn-large btn-primary">
@@ -78,11 +78,13 @@
                         <span class="terminal-title">terminal</span>
                     </div>
                     <div class="terminal-body">
-                        <p><span class="prompt">$</span> clio install docker</p>
-                        <p class="output">✓ Detected module: docker_install</p>
-                        <p class="output">✓ Checking dependencies...</p>
-                        <p class="output">✓ Installing Docker Engine...</p>
-                        <p class="success">✓ Docker installed successfully</p>
+                        <p><span class="prompt">$</span> clio "how do I list files?"</p>
+                        <p class="output">📖 Command: <strong>ls</strong> - list directory contents</p>
+                        <p class="output">   Usage: ls [options] [directory]</p>
+                        <p class="output">   Try: ls -lah  (detailed list with hidden files)</p>
+                        <p><span class="prompt">$</span> clio "install docker"</p>
+                        <p class="output">✓ Found module: docker_install</p>
+                        <p class="success">✓ Docker installed!</p>
                     </div>
                 </div>
             </div>
@@ -95,23 +97,23 @@
             <div class="stats-grid">
                 <div class="stat-card">
                     <span class="material-icons stat-icon">inventory_2</span>
-                    <h3 class="stat-number">{{if .ModuleCount}}{{.ModuleCount}}{{else}}150+{{end}}</h3>
-                    <p class="stat-label">Modules Available</p>
+                    <h3 class="stat-number">{{if .ModuleCount}}{{.ModuleCount}}{{else}}50+{{end}}</h3>
+                    <p class="stat-label">Ready-to-Use Modules</p>
                 </div>
                 <div class="stat-card">
                     <span class="material-icons stat-icon">download</span>
-                    <h3 class="stat-number">{{if .TotalDownloads}}{{.TotalDownloads}}{{else}}10K+{{end}}</h3>
-                    <p class="stat-label">Downloads</p>
-                </div>
-                <div class="stat-card">
-                    <span class="material-icons stat-icon">group</span>
-                    <h3 class="stat-number">{{if .Contributors}}{{.Contributors}}{{else}}50+{{end}}</h3>
-                    <p class="stat-label">Contributors</p>
+                    <h3 class="stat-number">1-Click</h3>
+                    <p class="stat-label">Installation</p>
                 </div>
                 <div class="stat-card">
                     <span class="material-icons stat-icon">devices</span>
                     <h3 class="stat-number">3</h3>
-                    <p class="stat-label">Platforms</p>
+                    <p class="stat-label">Platforms (Linux, macOS, Android)</p>
+                </div>
+                <div class="stat-card">
+                    <span class="material-icons stat-icon">code</span>
+                    <h3 class="stat-number">100%</h3>
+                    <p class="stat-label">Open Source</p>
                 </div>
             </div>
         </div>
@@ -121,57 +123,76 @@
     <section class="features-section">
         <div class="container">
             <div class="section-header">
-                <h2>How It Works</h2>
-                <p>Three simple steps to automate your command-line workflows</p>
+                <h2>How Clio Works</h2>
+                <p>No command memorization needed—just tell Clio what you want in plain English</p>
             </div>
             <div class="features-grid">
                 <div class="feature-card">
                     <div class="feature-icon">
                         <span class="material-icons">search</span>
                     </div>
-                    <h3>Discover</h3>
-                    <p>Browse our curated collection of workflow modules. Search by tags, platform, or use case to find exactly what you need.</p>
+                    <h3>Command Search</h3>
+                    <p><strong>Most common use:</strong> Search man pages for any command. "how do I...?" gets instant answers with examples. No more memorizing syntax.</p>
                 </div>
                 <div class="feature-card">
                     <div class="feature-icon">
-                        <span class="material-icons">download</span>
+                        <span class="material-icons">cloud_off</span>
                     </div>
-                    <h3>Sync</h3>
-                    <p>Clio automatically syncs modules to your local database. Delta updates ensure you always have the latest versions.</p>
+                    <h3>Offline Ready</h3>
+                    <p><strong>Works without internet:</strong> After the first sync, Clio runs completely offline using local AI. Perfect for remote work or mobile devices.</p>
                 </div>
                 <div class="feature-card">
                     <div class="feature-icon">
-                        <span class="material-icons">bolt</span>
+                        <span class="material-icons">phone_android</span>
                     </div>
-                    <h3>Execute</h3>
-                    <p>Describe your task in natural language. Clio's AI matches your intent and executes the right module workflow.</p>
+                    <h3>Works Everywhere</h3>
+                    <p><strong>Including Android:</strong> Full support for Linux, macOS, and Termux on Android. Automate your phone's CLI with the same power as your desktop.</p>
                 </div>
             </div>
         </div>
     </section>
 
-    <!-- Platform Support -->
+    <!-- Platform Support / Example Usage -->
     <section class="platform-section">
         <div class="container">
             <div class="section-header">
-                <h2>Works Everywhere</h2>
-                <p>First-class support for desktop and mobile environments</p>
+                <h2>Most Common Use: Finding Commands</h2>
+                <p>Don't know the command? Just ask Clio in plain English</p>
             </div>
             <div class="platform-grid">
-                <div class="platform-card">
-                    <span class="material-icons platform-icon">laptop_mac</span>
-                    <h4>Linux & macOS</h4>
-                    <p>Native support for all major distributions</p>
+                <div class="platform-card" style="text-align: left; padding: 1.5rem;">
+                    <h4 style="margin-bottom: 1rem; color: #3f51b5;">🔍 Command Search (Man Pages)</h4>
+                    
+                    <p style="margin-bottom: 0.5rem;"><strong>💬 You ask:</strong> "how do I compress a file?"</p>
+                    <p style="margin-bottom: 1rem; color: #666;"><strong>🤖 Clio finds:</strong> <code>tar -czf archive.tar.gz file</code> and explains the options</p>
+                    
+                    <p style="margin-bottom: 0.5rem;"><strong>💬 You ask:</strong> "what command shows disk space?"</p>
+                    <p style="margin-bottom: 1rem; color: #666;"><strong>🤖 Clio finds:</strong> <code>df -h</code> with usage examples</p>
+                    
+                    <p style="margin-bottom: 0.5rem;"><strong>💬 You ask:</strong> "how to change file permissions?"</p>
+                    <p style="margin-bottom: 1rem; color: #666;"><strong>🤖 Clio finds:</strong> <code>chmod</code> command with practical examples</p>
+                    
+                    <p style="margin-bottom: 0.5rem;"><strong>💬 You ask:</strong> "how do I search inside files?"</p>
+                    <p style="color: #666;"><strong>🤖 Clio finds:</strong> <code>grep -r "pattern" .</code> with explanation</p>
                 </div>
-                <div class="platform-card">
-                    <span class="material-icons platform-icon">phone_android</span>
-                    <h4>Android (Termux)</h4>
-                    <p>Full-featured CLI automation on your phone</p>
-                </div>
-                <div class="platform-card">
-                    <span class="material-icons platform-icon">cloud_off</span>
-                    <h4>Offline Ready</h4>
-                    <p>Works without internet after initial sync</p>
+            </div>
+            
+            <div class="section-header" style="margin-top: 3rem;">
+                <h2>Automation Workflows</h2>
+                <p>Beyond command search: automate complex multi-step tasks</p>
+            </div>
+            <div class="platform-grid">
+                <div class="platform-card" style="text-align: left; padding: 1.5rem;">
+                    <h4 style="margin-bottom: 1rem; color: #3f51b5;">⚡ Multi-Step Automation</h4>
+                    
+                    <p style="margin-bottom: 0.5rem;"><strong>💬 You say:</strong> "install docker"</p>
+                    <p style="margin-bottom: 1rem; color: #666;"><strong>🤖 Clio does:</strong> Detects your OS, adds repo, installs Docker, starts service, adds you to docker group</p>
+                    
+                    <p style="margin-bottom: 0.5rem;"><strong>💬 You say:</strong> "backup my documents folder"</p>
+                    <p style="margin-bottom: 1rem; color: #666;"><strong>🤖 Clio does:</strong> Creates timestamped compressed backup and confirms location</p>
+                    
+                    <p style="margin-bottom: 0.5rem;"><strong>💬 You say:</strong> "setup python dev environment"</p>
+                    <p style="color: #666;"><strong>🤖 Clio does:</strong> Installs Python, pip, virtualenv, creates venv, installs common packages</p>
                 </div>
             </div>
         </div>
@@ -183,7 +204,7 @@
             <div class="quickstart-card">
                 <div class="quickstart-header">
                     <h2>Get Started in Seconds</h2>
-                    <p>Install Clio and start automating your CLI workflows</p>
+                    <p>Install Clio on Linux, macOS, or Android (Termux)—no experience needed</p>
                 </div>
                 <div class="code-block">
                     <div class="code-header">
@@ -214,7 +235,7 @@
                         <span class="step-number">3</span>
                         <div class="step-content">
                             <h4>Start Automating</h4>
-                            <p>Use <code>clio "your task"</code> to execute workflows</p>
+                            <p>Just type: <code>clio "your task in plain English"</code> — Clio handles the rest!</p>
                         </div>
                     </div>
                 </div>
