@@ -253,7 +253,7 @@ func (h *Handlers) DeleteUser(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to delete user", http.StatusInternalServerError)
 		return
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	// Delete user's API keys
 	_, err = tx.Exec("DELETE FROM api_keys WHERE user_id = ?", userID)
