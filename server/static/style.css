@@ -404,6 +404,32 @@ footer a:hover {
     text-decoration: underline;
 }
 
+/* Material Design Footer */
+.app-footer {
+    background: #263238;
+    color: rgba(255, 255, 255, 0.87);
+    padding: 2rem 0;
+    text-align: center;
+    margin-top: 3rem;
+    font-family: 'Roboto', sans-serif;
+}
+
+.app-footer p {
+    margin: 0.5rem 0;
+    font-size: 0.9rem;
+}
+
+.app-footer a {
+    color: #82b1ff;
+    text-decoration: none;
+    transition: color 0.2s;
+}
+
+.app-footer a:hover {
+    color: #448aff;
+    text-decoration: none;
+}
+
 /* Section styling */
 section {
     background: white;

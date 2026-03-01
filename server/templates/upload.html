@@ -5,24 +5,38 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{.Title}} - CLIPilot Registry</title>
     <link rel="stylesheet" href="/static/style.css">
+    <!-- Material Icons -->
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <!-- Roboto Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
 </head>
 <body>
-    <nav>
-        <div class="container">
-            <h1><a href="/">CLIPilot Registry</a></h1>
-            <ul>
-                <li><a href="/">Home</a></li>
-                <li><a href="/modules">Browse Modules</a></li>
+    <!-- Material Design App Bar -->
+    <header class="app-bar">
+        <div class="container app-bar-content">
+            <div class="logo">
+                <span class="material-icons">terminal</span>
+                <h1><a href="/">CLIPilot Registry</a></h1>
+            </div>
+            <nav class="nav-menu">
+                <a href="/">Home</a>
+                <a href="/modules">Browse Modules</a>
                 {{if .LoggedIn}}
-                    <li><a href="/my-modules">My Modules</a></li>
-                    <li><a href="/upload">Upload</a></li>
-                    <li><a href="/logout">Logout</a></li>
+                    <a href="/my-modules">My Modules</a>
+                    <a href="/upload" class="btn-outlined">Upload</a>
+                    {{if .Session.GitHubUser}}
+                    <div class="user-profile">
+                        <img src="{{.Session.GitHubUser.AvatarURL}}" alt="{{.Session.GitHubUser.Login}}" class="avatar">
+                        <span>{{.Session.GitHubUser.Login}}</span>
+                    </div>
+                    {{end}}
+                    <a href="/logout" class="btn-text">Logout</a>
                 {{else}}
-                    <li><a href="/login">Login</a></li>
+                    <a href="/login" class="btn-contained">Login</a>
                 {{end}}
-            </ul>
+            </nav>
         </div>
-    </nav>
+    </header>
     <main class="container">
         <section>
     <h2>Upload Module</h2>
@@ -213,9 +227,10 @@ function copyPrompt() {
 }
 </script>
     </main>
-    <footer>
+    <footer class="app-footer">
         <div class="container">
-            <p>&copy; 2024 CLIPilot Registry. Open source CLI automation platform.</p>
+            <p>&copy; 2026 CLIPilot Registry | Open Source CLI Automation</p>
+            <p><a href="https://github.com/themobileprof/clio" target="_blank">GitHub</a> • <a href="/modules">Browse Modules</a> • <a href="/clio">Install Clio</a></p>
         </div>
     </footer>
 </body>
