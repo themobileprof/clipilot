@@ -7,7 +7,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"html/template"
 	"log"
 	"net/http"
 	"strconv"
@@ -99,15 +98,9 @@ func (h *Handlers) AdminAPIKeysPage(w http.ResponseWriter, r *http.Request) {
 		"APIKeys":  apiKeys,
 	}
 
-	tmpl, err := template.ParseFiles("server/templates/api-keys.html")
-	if err != nil {
-		log.Printf("Error parsing template: %v", err)
-		http.Error(w, "Template error", http.StatusInternalServerError)
-		return
-	}
-
-	if err := tmpl.Execute(w, data); err != nil {
+	if err := h.templates.ExecuteTemplate(w, "api-keys.html", data); err != nil {
 		log.Printf("Error executing template: %v", err)
+		http.Error(w, "Template error", http.StatusInternalServerError)
 	}
 }
 
@@ -320,14 +313,8 @@ func (h *Handlers) AdminAPIKeysPageWithFlash(w http.ResponseWriter, r *http.Requ
 		data["Success"] = success
 	}
 
-	tmpl, err := template.ParseFiles("server/templates/api-keys.html")
-	if err != nil {
-		log.Printf("Error parsing template: %v", err)
-		http.Error(w, "Template error", http.StatusInternalServerError)
-		return
-	}
-
-	if err := tmpl.Execute(w, data); err != nil {
+	if err := h.templates.ExecuteTemplate(w, "api-keys.html", data); err != nil {
 		log.Printf("Error executing template: %v", err)
+		http.Error(w, "Template error", http.StatusInternalServerError)
 	}
 }

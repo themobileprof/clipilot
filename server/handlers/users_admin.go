@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"database/sql"
-	"html/template"
 	"log"
 	"net/http"
 	"strconv"
@@ -111,15 +110,9 @@ func (h *Handlers) AdminUsersPage(w http.ResponseWriter, r *http.Request) {
 		data["Success"] = "User created successfully! Share the credentials below with the new user."
 	}
 
-	tmpl, err := template.ParseFiles("server/templates/users-admin.html")
-	if err != nil {
-		log.Printf("Error parsing template: %v", err)
-		http.Error(w, "Template error", http.StatusInternalServerError)
-		return
-	}
-
-	if err := tmpl.Execute(w, data); err != nil {
+	if err := h.templates.ExecuteTemplate(w, "users-admin.html", data); err != nil {
 		log.Printf("Error executing template: %v", err)
+		http.Error(w, "Template error", http.StatusInternalServerError)
 	}
 }
 
