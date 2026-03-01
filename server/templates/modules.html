@@ -24,6 +24,9 @@
                 {{if .LoggedIn}}
                     <a href="/my-modules">My Modules</a>
                     <a href="/upload" class="btn-outlined">Upload</a>
+                    {{if .Session.IsAdmin}}
+                    <a href="/admin/api-keys">API Keys</a>
+                    {{end}}
                     {{if .Session.GitHubUser}}
                     <div class="user-profile">
                         <img src="{{.Session.GitHubUser.AvatarURL}}" alt="{{.Session.GitHubUser.Login}}" class="avatar">

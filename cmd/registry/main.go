@@ -142,6 +142,11 @@ func main() {
 	mux.HandleFunc("/api/install-scripts", h.ListInstallScripts)        // Admin only - list all scripts
 	mux.HandleFunc("/api/install-scripts/", h.ActivateInstallScript)    // Admin only - activate specific version
 
+	// Admin API key management
+	mux.HandleFunc("/admin/api-keys", h.AdminAPIKeysPageWithFlash) // Admin only - manage API keys
+	mux.HandleFunc("/admin/api-keys/generate", h.GenerateAPIKey)   // Admin only - generate new key
+	mux.HandleFunc("/admin/api-keys/revoke", h.RevokeAPIKey)       // Admin only - revoke key
+
 	// Static files
 	mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir(staticDir))))
 
@@ -163,6 +168,7 @@ func main() {
 	fmt.Println("  - API v1 Delta Sync: /api/v1/modules/changed")
 	fmt.Println("  - Clio Install: /clio (public)")
 	fmt.Println("  - Clio Upload: /api/install-script/upload (admin)")
+	fmt.Println("  - API Keys: /admin/api-keys (admin)")
 	fmt.Println()
 
 	// Wrap mux with rate limiter
