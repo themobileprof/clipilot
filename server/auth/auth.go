@@ -78,6 +78,31 @@ func (m *Manager) SetSession(w http.ResponseWriter, username string) {
 	})
 }
 
+// SetAdminSession creates a new session with specified admin status
+func (m *Manager) SetAdminSession(w http.ResponseWriter, username string, isAdmin bool) {
+	token := m.generateToken()
+
+	session := &Session{
+		Username:  username,
+		IsAdmin:   isAdmin,
+		CreatedAt: time.Now(),
+		ExpiresAt: time.Now().Add(sessionTTL),
+	}
+
+	m.mu.Lock()
+	m.sessions[token] = session
+	m.mu.Unlock()
+
+	http.SetCookie(w, &http.Cookie{
+		Name:     sessionCookie,
+		Value:    token,
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   false, // Set to true in production with HTTPS
+		MaxAge:   int(sessionTTL.Seconds()),
+	})
+}
+
 // SetGitHubSession creates a new session for GitHub user
 func (m *Manager) SetGitHubSession(w http.ResponseWriter, ghUser *GitHubUser) {
 	token := m.generateToken()

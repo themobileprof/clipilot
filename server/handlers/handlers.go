@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"golang.org/x/crypto/bcrypt"
 	"golang.org/x/oauth2"
 	yaml "gopkg.in/yaml.v3"
 	_ "modernc.org/sqlite"
@@ -72,7 +73,10 @@ func New(cfg Config) *Handlers {
 		log.Fatalf("Failed to run migrations: %v", err)
 	}
 
-
+	// Bootstrap: Ensure admin user exists in database
+	if err := EnsureAdminUser(db, cfg.AdminUser, cfg.AdminPass); err != nil {
+		log.Fatalf("Failed to create admin user: %v", err)
+	}
 
 	// Bootstrap: discover and submit server's own commands if low on data
 	// This runs asynchronously to not block server startup
@@ -579,8 +583,9 @@ func (h *Handlers) Login(w http.ResponseWriter, r *http.Request) {
 		// Validate input
 		if username == "" || password == "" {
 			data := map[string]interface{}{
-				"Title": "Login",
-				"Error": "Username and password are required",
+				"Title":              "Login",
+				"Error":              "Username and password are required",
+				"GitHubOAuthEnabled": h.githubOAuth != nil,
 			}
 			if err := h.templates.ExecuteTemplate(w, "login.html", data); err != nil {
 				log.Printf("Template error: %v", err)
@@ -589,8 +594,10 @@ func (h *Handlers) Login(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		if h.auth.Authenticate(username, password) {
-			h.auth.SetSession(w, username)
+		// Authenticate against database
+		username, isAdmin, success := h.authenticateUser(username, password)
+		if success {
+			h.auth.SetAdminSession(w, username, isAdmin)
 			http.Redirect(w, r, "/upload", http.StatusSeeOther)
 			return
 		}
@@ -673,6 +680,37 @@ func (h *Handlers) APIGetModule(w http.ResponseWriter, r *http.Request) {
 // HandleSemanticSearch wraps the semantic search handler
 func (h *Handlers) HandleSemanticSearch(geminiAPIKey string) http.HandlerFunc {
 	return HandleSemanticSearch(h.db, geminiAPIKey)
+}
+
+// authenticateUser checks username/password against users table
+// Returns (username, isAdmin, success)
+func (h *Handlers) authenticateUser(username, password string) (string, bool, bool) {
+	var passwordHash string
+	var role string
+	var userID int64
+
+	// Query user from database
+	err := h.db.QueryRow(`
+		SELECT id, password_hash, role FROM users 
+		WHERE username = ? AND password_hash IS NOT NULL
+	`, username).Scan(&userID, &passwordHash, &role)
+
+	if err != nil {
+		if err != sql.ErrNoRows {
+			log.Printf("Database error during authentication: %v", err)
+		}
+		return "", false, false
+	}
+
+	// Verify password with bcrypt
+	err = bcrypt.CompareHashAndPassword([]byte(passwordHash), []byte(password))
+	if err != nil {
+		return "", false, false
+	}
+
+	// Authentication successful
+	isAdmin := (role == "admin")
+	return username, isAdmin, true
 }
 
 // HealthCheck returns server health status

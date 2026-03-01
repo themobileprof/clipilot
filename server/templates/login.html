@@ -25,6 +25,7 @@
                     <a href="/my-modules">My Modules</a>
                     <a href="/upload" class="btn-outlined">Upload</a>
                     {{if .Session.IsAdmin}}
+                    <a href="/admin/users">Users</a>
                     <a href="/admin/api-keys">API Keys</a>
                     {{end}}
                     {{if .Session.GitHubUser}}

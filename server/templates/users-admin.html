@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{.Title}} - CLIPilot Registry</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <!-- Material Icons -->
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <!-- Roboto Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Material Design App Bar -->
+    <header class="app-bar">
+        <div class="container app-bar-content">
+            <div class="logo">
+                <span class="material-icons">terminal</span>
+                <h1><a href="/">CLIPilot Registry</a></h1>
+            </div>
+            <nav class="nav-menu">
+                <a href="/">Home</a>
+                <a href="/modules">Browse Modules</a>
+                {{if .LoggedIn}}
+                    <a href="/my-modules">My Modules</a>
+                    <a href="/upload" class="btn-outlined">Upload</a>
+                    {{if .Session.IsAdmin}}
+                    <a href="/admin/users">Users</a>
+                    <a href="/admin/api-keys">API Keys</a>
+                    {{end}}
+                    {{if .Session.GitHubUser}}
+                    <div class="user-profile">
+                        <img src="{{.Session.GitHubUser.AvatarURL}}" alt="{{.Session.GitHubUser.Login}}" class="avatar">
+                        <span>{{.Session.GitHubUser.Login}}</span>
+                    </div>
+                    {{end}}
+                    <a href="/logout" class="btn-text">Logout</a>
+                {{else}}
+                    <a href="/login" class="btn-contained">Login</a>
+                {{end}}
+            </nav>
+        </div>
+    </header>
+
+    <main class="container">
+        <section>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                <div>
+                    <h2><span class="material-icons" style="vertical-align: middle; margin-right: 0.5rem;">people</span>User Management</h2>
+                    <p>Manage users and editors who can upload modules</p>
+                </div>
+                <button onclick="showCreateModal()" class="btn btn-primary">
+                    <span class="material-icons" style="vertical-align: middle; font-size: 18px;">person_add</span>
+                    Add User
+                </button>
+            </div>
+
+            {{if .Error}}
+            <div class="error" style="margin-bottom: 1rem;">
+                <span class="material-icons" style="vertical-align: middle;">error</span>
+                {{.Error}}
+            </div>
+            {{end}}
+
+            {{if .Success}}
+            <div class="success" style="margin-bottom: 1rem; padding: 1rem; background: #d4edda; border: 1px solid #c3e6cb; border-radius: 4px; color: #155724;">
+                <span class="material-icons" style="vertical-align: middle;">check_circle</span>
+                {{.Success}}
+            </div>
+            {{end}}
+
+            {{if .NewUser}}
+            <div style="margin-bottom: 2rem; padding: 1.5rem; background: #fff3cd; border: 2px solid #ffc107; border-radius: 8px;">
+                <h3 style="margin-top: 0; color: #856404;">
+                    <span class="material-icons" style="vertical-align: middle; color: #ffc107;">info</span>
+                    User Created Successfully
+                </h3>
+                <p style="margin-bottom: 1rem;"><strong>Share these credentials with the new user:</strong></p>
+                <div style="background: white; padding: 1rem; border-radius: 4px; border: 1px solid #ddd;">
+                    <p style="margin: 0.5rem 0;"><strong>Username:</strong> <code>{{.NewUser.Username}}</code></p>
+                    <p style="margin: 0.5rem 0;"><strong>Email:</strong> <code>{{.NewUser.Email}}</code></p>
+                    <p style="margin: 0.5rem 0;"><strong>Password:</strong> <code>{{.NewUser.Password}}</code></p>
+                    <p style="margin: 0.5rem 0;"><strong>Role:</strong> <span style="background: #e3f2fd; padding: 0.25rem 0.5rem; border-radius: 4px;">{{.NewUser.Role}}</span></p>
+                </div>
+                <p style="margin-top: 1rem; margin-bottom: 0; font-size: 0.9rem; color: #856404;">
+                    💡 The user can login at: <a href="/login">/login</a>
+                </p>
+            </div>
+            {{end}}
+
+            {{if .Users}}
+            <div class="users-list">
+                <table style="width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                    <thead style="background: #f5f5f5;">
+                        <tr>
+                            <th style="padding: 1rem; text-align: left; font-weight: 500;">User</th>
+                            <th style="padding: 1rem; text-align: left; font-weight: 500;">Email</th>
+                            <th style="padding: 1rem; text-align: left; font-weight: 500;">Role</th>
+                            <th style="padding: 1rem; text-align: left; font-weight: 500;">Auth Method</th>
+                            <th style="padding: 1rem; text-align: left; font-weight: 500;">Joined</th>
+                            <th style="padding: 1rem; text-align: left; font-weight: 500;">Modules</th>
+                            <th style="padding: 1rem; text-align: center; font-weight: 500;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {{range .Users}}
+                        <tr style="border-top: 1px solid #eee;">
+                            <td style="padding: 1rem;">
+                                {{if .AvatarURL}}
+                                <img src="{{.AvatarURL}}" alt="{{.Username}}" style="width: 32px; height: 32px; border-radius: 50%; vertical-align: middle; margin-right: 0.5rem;">
+                                {{else}}
+                                <span class="material-icons" style="vertical-align: middle; margin-right: 0.5rem; color: #666;">account_circle</span>
+                                {{end}}
+                                <strong>{{.Username}}</strong>
+                            </td>
+                            <td style="padding: 1rem;">{{.Email}}</td>
+                            <td style="padding: 1rem;">
+                                {{if eq .Role "admin"}}
+                                <span style="display: inline-block; padding: 0.25rem 0.75rem; background: #ff4081; color: white; border-radius: 4px; font-size: 0.85rem; font-weight: 500;">
+                                    <span class="material-icons" style="vertical-align: middle; font-size: 16px;">admin_panel_settings</span>
+                                    Admin
+                                </span>
+                                {{else}}
+                                <span style="display: inline-block; padding: 0.25rem 0.75rem; background: #e3f2fd; color: #1565c0; border-radius: 4px; font-size: 0.85rem;">
+                                    <span class="material-icons" style="vertical-align: middle; font-size: 16px;">edit</span>
+                                    Editor
+                                </span>
+                                {{end}}
+                            </td>
+                            <td style="padding: 1rem;">
+                                {{if .GitHubID}}
+                                <span style="display: inline-flex; align-items: center; gap: 0.25rem;">
+                                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                                        <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/>
+                                    </svg>
+                                    GitHub
+                                </span>
+                                {{else}}
+                                <span style="color: #666;">
+                                    <span class="material-icons" style="vertical-align: middle; font-size: 16px;">key</span>
+                                    Password
+                                </span>
+                                {{end}}
+                            </td>
+                            <td style="padding: 1rem;">{{.CreatedAt.Format "Jan 2, 2006"}}</td>
+                            <td style="padding: 1rem; text-align: center;">
+                                <a href="/my-modules?user={{.Username}}" style="color: #3f51b5; text-decoration: none;">{{.ModuleCount}}</a>
+                            </td>
+                            <td style="padding: 1rem; text-align: center;">
+                                {{if ne .Role "admin"}}
+                                <button onclick="showDeleteModal('{{.ID}}', '{{.Username}}')" style="background: none; border: none; color: #d32f2f; cursor: pointer; padding: 0.5rem; display: inline-flex; align-items: center; gap: 0.25rem;">
+                                    <span class="material-icons" style="font-size: 18px;">delete</span>
+                                    Delete
+                                </button>
+                                {{else}}
+                                <span style="color: #999;">—</span>
+                                {{end}}
+                            </td>
+                        </tr>
+                        {{end}}
+                    </tbody>
+                </table>
+            </div>
+            {{else}}
+            <div style="text-align: center; padding: 3rem; color: #666;">
+                <span class="material-icons" style="font-size: 48px; opacity: 0.3;">people</span>
+                <p>No users yet. Add the first user to get started!</p>
+            </div>
+            {{end}}
+
+            <div style="margin-top: 2rem; padding: 1rem; background: #f5f5f5; border-radius: 8px;">
+                <h3 style="margin-top: 0; display: flex; align-items: center; gap: 0.5rem;">
+                    <span class="material-icons">info</span>
+                    User Roles
+                </h3>
+                <ul style="margin: 0.5rem 0;">
+                    <li><strong>Admin:</strong> Full access - manage users, API keys, view all modules, upload modules</li>
+                    <li><strong>Editor:</strong> Can upload and manage their own modules, cannot access admin features</li>
+                </ul>
+            </div>
+        </section>
+    </main>
+
+    <!-- Create User Modal -->
+    <div id="createModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;">
+        <div style="background: white; padding: 2rem; border-radius: 8px; max-width: 500px; width: 90%; max-height: 90vh; overflow-y: auto;">
+            <h3 style="margin-top: 0;">Add New User</h3>
+            <form method="POST" action="/admin/users/create">
+                <div class="form-group">
+                    <label for="username">Username *</label>
+                    <input type="text" id="username" name="username" required pattern="[a-zA-Z0-9_-]+" 
+                           placeholder="e.g., john_doe" title="Alphanumeric, underscores and hyphens only">
+                    <small>Alphanumeric characters, underscores and hyphens only</small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="email">Email *</label>
+                    <input type="email" id="email" name="email" required placeholder="user@example.com">
+                    <small>User's email address for notifications</small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="password">Password *</label>
+                    <input type="password" id="password" name="password" required minlength="8" 
+                           placeholder="Enter password (min 8 characters)">
+                    <small>Minimum 8 characters. User can change this later.</small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="role">Role *</label>
+                    <select id="role" name="role" required style="width: 100%; padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px;">
+                        <option value="user">Editor - Can manage own modules</option>
+                        <option value="admin">Admin - Full access (use sparingly)</option>
+                    </select>
+                    <small>Choose the appropriate role for this user</small>
+                </div>
+                
+                <div style="display: flex; gap: 0.5rem; justify-content: flex-end; margin-top: 1.5rem;">
+                    <button type="button" onclick="hideCreateModal()" class="btn" style="background: #ccc;">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Create User</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Delete User Modal -->
+    <div id="deleteModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;">
+        <div style="background: white; padding: 2rem; border-radius: 8px; max-width: 400px; width: 90%;">
+            <h3 style="margin-top: 0; color: #d32f2f;">
+                <span class="material-icons" style="vertical-align: middle;">warning</span>
+                Delete User
+            </h3>
+            <p>Are you sure you want to delete user <strong id="deleteUsername"></strong>?</p>
+            <p style="color: #666; font-size: 0.9rem;">This will permanently delete the user and all their modules. This action cannot be undone.</p>
+            
+            <form method="POST" action="/admin/users/delete">
+                <input type="hidden" id="deleteUserId" name="user_id">
+                <div style="display: flex; gap: 0.5rem; justify-content: flex-end; margin-top: 1.5rem;">
+                    <button type="button" onclick="hideDeleteModal()" class="btn" style="background: #ccc;">Cancel</button>
+                    <button type="submit" class="btn" style="background: #d32f2f; color: white;">Delete User</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <footer class="app-footer">
+        <div class="container">
+            <p>&copy; 2026 CLIPilot Registry | Open Source CLI Automation</p>
+            <p><a href="https://github.com/themobileprof/clio" target="_blank">GitHub</a> • <a href="/modules">Browse Modules</a> • <a href="/clio">Install Clio</a></p>
+        </div>
+    </footer>
+
+    <script>
+    function showCreateModal() {
+        document.getElementById('createModal').style.display = 'flex';
+    }
+
+    function hideCreateModal() {
+        document.getElementById('createModal').style.display = 'none';
+    }
+
+    function showDeleteModal(userId, username) {
+        document.getElementById('deleteUserId').value = userId;
+        document.getElementById('deleteUsername').textContent = username;
+        document.getElementById('deleteModal').style.display = 'flex';
+    }
+
+    function hideDeleteModal() {
+        document.getElementById('deleteModal').style.display = 'none';
+    }
+
+    // Close modals on escape key
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            hideCreateModal();
+            hideDeleteModal();
+        }
+    });
+
+    // Close modals on background click
+    document.getElementById('createModal').addEventListener('click', function(e) {
+        if (e.target === this) hideCreateModal();
+    });
+    document.getElementById('deleteModal').addEventListener('click', function(e) {
+        if (e.target === this) hideDeleteModal();
+    });
+    </script>
+</body>
+</html>
