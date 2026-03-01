@@ -118,6 +118,9 @@ func (h *Handlers) UploadInstallScript(w http.ResponseWriter, r *http.Request) {
 	hash := sha256.Sum256(content)
 	checksum := fmt.Sprintf("%x", hash)
 
+	// Get file size
+	fileSize := int64(len(content))
+
 	// Save file to uploads directory
 	uploadDir := filepath.Join(h.config.UploadsDir, "install_scripts")
 	if err := os.MkdirAll(uploadDir, 0755); err != nil {
@@ -158,9 +161,9 @@ func (h *Handlers) UploadInstallScript(w http.ResponseWriter, r *http.Request) {
 	}
 
 	_, err = h.db.Exec(`
-		INSERT INTO install_scripts (version, file_path, checksum_sha256, uploaded_by, is_active, uploaded_at)
-		VALUES (?, ?, ?, ?, 1, CURRENT_TIMESTAMP)
-	`, version, filePath, checksum, uploaderIDPtr)
+		INSERT INTO install_scripts (version, file_path, checksum_sha256, size_bytes, uploaded_by, is_active, uploaded_at)
+		VALUES (?, ?, ?, ?, ?, 1, CURRENT_TIMESTAMP)
+	`, version, filePath, checksum, fileSize, uploaderIDPtr)
 
 	if err != nil {
 		log.Printf("Failed to insert install script record: %v", err)
