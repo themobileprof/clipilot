@@ -28,7 +28,7 @@ CLIPilot Registry is the backend server that powers [Clio](https://github.com/th
 ## ✨ Features
 
 - **📦 Module Registry**: Centralized storage for workflow modules
-- **🔍 Semantic Search**: AI-powered module discovery (Gemini)
+- **🔍 Semantic Search**: Catalog + optional Gemini for Clio remote fallback
 - **🌐 Web UI**: Browse, search, and upload modules via browser
 - **🔐 Authentication**: GitHub OAuth + session-based auth
 - **📊 Analytics**: Track module downloads and popularity

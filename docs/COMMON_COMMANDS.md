@@ -2,20 +2,17 @@
 
 ## Overview
 
-CLIPilot includes a **categorized catalog of commonly-needed commands** that helps suggest installations when users search for tools they don't have installed.
+The **common commands catalog** powers `POST /api/commands/search` on the CLIPilot registry. The **[Clio](https://github.com/themobileprof/clio)** client calls this endpoint when offline matching fails.
 
-## How It Works
+## How It Works (server-side)
 
-When you search for a command:
+1. Clio tries local offline matching first (phrases, catalog, fuzzy)
+2. On miss, Clio calls `POST /api/commands/search` with the full natural-language query
+3. Server runs keyword search on embedded `server/catalog/common_commands.yaml`
+4. If confidence is low and `GEMINI_API_KEY` is set, Gemini Flash refines the result
+5. Results are cached in SQLite (`query_cache`) for 7 days
 
-1. **First**: CLIPilot checks **installed commands** on your system (via `compgen -c`)
-2. **Second**: CLIPilot searches **installed modules** in the database
-3. **Fallback**: If no strong match is found (score < 1.5), CLIPilot searches the **common commands catalog**
-
-If a common command matches your query, CLIPilot will suggest it with:
-- ✅ Command name with `(not installed)` label
-- 📝 Description of what the command does
-- 📦 **OS-specific installation instruction**
+Response includes `candidates[]`, `usage`, and `source` (`catalog` or `gemini`).
 
 ## Example Usage
 

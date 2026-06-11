@@ -248,22 +248,26 @@ Content-Type: application/json
 **Response:**
 ```json
 {
-  "results": [
+  "candidates": [
     {
       "name": "cp",
       "description": "Copy files and directories",
-      "usage": "cp source dest"
-    },
-    {
-      "name": "rsync",
-      "description": "Remote file synchronization",
-      "usage": "rsync -av source dest"
+      "category": "file-management",
+      "use_cases": ["cp source dest"],
+      "usage": "cp source dest",
+      "keywords": ["copy", "duplicate"]
     }
-  ]
+  ],
+  "results": [],
+  "message": "Found 1 candidates",
+  "cached": false,
+  "source": "catalog"
 }
 ```
 
-**Note:** This endpoint already exists and works. No changes needed.
+`results` mirrors `candidates` for backward compatibility. `source` is `catalog` or `gemini`.
+
+**Search pipeline:** embedded catalog → optional Gemini (`GEMINI_API_KEY`) → SQLite cache (7 days).
 
 ---
 

@@ -1,0 +1,669 @@
+# Common Commands Catalog
+# Used for suggesting installations when commands are not found
+
+# Development Tools
+- name: git
+  description: Distributed version control system
+  category: development
+  keywords: version control, repository, commit, clone, push, pull
+  apt_package: git
+  pkg_package: git
+  dnf_package: git
+  brew_package: git
+  arch_package: git
+  homepage: https://git-scm.com
+  priority: 95
+
+- name: make
+  description: Build automation tool
+  category: development
+  keywords: build, compile, makefile
+  apt_package: build-essential
+  pkg_package: make
+  dnf_package: make
+  brew_package: make
+  arch_package: make
+  priority: 80
+
+- name: gcc
+  description: GNU C/C++ compiler
+  category: development
+  keywords: compiler, c, cpp, compile
+  apt_package: build-essential
+  pkg_package: clang
+  dnf_package: gcc
+  brew_package: gcc
+  arch_package: gcc
+  alternative_to: clang
+  priority: 75
+
+- name: python3
+  description: Python 3 programming language interpreter
+  category: development
+  keywords: python, programming, script
+  apt_package: python3
+  pkg_package: python
+  dnf_package: python3
+  brew_package: python3
+  arch_package: python
+  priority: 90
+
+- name: node
+  description: Node.js JavaScript runtime
+  category: development
+  keywords: nodejs, javascript, npm
+  apt_package: nodejs
+  pkg_package: nodejs
+  dnf_package: nodejs
+  brew_package: node
+  arch_package: nodejs
+  alternative_to: deno, bun
+  homepage: https://nodejs.org
+  priority: 85
+
+- name: npm
+  description: Node package manager
+  category: development
+  keywords: nodejs, package manager, javascript
+  apt_package: npm
+  pkg_package: nodejs
+  dnf_package: npm
+  brew_package: node
+  arch_package: npm
+  priority: 85
+
+- name: go
+  description: Go programming language compiler
+  category: development
+  keywords: golang, programming, compile
+  apt_package: golang-go
+  pkg_package: golang
+  dnf_package: golang
+  brew_package: go
+  arch_package: go
+  homepage: https://go.dev
+  priority: 70
+
+# System Information
+- name: df
+  description: Report file system disk space usage
+  category: system
+  keywords: storage, disk space, available, free, usage, check
+  priority: 95
+
+- name: du
+  description: Estimate file space usage
+  category: system
+  keywords: disk, usage, size, folder size, directory
+  priority: 85
+
+- name: free
+  description: Display amount of free and used memory
+  category: system
+  keywords: memory, ram, usage, available
+  priority: 90
+
+- name: neofetch
+  description: Command-line system information tool
+  category: system
+  keywords: system, info, os, hardware, specs
+  apt_package: neofetch
+  pkg_package: neofetch
+  priority: 60
+
+# File Operations
+- name: mkdir
+  description: Create new directories
+  category: file-management
+  keywords: create, new, folder, directory, make
+  priority: 100
+
+- name: touch
+  description: Change file timestamps or create empty files
+  category: file-management
+  keywords: create, new, file, empty, make
+  priority: 90
+
+- name: cp
+  description: Copy files and directories
+  category: file-management
+  keywords: copy, duplicate, clone, file, folder
+  priority: 100
+
+- name: mv
+  description: Move or rename files
+  category: file-management
+  keywords: move, rename, file, folder
+  priority: 100
+
+- name: rm
+  description: Remove files or directories
+  category: file-management
+  keywords: remove, delete, trash, unlink
+  priority: 100
+
+- name: ls
+  description: List directory contents
+  category: file-management
+  keywords: list, show, files, folders, directory
+  priority: 100
+
+- name: chmod
+  description: Change file mode bits
+  category: file-management
+  keywords: permissions, executable, read, write
+  priority: 95
+
+# Modern CLI Tools
+- name: bat
+  description: Cat clone with syntax highlighting
+  category: file-management
+  keywords: cat, view, syntax, highlight, pager
+  apt_package: bat
+  pkg_package: bat
+  dnf_package: bat
+  brew_package: bat
+  arch_package: bat
+  alternative_to: cat, less
+  homepage: https://github.com/sharkdp/bat
+  priority: 65
+
+- name: eza
+  description: Modern ls replacement with icons
+  category: file-management
+  keywords: ls, list, directory, files, tree
+  apt_package: eza
+  pkg_package: eza
+  dnf_package: eza
+  brew_package: eza
+  arch_package: eza
+  alternative_to: ls, exa
+  homepage: https://github.com/eza-community/eza
+  priority: 60
+
+- name: fd
+  description: Simple, fast alternative to find
+  category: file-management
+  keywords: find, search, files, fast
+  apt_package: fd-find
+  pkg_package: fd
+  dnf_package: fd-find
+  brew_package: fd
+  arch_package: fd
+  alternative_to: find
+  homepage: https://github.com/sharkdp/fd
+  priority: 65
+
+- name: ripgrep
+  description: Fast recursive grep alternative
+  category: file-management
+  keywords: grep, search, text, fast, rg
+  apt_package: ripgrep
+  pkg_package: ripgrep
+  dnf_package: ripgrep
+  brew_package: ripgrep
+  arch_package: ripgrep
+  alternative_to: grep, ag
+  homepage: https://github.com/BurntSushi/ripgrep
+  priority: 70
+
+- name: fzf
+  description: Command-line fuzzy finder
+  category: file-management
+  keywords: fuzzy, finder, search, interactive
+  apt_package: fzf
+  pkg_package: fzf
+  dnf_package: fzf
+  brew_package: fzf
+  arch_package: fzf
+  homepage: https://github.com/junegunn/fzf
+  priority: 75
+
+- name: jq
+  description: Command-line JSON processor
+  category: file-management
+  keywords: json, parse, query, filter
+  apt_package: jq
+  pkg_package: jq
+  dnf_package: jq
+  brew_package: jq
+  arch_package: jq
+  homepage: https://jqlang.github.io/jq/
+  priority: 80
+
+- name: yq
+  description: Command-line YAML/JSON processor
+  category: file-management
+  keywords: yaml, json, parse, query
+  apt_package: yq
+  pkg_package: yq
+  dnf_package: yq
+  brew_package: yq
+  arch_package: yq
+  alternative_to: jq
+  homepage: https://github.com/mikefarah/yq
+  priority: 60
+
+# Networking Tools
+- name: curl
+  description: Transfer data with URLs
+  category: networking
+  keywords: http, download, api, request
+  apt_package: curl
+  pkg_package: curl
+  dnf_package: curl
+  brew_package: curl
+  arch_package: curl
+  alternative_to: wget
+  homepage: https://curl.se
+  priority: 90
+
+- name: wget
+  description: Network downloader
+  category: networking
+  keywords: http, download, retrieve, internet, get, fetch
+  apt_package: wget
+  pkg_package: wget
+  dnf_package: wget
+  brew_package: wget
+  arch_package: wget
+  alternative_to: curl
+  priority: 85
+
+- name: nmap
+  description: Network exploration and security scanner
+  category: networking
+  keywords: network, scan, port, security
+  apt_package: nmap
+  pkg_package: nmap
+  dnf_package: nmap
+  brew_package: nmap
+  arch_package: nmap
+  homepage: https://nmap.org
+  priority: 60
+
+- name: netcat
+  description: Networking utility for reading/writing network connections
+  category: networking
+  keywords: network, tcp, udp, connection, nc
+  apt_package: netcat-openbsd
+  pkg_package: netcat-openbsd
+  dnf_package: nc
+  brew_package: netcat
+  arch_package: openbsd-netcat
+  alternative_to: nc, ncat
+  priority: 55
+
+- name: ssh
+  description: OpenSSH client for secure connections
+  category: networking
+  keywords: secure shell, remote, connection
+  apt_package: openssh-client
+  pkg_package: openssh
+  dnf_package: openssh-clients
+  brew_package: openssh
+  arch_package: openssh
+  priority: 90
+
+- name: rsync
+  description: Fast incremental file transfer
+  category: file-management
+  keywords: sync, copy, backup, transfer
+  apt_package: rsync
+  pkg_package: rsync
+  dnf_package: rsync
+  brew_package: rsync
+  arch_package: rsync
+  alternative_to: scp, cp
+  priority: 75
+
+# Database Clients
+- name: psql
+  description: PostgreSQL interactive terminal
+  category: database
+  keywords: postgresql, database, sql
+  apt_package: postgresql-client
+  pkg_package: postgresql
+  dnf_package: postgresql
+  brew_package: postgresql
+  arch_package: postgresql
+  homepage: https://www.postgresql.org
+  priority: 70
+
+- name: mysql
+  description: MySQL command-line client
+  category: database
+  keywords: mysql, database, sql
+  apt_package: mysql-client
+  pkg_package: mariadb
+  dnf_package: mysql
+  brew_package: mysql-client
+  arch_package: mysql-clients
+  homepage: https://www.mysql.com
+  priority: 70
+
+- name: redis-cli
+  description: Redis command-line client
+  category: database
+  keywords: redis, cache, key-value
+  apt_package: redis-tools
+  pkg_package: redis
+  dnf_package: redis
+  brew_package: redis
+  arch_package: redis
+  homepage: https://redis.io
+  priority: 60
+
+- name: mongosh
+  description: MongoDB shell
+  category: database
+  keywords: mongodb, database, nosql
+  apt_package: mongodb-mongosh
+  pkg_package: mongodb
+  dnf_package: mongodb-mongosh
+  brew_package: mongosh
+  arch_package: mongodb-tools
+  alternative_to: mongo
+  homepage: https://www.mongodb.com
+  priority: 60
+
+- name: sqlite3
+  description: SQLite command-line interface
+  category: database
+  keywords: sqlite, database, sql
+  apt_package: sqlite3
+  pkg_package: sqlite
+  dnf_package: sqlite
+  brew_package: sqlite
+  arch_package: sqlite
+  homepage: https://www.sqlite.org
+  priority: 75
+
+# System Monitoring
+- name: ps
+  description: Report a snapshot of the current processes
+  category: system
+  keywords: processes, running, list, check, status, pid
+  priority: 95
+
+- name: top
+  description: Display Linux processes
+  category: system
+  keywords: processes, running, monitor, cpu, memory, check
+  priority: 90
+
+- name: htop
+  description: Interactive process viewer
+  category: system
+  keywords: processes, monitor, cpu, memory, top
+  apt_package: htop
+  pkg_package: htop
+  dnf_package: htop
+  brew_package: htop
+  arch_package: htop
+  alternative_to: top
+  priority: 80
+
+- name: btop
+  description: Modern resource monitor with graphs
+  category: system
+  keywords: processes, monitor, cpu, memory, gpu
+  apt_package: btop
+  pkg_package: btop
+  dnf_package: btop
+  brew_package: btop
+  arch_package: btop
+  alternative_to: htop, top
+  homepage: https://github.com/aristocratos/btop
+  priority: 65
+
+- name: iftop
+  description: Display bandwidth usage
+  category: networking
+  keywords: network, bandwidth, monitor, traffic
+  apt_package: iftop
+  pkg_package: iftop
+  dnf_package: iftop
+  brew_package: iftop
+  arch_package: iftop
+  priority: 50
+
+- name: iotop
+  description: I/O monitoring tool
+  category: system
+  keywords: disk, io, monitor, performance
+  apt_package: iotop
+  pkg_package: iotop
+  dnf_package: iotop
+  brew_package: iotop
+  arch_package: iotop
+  priority: 50
+
+# Text Editors
+- name: vim
+  description: Vi IMproved text editor
+  category: editor
+  keywords: editor, text, vi
+  apt_package: vim
+  pkg_package: vim
+  dnf_package: vim-enhanced
+  brew_package: vim
+  arch_package: vim
+  alternative_to: vi, nvim, nano
+  homepage: https://www.vim.org
+  priority: 85
+
+- name: nano
+  description: Simple text editor
+  category: editor
+  keywords: editor, text, simple, edit, write, modify
+  apt_package: nano
+  pkg_package: nano
+  dnf_package: nano
+  brew_package: nano
+  arch_package: nano
+  alternative_to: vim, vi
+  priority: 80
+
+- name: emacs
+  description: Extensible text editor
+  category: editor
+  keywords: editor, text, lisp
+  apt_package: emacs
+  pkg_package: emacs
+  dnf_package: emacs
+  brew_package: emacs
+  arch_package: emacs
+  homepage: https://www.gnu.org/software/emacs/
+  priority: 60
+
+# Compression Tools
+- name: tar
+  description: Archive utility
+  category: file-management
+  keywords: archive, compress, extract, backup
+  apt_package: tar
+  pkg_package: tar
+  dnf_package: tar
+  brew_package: tar
+  arch_package: tar
+  priority: 90
+
+- name: zip
+  description: Package and compress files
+  category: file-management
+  keywords: compress, archive, package
+  apt_package: zip
+  pkg_package: zip
+  dnf_package: zip
+  brew_package: zip
+  arch_package: zip
+  alternative_to: gzip, bzip2
+  priority: 85
+
+- name: unzip
+  description: Extract compressed files
+  category: file-management
+  keywords: extract, decompress, archive
+  apt_package: unzip
+  pkg_package: unzip
+  dnf_package: unzip
+  brew_package: unzip
+  arch_package: unzip
+  priority: 85
+
+- name: gzip
+  description: Compress or expand files
+  category: file-management
+  keywords: compress, decompress, gz
+  apt_package: gzip
+  pkg_package: gzip
+  dnf_package: gzip
+  brew_package: gzip
+  arch_package: gzip
+  priority: 80
+
+# Container Tools
+- name: docker
+  description: Container platform
+  category: containers
+  keywords: container, virtualization, image
+  apt_package: docker.io
+  pkg_package: docker
+  dnf_package: docker
+  brew_package: docker
+  arch_package: docker
+  homepage: https://www.docker.com
+  priority: 85
+
+- name: kubectl
+  description: Kubernetes command-line tool
+  category: containers
+  keywords: kubernetes, k8s, orchestration, cluster
+  apt_package: kubectl
+  dnf_package: kubernetes-client
+  brew_package: kubectl
+  arch_package: kubectl
+  homepage: https://kubernetes.io
+  priority: 60
+
+# Cloud CLI Tools
+- name: aws
+  description: AWS Command Line Interface
+  category: cloud
+  keywords: amazon, cloud, s3, ec2
+  apt_package: awscli
+  pkg_package: awscli
+  dnf_package: awscli
+  brew_package: awscli
+  arch_package: aws-cli
+  homepage: https://aws.amazon.com/cli/
+  priority: 70
+
+- name: gcloud
+  description: Google Cloud SDK CLI
+  category: cloud
+  keywords: google, cloud, gcp
+  homepage: https://cloud.google.com/sdk
+  priority: 60
+
+- name: az
+  description: Azure Command-Line Interface
+  category: cloud
+  keywords: microsoft, azure, cloud
+  homepage: https://docs.microsoft.com/cli/azure/
+  priority: 60
+
+# Misc Utilities
+- name: tmux
+  description: Terminal multiplexer
+  category: terminal
+  keywords: terminal, multiplexer, session, screen
+  apt_package: tmux
+  pkg_package: tmux
+  dnf_package: tmux
+  brew_package: tmux
+  arch_package: tmux
+  alternative_to: screen
+  homepage: https://github.com/tmux/tmux
+  priority: 75
+
+- name: screen
+  description: Terminal multiplexer
+  category: terminal
+  keywords: terminal, multiplexer, session
+  apt_package: screen
+  pkg_package: screen
+  dnf_package: screen
+  brew_package: screen
+  arch_package: screen
+  alternative_to: tmux
+  priority: 70
+
+- name: tree
+  description: Display directory tree structure
+  category: file-management
+  keywords: directory, tree, list, structure
+  apt_package: tree
+  pkg_package: tree
+  dnf_package: tree
+  brew_package: tree
+  arch_package: tree
+  alternative_to: ls, eza
+  priority: 70
+
+- name: watch
+  description: Execute program periodically
+  category: system
+  keywords: monitor, repeat, periodic
+  apt_package: procps
+  pkg_package: procps
+  dnf_package: procps-ng
+  brew_package: watch
+  arch_package: procps-ng
+  priority: 65
+
+- name: diff
+  description: Compare files line by line
+  category: file-management
+  keywords: compare, difference, patch
+  apt_package: diffutils
+  pkg_package: diffutils
+  dnf_package: diffutils
+  brew_package: diffutils
+  arch_package: diffutils
+  priority: 75
+
+- name: grep
+  description: Search text using patterns
+  category: file-management
+  keywords: search, pattern, text, regex
+  apt_package: grep
+  pkg_package: grep
+  dnf_package: grep
+  brew_package: grep
+  arch_package: grep
+  alternative_to: ripgrep, ag
+  priority: 90
+
+- name: sed
+  description: Stream editor for filtering and transforming text
+  category: file-management
+  keywords: stream, editor, text, transform
+  apt_package: sed
+  pkg_package: sed
+  dnf_package: sed
+  brew_package: gnu-sed
+  arch_package: sed
+  priority: 80
+
+- name: awk
+  description: Pattern scanning and processing language
+  category: file-management
+  keywords: text, processing, pattern, script
+  apt_package: gawk
+  pkg_package: gawk
+  dnf_package: gawk
+  brew_package: gawk
+  arch_package: gawk
+  priority: 75

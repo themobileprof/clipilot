@@ -88,34 +88,14 @@ case "${1:-all}" in
         run_test "Integration Tests" "go test -tags=integration ./..."
         ;;
     
-    bench)
-        echo "Running benchmarks..."
-        run_test "Benchmarks" "go test -bench=. -benchmem ./internal/intent ./internal/modules"
+    catalog)
+        echo "Running catalog search tests..."
+        run_test "Catalog Tests" "go test -v ./server/catalog"
         ;;
     
-    db)
-        echo "Running database tests..."
-        run_test "Database Tests" "go test -v ./internal/db"
-        ;;
-    
-    engine)
-        echo "Running engine tests..."
-        run_test "Engine Tests" "go test -v ./internal/engine"
-        ;;
-    
-    intent)
-        echo "Running intent detection tests..."
-        run_test "Intent Tests" "go test -v ./internal/intent"
-        ;;
-    
-    modules)
-        echo "Running module loader tests..."
-        run_test "Module Tests" "go test -v ./internal/modules"
-        ;;
-    
-    config)
-        echo "Running config tests..."
-        run_test "Config Tests" "go test -v ./internal/config"
+    handlers)
+        echo "Running handler tests..."
+        run_test "Handler Tests" "go test -v ./server/handlers"
         ;;
     
     ci)
@@ -124,15 +104,14 @@ case "${1:-all}" in
         run_test "Unit Tests" "go test -v ./..."
         run_test "Race Detection" "go test -race ./..."
         run_test "Coverage" "go test -coverprofile=coverage.txt -covermode=atomic ./..."
-        run_test "Build CLI" "go build -o bin/clipilot ./cmd/clipilot"
-        run_test "Build Registry" "go build -o bin/registry ./cmd/registry"
+        run_test "Build Registry" "go build -o bin/clipilot-server ./cmd/registry"
         echo ""
         echo -e "${GREEN}✅ Full CI/CD test suite PASSED${NC}"
         ;;
     
     quick)
         echo "Running quick test (no race detector)..."
-        run_test "Quick Tests" "go test ./internal/..."
+        run_test "Quick Tests" "go test ./server/..."
         ;;
     
     verbose)

@@ -1,42 +1,49 @@
 package handlers
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"database/sql"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/themobileprof/clipilot/server/catalog"
 )
 
-// SemanticSearchRequest represents a natural language query
+// SemanticSearchRequest is the Clio client search body.
 type SemanticSearchRequest struct {
 	Query string `json:"query"`
+	OS    string `json:"os,omitempty"`
+	Arch  string `json:"arch,omitempty"`
 }
 
-// SemanticSearchResponse returns candidates
+// SemanticSearchResponse is returned to Clio (and legacy clients).
 type SemanticSearchResponse struct {
 	Candidates []CommandCandidate `json:"candidates"`
+	Results    []CommandCandidate `json:"results,omitempty"` // legacy alias for Clio
 	Message    string             `json:"message"`
 	Cached     bool               `json:"cached"`
+	Source     string             `json:"source,omitempty"` // catalog | gemini
 }
 
-// CommandCandidate represents a suggested command
+// CommandCandidate represents a suggested command.
 type CommandCandidate struct {
 	Name        string   `json:"name"`
 	Description string   `json:"description"`
 	Category    string   `json:"category"`
 	UseCases    []string `json:"use_cases"`
-	Keywords    []string `json:"keywords"` // Keep for compatibility
+	Keywords    []string `json:"keywords"`
+	Usage       string   `json:"usage,omitempty"`
 }
 
-// HandleSemanticSearch proxies natural language queries to Gemini with Caching
-// POST /api/commands/search
+// HandleSemanticSearch serves POST /api/commands/search for the Clio client.
 func HandleSemanticSearch(db *sql.DB, geminiAPIKey string) http.HandlerFunc {
-	// Ensure cache table exists on startup (or first request)
 	ensureCacheTable(db)
 
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -50,77 +57,196 @@ func HandleSemanticSearch(db *sql.DB, geminiAPIKey string) http.HandlerFunc {
 			http.Error(w, "Invalid request", http.StatusBadRequest)
 			return
 		}
-
-		if req.Query == "" {
+		if strings.TrimSpace(req.Query) == "" {
 			http.Error(w, "Query is required", http.StatusBadRequest)
 			return
 		}
 
-		// 1. Check Cache
-		queryHash := hashQuery(req.Query)
-		if cachedCandidates, err := getCachedResponse(db, queryHash); err == nil {
-			response := SemanticSearchResponse{
-				Candidates: cachedCandidates,
-				Message:    fmt.Sprintf("Found %d candidates (cached)", len(cachedCandidates)),
-				Cached:     true,
-			}
-			w.Header().Set("Content-Type", "application/json")
-			_ = json.NewEncoder(w).Encode(response)
+		cacheKey := hashQuery(req.Query, req.OS, req.Arch)
+		if cached, err := getCachedResponse(db, cacheKey); err == nil {
+			writeSearchResponse(w, cached, true, "")
 			return
 		}
 
-		// 2. Call Gemini (if not cached)
-		candidates, err := searchWithGemini(geminiAPIKey, req.Query)
-		if err != nil {
-			log.Printf("Gemini search failed: %v", err)
-			http.Error(w, "Search failed", http.StatusInternalServerError)
+		candidates, source := searchCommands(req.Query, req.OS, geminiAPIKey)
+		if len(candidates) == 0 {
+			http.Error(w, "No matching commands found", http.StatusNotFound)
 			return
 		}
 
-		// 3. Cache Result
-		if len(candidates) > 0 {
-			go cacheResponse(db, queryHash, candidates) // Async cache
-		}
+		go cacheResponse(db, cacheKey, candidates)
 
-		response := SemanticSearchResponse{
-			Candidates: candidates,
-			Message:    fmt.Sprintf("Found %d candidates", len(candidates)),
-			Cached:     false,
-		}
-
-		w.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(response)
+		writeSearchResponse(w, candidates, false, source)
 	}
 }
 
-// searchWithGemini queries Gemini API for commands
-func searchWithGemini(apiKey, query string) ([]CommandCandidate, error) {
-	// TODO: Replace with actual Gemini API call
-	// For now, retaining the mock logic for demonstration/fallback
-	// In production, this would make an HTTP request to Google AI Studio
-	
-	_ = apiKey
-	
-	queryLower := strings.ToLower(query)
-	// Determine if we should delay to simulate network call (removed for speed if mock)
-	
-	// Mock logic
-	if strings.Contains(queryLower, "firewall") || strings.Contains(queryLower, "port") {
-		return []CommandCandidate{
-			{Name: "ufw", Description: "Uncomplicated Firewall", Category: "security", UseCases: []string{"enable firewall", "allow port 80"}, Keywords: []string{"ufw"}},
-			{Name: "iptables", Description: "Administration tool for IPv4 packet filtering", Category: "security", UseCases: []string{"block ip", "nat"}, Keywords: []string{"iptables"}},
-		}, nil
+func searchCommands(query, os, geminiAPIKey string) ([]CommandCandidate, string) {
+	hits := catalog.Search(query)
+	if len(hits) > 0 && hits[0].Score >= 4.0 {
+		return catalogHitsToCandidates(hits, os), "catalog"
 	}
-	
-	// Default mock - simulating "I don't know" or generic
-	// In real implementation, this returns actual LLM predictions
-	return []CommandCandidate{
-		{Name: "echo", Description: "Display a line of text", Category: "general", UseCases: []string{"print variable", "write to file"}, Keywords: []string{"echo"}},
-	}, nil
+
+	if geminiAPIKey != "" {
+		if candidates, err := searchWithGemini(geminiAPIKey, query, os, hits); err == nil && len(candidates) > 0 {
+			return candidates, "gemini"
+		}
+		log.Printf("Gemini search failed, using catalog fallback")
+	}
+
+	if len(hits) > 0 {
+		return catalogHitsToCandidates(hits, os), "catalog"
+	}
+	return nil, ""
 }
 
+func catalogHitsToCandidates(hits []catalog.SearchResult, os string) []CommandCandidate {
+	out := make([]CommandCandidate, 0, len(hits))
+	for _, hit := range hits {
+		usage := catalog.UseCase(hit.Entry, os)
+		kw := strings.Split(hit.Entry.Keywords, ",")
+		for i := range kw {
+			kw[i] = strings.TrimSpace(kw[i])
+		}
+		out = append(out, CommandCandidate{
+			Name:        hit.Entry.Name,
+			Description: hit.Entry.Description,
+			Category:    hit.Entry.Category,
+			UseCases:    []string{usage},
+			Keywords:    kw,
+			Usage:       usage,
+		})
+	}
+	return out
+}
 
-// --- Caching Helpers ---
+func writeSearchResponse(w http.ResponseWriter, candidates []CommandCandidate, cached bool, source string) {
+	msg := fmt.Sprintf("Found %d candidates", len(candidates))
+	if cached {
+		msg += " (cached)"
+	}
+	resp := SemanticSearchResponse{
+		Candidates: candidates,
+		Results:    candidates,
+		Message:    msg,
+		Cached:     cached,
+		Source:     source,
+	}
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(resp)
+}
+
+// searchWithGemini calls Gemini Flash when catalog confidence is low.
+func searchWithGemini(apiKey, query, os string, hints []catalog.SearchResult) ([]CommandCandidate, error) {
+	var hintLines strings.Builder
+	for i, h := range hints {
+		if i >= 3 {
+			break
+		}
+		hintLines.WriteString(fmt.Sprintf("- %s: %s\n", h.Entry.Name, h.Entry.Description))
+	}
+
+	prompt := fmt.Sprintf(`You help Nigerian students on Termux (Android, arm64) find Linux shell commands.
+Reply with ONLY a JSON array (max 3 items). Each item: {"name":"command","description":"brief","usage":"example"}.
+No markdown. Prefer standard tools (ls, cp, df, free, pkg, git). Never suggest "echo" unless user wants to print text.
+
+User query: %q
+OS: %s
+Catalog hints:
+%s`, query, os, hintLines.String())
+
+	body := map[string]interface{}{
+		"contents": []map[string]interface{}{
+			{"parts": []map[string]string{{"text": prompt}}},
+		},
+		"generationConfig": map[string]interface{}{
+			"temperature":     0.2,
+			"maxOutputTokens": 512,
+		},
+	}
+	jsonBody, _ := json.Marshal(body)
+
+	url := fmt.Sprintf("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=%s", apiKey)
+	req, err := http.NewRequest(http.MethodPost, url, bytes.NewReader(jsonBody))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{Timeout: 12 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	raw, err := io.ReadAll(io.LimitReader(resp.Body, 32<<10))
+	if err != nil {
+		return nil, err
+	}
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("gemini status %d: %s", resp.StatusCode, string(raw))
+	}
+
+	return parseGeminiCandidates(raw)
+}
+
+func parseGeminiCandidates(raw []byte) ([]CommandCandidate, error) {
+	var geminiResp struct {
+		Candidates []struct {
+			Content struct {
+				Parts []struct {
+					Text string `json:"text"`
+				} `json:"parts"`
+			} `json:"content"`
+		} `json:"candidates"`
+	}
+	if err := json.Unmarshal(raw, &geminiResp); err != nil {
+		return nil, err
+	}
+	if len(geminiResp.Candidates) == 0 || len(geminiResp.Candidates[0].Content.Parts) == 0 {
+		return nil, fmt.Errorf("empty gemini response")
+	}
+
+	text := strings.TrimSpace(geminiResp.Candidates[0].Content.Parts[0].Text)
+	text = strings.TrimPrefix(text, "```json")
+	text = strings.TrimPrefix(text, "```")
+	text = strings.TrimSuffix(text, "```")
+	text = strings.TrimSpace(text)
+
+	var parsed []struct {
+		Name        string `json:"name"`
+		Description string `json:"description"`
+		Usage       string `json:"usage"`
+	}
+	if err := json.Unmarshal([]byte(text), &parsed); err != nil {
+		return nil, err
+	}
+
+	out := make([]CommandCandidate, 0, len(parsed))
+	for _, p := range parsed {
+		name := strings.Fields(strings.TrimSpace(p.Name))[0]
+		if name == "" || name == "echo" {
+			continue
+		}
+		usage := p.Usage
+		if usage == "" {
+			usage = name
+		}
+		out = append(out, CommandCandidate{
+			Name:        name,
+			Description: p.Description,
+			Category:    "remote",
+			UseCases:    []string{usage},
+			Usage:       usage,
+		})
+	}
+	if len(out) == 0 {
+		return nil, fmt.Errorf("no valid commands in gemini response")
+	}
+	return out, nil
+}
+
+// --- Caching ---
 
 func ensureCacheTable(db *sql.DB) {
 	_, _ = db.Exec(`
@@ -132,23 +258,25 @@ func ensureCacheTable(db *sql.DB) {
 	`)
 }
 
-func hashQuery(query string) string {
-	hash := sha256.Sum256([]byte(strings.TrimSpace(strings.ToLower(query))))
-	return hex.EncodeToString(hash[:])
+func hashQuery(query, os, arch string) string {
+	normalized := strings.TrimSpace(strings.ToLower(query)) + "|" + os + "|" + arch
+	sum := sha256.Sum256([]byte(normalized))
+	return hex.EncodeToString(sum[:])
 }
 
 func getCachedResponse(db *sql.DB, hash string) ([]CommandCandidate, error) {
 	var jsonStr string
 	var createdAt int64
-	
-	// Cache valid for 24 hours
-	expiry := time.Now().Add(-24 * time.Hour).Unix()
-	
-	err := db.QueryRow("SELECT response_json, created_at FROM query_cache WHERE query_hash = ? AND created_at > ?", hash, expiry).Scan(&jsonStr, &createdAt)
+	expiry := time.Now().Add(-7 * 24 * time.Hour).Unix()
+
+	err := db.QueryRow(
+		`SELECT response_json, created_at FROM query_cache WHERE query_hash = ? AND created_at > ?`,
+		hash, expiry,
+	).Scan(&jsonStr, &createdAt)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	var candidates []CommandCandidate
 	if err := json.Unmarshal([]byte(jsonStr), &candidates); err != nil {
 		return nil, err
@@ -157,7 +285,10 @@ func getCachedResponse(db *sql.DB, hash string) ([]CommandCandidate, error) {
 }
 
 func cacheResponse(db *sql.DB, hash string, candidates []CommandCandidate) {
-	jsonBytes, _ := json.Marshal(candidates)
+	jsonBytes, err := json.Marshal(candidates)
+	if err != nil {
+		return
+	}
 	_, _ = db.Exec(`
 		INSERT OR REPLACE INTO query_cache (query_hash, response_json, created_at)
 		VALUES (?, ?, ?)

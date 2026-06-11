@@ -1,93 +1,54 @@
-# Client-Server Architecture Flow
+# CLIPilot + Clio Architecture
 
-This document maps the end-to-end flow of a user command in dynamic CLIPilot architecture.
-
-## 🔄 High Level Overview
+CLIPilot is the **registry server**. **Clio** is the only supported CLI client.
 
 ```mermaid
 graph TD
-    User([User Input]) --> Client[Local Client (CLI)]
-    Client -->|1. Detect Intent| Intent{Local Intent?}
-    
-    Intent -->|Yes| LocalExec[Local Execution]
-    LocalExec -->|Run| System[System Shell]
-    
-    Intent -->|No| Cloud{Offline?}
-    Cloud -->|Yes| Fallback[Keyword/Man Page Search]
-    
-    Cloud -->|No| Server[Registry Server]
-    Server -->|2. Semantic Search| Cache{Cached?}
-    
-    Cache -->|Yes| ServerResp[Server Response]
-    Cache -->|No| LLM(Gemini LLM)
-    
-    LLM -->|3. Generate Candidates| Cache
-    ServerResp -->|JSON| Client
-    
-    Client -->|4. Confirmation| User
-    User -->|Approve| LocalExec
+    Student[Student on Termux] --> Clio[Clio binary]
+    Clio --> L1[Layer 1: Phrase + catalog offline]
+    Clio --> L3[Layer 3: Local modules SQLite]
+    Clio -->|cache miss| API[POST /api/commands/search]
+    API --> Cache[Server query_cache]
+    Cache -->|miss| Cat[server/catalog keyword search]
+    Cat -->|low score + GEMINI_API_KEY| Gemini[Gemini Flash]
+    Clio -->|sync| ModAPI[GET /api/v1/modules/changed]
+    ModAPI --> Registry[(registry.db)]
 ```
 
-## 🔍 Detailed Code Path
+## Clio client ([github.com/themobileprof/clio](https://github.com/themobileprof/clio))
 
-### 1. Client Side (The Terminal)
+- Offline phrase + verb-noun matching (Nigerian Pidgin aware)
+- Local module sync and `clio-run-module` execution
+- Remote fallback: `POST https://clipilot.themobileprof.com/api/commands/search`
+- Local SQLite cache of remote results (`query_cache` in `~/.clio/clio.db`)
 
-**Entry Point**: `cmd/clipilot/main.go`
-- Initializes `repl.New()`
-- Starts the interactive loop.
+## CLIPilot server (this repo)
 
-**Step 1: Input Handling**
-- File: `internal/ui/repl.go`
-- Function: `handleInput(text)`
-- Action: Passes user text to `IntentDetector`.
+| Endpoint | Purpose |
+|----------|---------|
+| `POST /api/commands/search` | Natural-language command lookup for Clio |
+| `GET /api/v1/modules/changed` | Delta module sync |
+| `GET /clio` | Install script for Clio |
+| `/modules` | Web UI |
 
-**Step 2: Intent Detection**
-- File: `internal/intent/keyword.go` (and `hybrid.go`)
-- Function: `Detect(input)`
-- Logic:
-    1.  **Exact Match**: Checks `internal/commands/catalog.go` (In-Memory).
-    2.  **Fuzzy Match**: Checks TF-IDF index of local man pages.
-    3.  **Registry Fallback**: If confidence < threshold, calls `registry.SearchCommands`.
+### Search handler (`server/handlers/commands.go`)
 
-**Step 3: Registry Client**
-- File: `internal/registry/client.go`
-- Function: `SearchCommands(query)`
-- Action: Sends `POST /api/commands/search` to `clipilot.themobileprof.com`.
-- Safety: Uses `newTransportWithDNSFallback()` to bypass Termux DNS issues.
+1. Check SQLite `query_cache` (7 days)
+2. Run `server/catalog.Search(query)` on embedded YAML
+3. If top score &lt; 4 and `GEMINI_API_KEY` set → Gemini with catalog hints
+4. Return `candidates[]` + legacy `results[]` alias
 
-### 2. Server Side (The Registry)
+### Catalog (`server/catalog/`)
 
-**Entry Point**: `cmd/registry/main.go`
-- Starts HTTP server on port 8080.
-- wrapper `handlers.New()`.
+- Embeds `common_commands.yaml` (~70 tools)
+- Adds Termux essentials: `ping`, `pwd`, `ps`, `kill`, `pkg`
+- Pidgin token expansion: `wetin`, `comot`, `data`, `jam`, etc.
 
-**Step 4: API Handling**
-- File: `server/handlers/commands.go` (Logic) & `handlers.go` (Routing)
-- Function: `HandleSemanticSearch` -> `searchWithGemini`
-- Logic:
-    1.  **Cache Check**: Hashes the query (SHA-256) and checks `query_cache` (SQLite).
-    2.  **LLM Call**: If cache miss, calls **Gemini Flash API** (`searchWithGemini`) to generate candidates.
-    3.  **Response**: Results are cached for 24h and returned as `CommandCandidate` objects.
+## Deployment
 
-### 3. Execution (Back to Client)
+```bash
+go build -o clipilot-server ./cmd/registry
+# or Docker: Dockerfile.registry
+```
 
-**Step 5: User Selection**
-- `REPL` displays the server suggestions.
-- User selects an option (e.g., `#1`).
-
-**Step 6: Safe Execution**
-- File: `internal/engine/runner.go`
-- Function: `Run(command)`
-- Safety: Uses `internal/utils/safeexec` to resolve paths without crashing (`safeexec.LookPath`).
-- Action: Executes `bash -c <command>` and streams output.
-
-## 🛠️ Key Components via File
-
-| Component | File Path | Purpose |
-|-----------|-----------|---------|
-| **REPL** | `internal/ui/repl.go` | Main UI loop, user input reading. |
-| **Intent** | `internal/intent/keyword.go` | Brain. Decides *what* to do. |
-| **Catalog** | `internal/commands/catalog.go` | fast local database of 50 common commands. |
-| **Safety** | `internal/utils/safeexec/safeexec.go` | Prevents SIGSYS crashes on Android. |
-| **Client API** | `internal/registry/client.go` | Talks to the server. |
-| **Server API** | `server/handlers/handlers.go` | Handles requests, talks to DB. |
+Set `GEMINI_API_KEY` for LLM fallback. Catalog search works without it.
