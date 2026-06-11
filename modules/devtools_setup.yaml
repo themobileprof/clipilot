@@ -1,0 +1,156 @@
+name: Dev Tools Setup
+id: devtools_setup
+version: 1.0.0
+description: Interactive install of common frontend/backend languages and build tools
+tags:
+  - development
+  - python
+  - nodejs
+  - golang
+  - setup
+estimated_time: "5-15 minutes"
+
+flows:
+  - name: setup
+    description: Pick languages and frameworks to install
+    steps:
+      - type: message
+        content: |
+          ╔══════════════════════════════════════════════════════════╗
+          ║  🛠️  Dev Tools Setup Wizard                              ║
+          ╚══════════════════════════════════════════════════════════╝
+          
+          Choose which languages and tools to install.
+          Press Enter for Yes, n for No on each prompt.
+
+      - type: confirm
+        prompt: "Start dev tools wizard?"
+        default: yes
+        on_no: abort
+
+      - type: section
+        title: "Detect Environment"
+        steps:
+          - type: command
+            command: |
+              echo "Current tools:"
+              command -v python3 >/dev/null 2>&1 && echo "  ✅ Python: $(python3 --version 2>&1)" || echo "  ❌ Python"
+              command -v node >/dev/null 2>&1 && echo "  ✅ Node: $(node --version 2>&1)" || echo "  ❌ Node.js"
+              command -v go >/dev/null 2>&1 && echo "  ✅ Go: $(go version 2>&1 | awk '{print $3}')" || echo "  ❌ Go"
+              command -v php >/dev/null 2>&1 && echo "  ✅ PHP: $(php --version 2>&1 | head -1)" || echo "  ❌ PHP"
+              command -v rustc >/dev/null 2>&1 && echo "  ✅ Rust: $(rustc --version 2>&1)" || echo "  ❌ Rust"
+              command -v make >/dev/null 2>&1 && echo "  ✅ Make" || echo "  ❌ Make"
+              echo ""
+              SELECTED=""
+              if command -v pkg >/dev/null 2>&1 && [ -n "${PREFIX:-}" ]; then
+                INSTALL="pkg install -y"
+              elif command -v apt-get >/dev/null 2>&1; then
+                INSTALL="sudo apt-get install -y"
+                sudo apt-get update 2>/dev/null || true
+              elif command -v brew >/dev/null 2>&1; then
+                INSTALL="brew install"
+              else
+                echo "⚠️  Unknown package manager — install tools manually."
+                INSTALL=""
+              fi
+              export CLIO_INSTALL="$INSTALL"
+            description: Checking installed tools
+            show_output: true
+
+      - type: section
+        title: "Choose Tools"
+        steps:
+          - type: command
+            command: |
+              [ -z "$CLIO_INSTALL" ] && exit 0
+              echo ""
+              read -p "Install Python? [Y/n]: " r
+              r=$(echo "${r:-Y}" | tr '[:upper:]' '[:lower:]')
+              [[ ! "$r" =~ ^n(o)?$ ]] && SELECTED="$SELECTED python"
+              read -p "Install Node.js? [Y/n]: " r
+              r=$(echo "${r:-Y}" | tr '[:upper:]' '[:lower:]')
+              [[ ! "$r" =~ ^n(o)?$ ]] && SELECTED="$SELECTED nodejs"
+              read -p "Install Go? [Y/n]: " r
+              r=$(echo "${r:-Y}" | tr '[:upper:]' '[:lower:]')
+              [[ ! "$r" =~ ^n(o)?$ ]] && SELECTED="$SELECTED golang"
+              read -p "Install PHP? [Y/n]: " r
+              r=$(echo "${r:-Y}" | tr '[:upper:]' '[:lower:]')
+              [[ ! "$r" =~ ^n(o)?$ ]] && SELECTED="$SELECTED php"
+              read -p "Install Rust (large download)? [y/N]: " r
+              r=$(echo "${r:-N}" | tr '[:upper:]' '[:lower:]')
+              [[ "$r" =~ ^y(es)?$ ]] && SELECTED="$SELECTED rust"
+              read -p "Install Make & build tools? [Y/n]: " r
+              r=$(echo "${r:-Y}" | tr '[:upper:]' '[:lower:]')
+              [[ ! "$r" =~ ^n(o)?$ ]] && SELECTED="$SELECTED build"
+              echo ""
+              echo "Will install:$SELECTED"
+              export CLIO_SELECTED="$SELECTED"
+            description: Selecting tools to install
+            interactive: true
+
+      - type: section
+        title: "Install Selected"
+        steps:
+          - type: command
+            command: |
+              [ -z "$CLIO_INSTALL" ] || [ -z "$CLIO_SELECTED" ] && exit 0
+              for tool in $CLIO_SELECTED; do
+                case "$tool" in
+                  python)
+                    echo "📦 Installing Python..."
+                    if echo "$CLIO_INSTALL" | grep -q pkg; then
+                      $CLIO_INSTALL python
+                    elif echo "$CLIO_INSTALL" | grep -q apt-get; then
+                      $CLIO_INSTALL python3 python3-pip python3-venv
+                    else
+                      $CLIO_INSTALL python
+                    fi ;;
+                  nodejs)
+                    echo "📦 Installing Node.js..."
+                    $CLIO_INSTALL nodejs 2>/dev/null || $CLIO_INSTALL node ;;
+                  golang)
+                    echo "📦 Installing Go..."
+                    $CLIO_INSTALL golang 2>/dev/null || $CLIO_INSTALL go ;;
+                  php)
+                    echo "📦 Installing PHP..."
+                    $CLIO_INSTALL php ;;
+                  rust)
+                    echo "📦 Installing Rust..."
+                    if echo "$CLIO_INSTALL" | grep -q pkg; then
+                      $CLIO_INSTALL rust || echo "Rust may need: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh"
+                    else
+                      curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y || echo "Rust install failed"
+                    fi ;;
+                  build)
+                    echo "📦 Installing build tools..."
+                    if echo "$CLIO_INSTALL" | grep -q pkg; then
+                      $CLIO_INSTALL make clang pkg-config
+                    elif echo "$CLIO_INSTALL" | grep -q apt-get; then
+                      $CLIO_INSTALL build-essential
+                    else
+                      $CLIO_INSTALL make
+                    fi ;;
+                esac
+              done
+              echo ""
+              echo "Installed versions:"
+              command -v python3 >/dev/null 2>&1 && python3 --version
+              command -v node >/dev/null 2>&1 && node --version
+              command -v go >/dev/null 2>&1 && go version
+              command -v php >/dev/null 2>&1 && php --version | head -1
+              command -v rustc >/dev/null 2>&1 && rustc --version
+            description: Installing selected dev tools
+            show_output: true
+            continue_on_error: true
+
+      - type: message
+        content: |
+          
+          ╔══════════════════════════════════════════════════════════╗
+          ║  ✅ Dev tools setup complete!                             ║
+          ╚══════════════════════════════════════════════════════════╝
+          
+          Quick start:
+            python3 -m venv myenv && source myenv/bin/activate
+            npm init -y && npm install express
+            go mod init myapp

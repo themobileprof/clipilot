@@ -1,0 +1,128 @@
+name: Vim Dev Setup
+id: vim_setup
+version: 1.0.0
+description: Install Vim with vim-plug and essential dev plugins
+tags:
+  - vim
+  - editor
+  - setup
+  - development
+estimated_time: "5-10 minutes"
+
+flows:
+  - name: setup
+    description: Vim editor with dev plugins
+    steps:
+      - type: message
+        content: |
+          ╔══════════════════════════════════════════════════════════╗
+          ║  📝 Vim Dev Setup Wizard                                  ║
+          ╚══════════════════════════════════════════════════════════╝
+          
+          Installs Vim, vim-plug, and plugins for coding:
+            • NERDTree, CtrlP, Airline, GitGutter, ALE
+            • Commentary, auto-pairs, syntax highlighting
+
+      - type: confirm
+        prompt: "Continue with Vim setup?"
+        default: yes
+        on_no: abort
+
+      - type: section
+        title: "Install Vim"
+        steps:
+          - type: command
+            command: |
+              if command -v pkg >/dev/null 2>&1 && [ -n "${PREFIX:-}" ]; then
+                DEBIAN_FRONTEND=noninteractive pkg install -y vim git curl
+              elif command -v apt-get >/dev/null 2>&1; then
+                sudo apt-get update && sudo apt-get install -y vim git curl
+              elif command -v brew >/dev/null 2>&1; then
+                brew install vim git curl
+              else
+                echo "Install vim, git, and curl with your package manager first."
+                exit 1
+              fi
+            description: Installing Vim and dependencies
+            show_output: true
+
+      - type: section
+        title: "Plugin Manager & Config"
+        steps:
+          - type: command
+            command: |
+              mkdir -p ~/.vim/autoload ~/.vim/plugged ~/.vim/backup ~/.vim/swap ~/.vim/undo
+              curl -fLo ~/.vim/autoload/plug.vim --create-dirs \
+                https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim
+            description: Installing vim-plug
+            show_output: true
+            continue_on_error: true
+
+          - type: command
+            command: |
+              if [ -f ~/.vimrc ] && [ ! -f ~/.vimrc.clio-backup ]; then
+                cp ~/.vimrc ~/.vimrc.clio-backup
+                echo "Backed up existing .vimrc to ~/.vimrc.clio-backup"
+              fi
+              cat > ~/.vimrc << 'VIMEOF'
+              set nocompatible
+              syntax on
+              filetype plugin indent on
+              set number relativenumber ruler showcmd showmatch wildmenu
+              set laststatus=2 cursorline colorcolumn=80
+              set ignorecase smartcase incsearch hlsearch
+              set autoindent smartindent expandtab tabstop=4 shiftwidth=4 softtabstop=4
+              set encoding=utf-8 fileencoding=utf-8 autoread hidden
+              set backupdir=~/.vim/backup// directory=~/.vim/swap//
+              set undofile undodir=~/.vim/undo//
+              let mapleader = ","
+              nnoremap <leader>w :w<CR>
+              nnoremap <leader>q :q<CR>
+              nnoremap <leader><space> :nohlsearch<CR>
+              nnoremap <C-h> <C-w>h
+              nnoremap <C-j> <C-w>j
+              nnoremap <C-k> <C-w>k
+              nnoremap <C-l> <C-w>l
+              call plug#begin('~/.vim/plugged')
+              Plug 'preservim/nerdtree'
+              Plug 'ctrlpvim/ctrlp.vim'
+              Plug 'vim-airline/vim-airline'
+              Plug 'vim-airline/vim-airline-themes'
+              Plug 'tpope/vim-fugitive'
+              Plug 'airblade/vim-gitgutter'
+              Plug 'dense-analysis/ale'
+              Plug 'jiangmiao/auto-pairs'
+              Plug 'tpope/vim-commentary'
+              Plug 'sheerun/vim-polyglot'
+              Plug 'morhetz/gruvbox'
+              call plug#end()
+              nnoremap <leader>t :NERDTreeToggle<CR>
+              nnoremap <leader>f :NERDTreeFind<CR>
+              let NERDTreeShowHidden=1
+              let g:ctrlp_map = '<c-p>'
+              silent! colorscheme gruvbox
+              set background=dark
+              VIMEOF
+            description: Creating .vimrc with dev plugins
+            show_output: true
+
+      - type: section
+        title: "Install Plugins"
+        steps:
+          - type: command
+            command: vim +PlugInstall +qall
+            description: Installing Vim plugins (may take a minute)
+            show_output: true
+            continue_on_error: true
+
+      - type: message
+        content: |
+          
+          ╔══════════════════════════════════════════════════════════╗
+          ║  ✅ Vim setup complete!                                   ║
+          ╚══════════════════════════════════════════════════════════╝
+          
+          Key mappings (leader = ,):
+            ,w  save    ,t  file tree    Ctrl+p  fuzzy find
+          
+          Inside Vim: :PlugUpdate to update plugins

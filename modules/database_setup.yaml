@@ -1,0 +1,148 @@
+name: Database Setup
+id: database_setup
+version: 1.0.0
+description: Choose and install common databases (PostgreSQL, MariaDB, Redis, SQLite)
+tags:
+  - database
+  - postgresql
+  - mysql
+  - redis
+  - sqlite
+  - setup
+estimated_time: "5-10 minutes"
+
+flows:
+  - name: setup
+    description: Interactive database installation wizard
+    steps:
+      - type: message
+        content: |
+          ╔══════════════════════════════════════════════════════════╗
+          ║  🗄️  Database Setup Wizard                               ║
+          ╚══════════════════════════════════════════════════════════╝
+          
+          Pick databases to install. On Termux:
+            • PostgreSQL & Redis include server + client
+            • MariaDB is MySQL-compatible
+            • MongoDB is NOT available in Termux repos
+
+      - type: confirm
+        prompt: "Start database setup?"
+        default: yes
+        on_no: abort
+
+      - type: section
+        title: "Check & Choose"
+        steps:
+          - type: command
+            command: |
+              echo "Currently installed:"
+              command -v psql >/dev/null 2>&1 && echo "  ✅ PostgreSQL" || echo "  ❌ PostgreSQL"
+              command -v mysql >/dev/null 2>&1 || command -v mariadb >/dev/null 2>&1 && echo "  ✅ MySQL/MariaDB" || echo "  ❌ MySQL/MariaDB"
+              command -v redis-cli >/dev/null 2>&1 && echo "  ✅ Redis" || echo "  ❌ Redis"
+              command -v sqlite3 >/dev/null 2>&1 && echo "  ✅ SQLite" || echo "  ❌ SQLite"
+              echo ""
+              if command -v pkg >/dev/null 2>&1 && [ -n "${PREFIX:-}" ]; then
+                export CLIO_INSTALL="pkg install -y"
+                export CLIO_ENV="termux"
+              elif command -v apt-get >/dev/null 2>&1; then
+                export CLIO_INSTALL="sudo apt-get install -y"
+                sudo apt-get update 2>/dev/null || true
+                export CLIO_ENV="linux"
+              elif command -v brew >/dev/null 2>&1; then
+                export CLIO_INSTALL="brew install"
+                export CLIO_ENV="mac"
+              else
+                export CLIO_INSTALL=""
+                echo "⚠️  Install databases manually for your system."
+              fi
+              SELECTED=""
+              echo ""
+              read -p "Install PostgreSQL? [Y/n]: " r
+              r=$(echo "${r:-Y}" | tr '[:upper:]' '[:lower:]')
+              [[ ! "$r" =~ ^n(o)?$ ]] && SELECTED="$SELECTED postgresql"
+              read -p "Install MySQL/MariaDB? [Y/n]: " r
+              r=$(echo "${r:-Y}" | tr '[:upper:]' '[:lower:]')
+              [[ ! "$r" =~ ^n(o)?$ ]] && SELECTED="$SELECTED mysql"
+              if [ "$CLIO_ENV" = "termux" ]; then
+                echo "MongoDB: not available on Termux (use MongoDB Atlas cloud)"
+              else
+                read -p "Install MongoDB Shell (mongosh)? [y/N]: " r
+                r=$(echo "${r:-N}" | tr '[:upper:]' '[:lower:]')
+                [[ "$r" =~ ^y(es)?$ ]] && SELECTED="$SELECTED mongodb"
+              fi
+              read -p "Install Redis? [Y/n]: " r
+              r=$(echo "${r:-Y}" | tr '[:upper:]' '[:lower:]')
+              [[ ! "$r" =~ ^n(o)?$ ]] && SELECTED="$SELECTED redis"
+              read -p "Install SQLite? [Y/n]: " r
+              r=$(echo "${r:-Y}" | tr '[:upper:]' '[:lower:]')
+              [[ ! "$r" =~ ^n(o)?$ ]] && SELECTED="$SELECTED sqlite"
+              echo ""
+              echo "Will install:$SELECTED"
+              export CLIO_DB_SELECTED="$SELECTED"
+            description: Choosing databases
+            interactive: true
+
+      - type: section
+        title: "Install Selected"
+        steps:
+          - type: command
+            command: |
+              [ -z "$CLIO_INSTALL" ] || [ -z "$CLIO_DB_SELECTED" ] && exit 0
+              for db in $CLIO_DB_SELECTED; do
+                case "$db" in
+                  postgresql)
+                    echo "📦 Installing PostgreSQL..."
+                    if [ "$CLIO_ENV" = "termux" ]; then
+                      $CLIO_INSTALL postgresql
+                      mkdir -p "$PREFIX/var/lib/postgresql"
+                      initdb "$PREFIX/var/lib/postgresql" 2>/dev/null || true
+                      echo "  Start: pg_ctl -D \$PREFIX/var/lib/postgresql start"
+                    elif [ "$CLIO_ENV" = "linux" ]; then
+                      $CLIO_INSTALL postgresql-client postgresql
+                    else
+                      $CLIO_INSTALL postgresql || $CLIO_INSTALL libpq
+                    fi ;;
+                  mysql)
+                    echo "📦 Installing MySQL/MariaDB..."
+                    if [ "$CLIO_ENV" = "termux" ]; then
+                      $CLIO_INSTALL mariadb
+                    elif [ "$CLIO_ENV" = "linux" ]; then
+                      $CLIO_INSTALL mysql-client default-mysql-client mariadb-client 2>/dev/null || $CLIO_INSTALL mysql-client
+                    else
+                      $CLIO_INSTALL mysql-client
+                    fi ;;
+                  mongodb)
+                    echo "📦 Installing MongoDB Shell..."
+                    $CLIO_INSTALL mongodb-mongosh 2>/dev/null || echo "  Install from https://www.mongodb.com/try/download/shell" ;;
+                  redis)
+                    echo "📦 Installing Redis..."
+                    if [ "$CLIO_ENV" = "termux" ]; then
+                      $CLIO_INSTALL redis
+                      echo "  Start: redis-server \$PREFIX/etc/redis.conf &"
+                    elif [ "$CLIO_ENV" = "linux" ]; then
+                      $CLIO_INSTALL redis-tools redis-server 2>/dev/null || $CLIO_INSTALL redis-tools
+                    else
+                      $CLIO_INSTALL redis
+                    fi ;;
+                  sqlite)
+                    echo "📦 Installing SQLite..."
+                    $CLIO_INSTALL sqlite ;;
+                esac
+              done
+            description: Installing databases
+            show_output: true
+            continue_on_error: true
+
+      - type: message
+        content: |
+          
+          ╔══════════════════════════════════════════════════════════╗
+          ║  ✅ Database setup complete!                              ║
+          ╚══════════════════════════════════════════════════════════╝
+          
+          Connect examples:
+            psql -h localhost -U postgres
+            mysql -u root -p
+            redis-cli
+            sqlite3 mydb.db

@@ -1,83 +1,113 @@
-name: git_setup
-id: org.themobileprof.git_setup
+name: Git & GitHub CLI Setup
+id: git_setup
 version: 1.0.0
-description: Configure Git with best practices and user information
-tags: [installer, composite, git, setup, development]
-provides:
-  - git_configured
-requires: []
-size_kb: 8
-flows:
-  main:
-    start: check_git
-    steps:
-      check_git:
-        type: instruction
-        message: "Checking if Git is installed..."
-        command: "git --version"
-        validate:
-          - check_command: "which git"
-            error_message: "Git is not installed. Please install git first."
-        next: configure_user
-      configure_user:
-        type: instruction
-        message: |
-          Configure your Git identity.
-          This will set your name and email for commits.
-        command: |
-          read -p "Enter your name: " name
-          read -p "Enter your email: " email
-          git config --global user.name "$name"
-          git config --global user.email "$email"
-          echo "Git user configured:"
-          git config --global user.name
-          git config --global user.email
-        next: configure_defaults
-      configure_defaults:
-        type: instruction
-        message: "Setting recommended Git defaults..."
-        command: |
-          git config --global init.defaultBranch main
-          git config --global pull.rebase false
-          git config --global core.autocrlf input
-          git config --global color.ui auto
-          echo "✓ Default branch: main"
-          echo "✓ Pull strategy: merge"
-          echo "✓ Line endings: input"
-          echo "✓ Color output: enabled"
-        next: configure_aliases
-      configure_aliases:
-        type: instruction
-        message: "Adding helpful Git aliases..."
-        command: |
-          git config --global alias.st status
-          git config --global alias.co checkout
-          git config --global alias.br branch
-          git config --global alias.ci commit
-          git config --global alias.last 'log -1 HEAD'
-          git config --global alias.unstage 'reset HEAD --'
-          echo "✓ Aliases configured: st, co, br, ci, last, unstage"
-        next: show_config
-      show_config:
-        type: instruction
-        message: "Your Git configuration:"
-        command: |
-          echo ""
-          echo "User Configuration:"
-          echo "  Name:  $(git config --global user.name)"
-          echo "  Email: $(git config --global user.email)"
-          echo ""
-          echo "Global Settings:"
-          git config --global --list | grep -E "(init.defaultBranch|pull.rebase|color.ui)" | sed 's/^/  /'
-          echo ""
-          echo "Aliases:"
-          git config --global --list | grep "^alias\." | sed 's/^alias\./  /' | sed 's/=/ = /'
-        next: done
-      done:
-        type: terminal
-        message: "Git configuration complete! You're ready to start using Git."
+description: Install Git and gh, configure identity and useful defaults
+tags:
+  - git
+  - github
+  - gh
+  - setup
+  - development
+estimated_time: "3-5 minutes"
 
-metadata:
-  author: TheMobileProf
-  license: MIT
-  url: https://github.com/themobileprof/clipilot
+flows:
+  - name: setup
+    description: Git and GitHub CLI configuration wizard
+    steps:
+      - type: message
+        content: |
+          ╔══════════════════════════════════════════════════════════╗
+          ║  🔀 Git & GitHub CLI Setup                                ║
+          ╚══════════════════════════════════════════════════════════╝
+          
+          This wizard will:
+            • Install git and gh (GitHub CLI)
+            • Set your name and email for commits
+            • Apply recommended defaults and aliases
+
+      - type: confirm
+        prompt: "Continue with Git setup?"
+        default: yes
+        on_no: abort
+
+      - type: section
+        title: "Install Git & gh"
+        steps:
+          - type: command
+            command: |
+              if command -v pkg >/dev/null 2>&1 && [ -n "${PREFIX:-}" ]; then
+                DEBIAN_FRONTEND=noninteractive pkg install -y git gh openssh
+              elif command -v apt-get >/dev/null 2>&1; then
+                sudo apt-get update
+                sudo apt-get install -y git openssh-client
+                if ! command -v gh >/dev/null 2>&1; then
+                  type -p curl >/dev/null || sudo apt-get install -y curl
+                  curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg 2>/dev/null
+                  echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list >/dev/null
+                  sudo apt-get update && sudo apt-get install -y gh || echo "gh install skipped — install manually from https://cli.github.com"
+                fi
+              elif command -v brew >/dev/null 2>&1; then
+                brew install git gh
+              else
+                echo "Install git and gh with your package manager."
+                exit 1
+              fi
+              git --version
+              command -v gh >/dev/null 2>&1 && gh --version || echo "gh not installed — optional"
+            description: Installing Git and GitHub CLI
+            show_output: true
+            continue_on_error: true
+
+      - type: section
+        title: "Configure Git Identity"
+        steps:
+          - type: command
+            command: |
+              echo ""
+              echo "Set your Git identity (used on every commit):"
+              CURRENT_NAME=$(git config --global user.name 2>/dev/null || true)
+              CURRENT_EMAIL=$(git config --global user.email 2>/dev/null || true)
+              [ -n "$CURRENT_NAME" ] && echo "Current name:  $CURRENT_NAME"
+              [ -n "$CURRENT_EMAIL" ] && echo "Current email: $CURRENT_EMAIL"
+              echo ""
+              read -p "Your name (for commits): " GIT_NAME
+              read -p "Your email: " GIT_EMAIL
+              [ -n "$GIT_NAME" ] && git config --global user.name "$GIT_NAME"
+              [ -n "$GIT_EMAIL" ] && git config --global user.email "$GIT_EMAIL"
+              echo ""
+              echo "Configured:"
+              git config --global user.name
+              git config --global user.email
+            description: Setting Git name and email
+            interactive: true
+
+      - type: section
+        title: "Git Defaults & Aliases"
+        steps:
+          - type: command
+            command: |
+              git config --global init.defaultBranch main
+              git config --global pull.rebase false
+              git config --global core.autocrlf input
+              git config --global color.ui auto
+              git config --global alias.st status
+              git config --global alias.co checkout
+              git config --global alias.br branch
+              git config --global alias.ci commit
+              git config --global alias.last 'log -1 HEAD'
+              git config --global alias.unstage 'reset HEAD --'
+              echo "✅ Defaults and aliases configured (st, co, br, ci, last, unstage)"
+            description: Applying recommended Git settings
+            show_output: true
+
+      - type: message
+        content: |
+          
+          ╔══════════════════════════════════════════════════════════╗
+          ║  ✅ Git setup complete!                                   ║
+          ╚══════════════════════════════════════════════════════════╝
+          
+          Next steps:
+            git clone https://github.com/user/repo.git
+            gh auth login          # sign in to GitHub (if gh is installed)
+            gh repo create my-app    # create a repo from the CLI

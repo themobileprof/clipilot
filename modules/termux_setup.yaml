@@ -1,257 +1,318 @@
-name: termux_setup
-id: org.themobileprof.termux_setup
+name: Termux Complete Setup
+id: termux_setup
 version: 1.0.0
-description: Initial setup and configuration for Termux environment on Android phones and tablets - essential tools and SSH setup
-tags: [installer, development, devops-ops, composite, termux, android, phone, mobile, setup]
-provides:
-  - termux_configured
-requires:
-  - check_command_exists
-size_kb: 15
+description: Complete development environment setup for Termux including Zsh, Vim, Git, LLM, and dev languages
+tags:
+  - termux
+  - setup
+  - configuration
+  - development
+  - first-run
+
+requires_termux: true
+estimated_time: "10-20 minutes"
 
 flows:
-  main:
-    start: check_termux
+  - name: setup
+    description: Interactive setup wizard for first-time Termux users
     steps:
-      check_termux:
-        type: action
-        message: "Verifying Termux environment..."
-        command: |
-          if [ -z "$TERMUX_VERSION" ] && [ ! -d "$PREFIX" ]; then
-            echo "❌ This doesn't appear to be a Termux environment"
-            echo "TERMUX_VERSION: ${TERMUX_VERSION:-not set}"
-            echo "PREFIX: ${PREFIX:-not set}"
-            exit 1
-          fi
-          echo "✅ Termux environment detected (version: ${TERMUX_VERSION:-unknown})"
-        next: update_packages
-
-      update_packages:
-        type: action
-        message: "Updating package system..."
-        command: |
-          echo "Updating package repositories..."
-          pkg update -y
-          echo "Upgrading installed packages..."
-          pkg upgrade -y
-          echo "✅ Package system updated"
-        next: install_essential
-
-      install_essential:
-        type: action
-        message: "Installing essential packages..."
-        command: |
-          echo "Installing essential development and utility packages..."
-          pkg install -y \
-            coreutils curl wget git openssh \
-            termux-api termux-tools \
-            man nano vim \
-            zip unzip tar \
-            grep sed gawk jq
-          echo "✅ Essential packages installed"
-        next: setup_storage
-
-      setup_storage:
-        type: action
-        message: "Setting up Android storage access..."
-        command: |
-          if [ ! -d "$HOME/storage" ]; then
-            echo "Setting up storage access..."
-            termux-setup-storage
-            sleep 2
-            if [ -d "$HOME/storage" ]; then
-              echo "✅ Storage access configured"
-              echo "   Access Android storage at: $HOME/storage"
-            else
-              echo "⚠  Storage setup may require manual permission grant"
-              echo "   Please check Android permissions for Termux"
-            fi
-          else
-            echo "✅ Storage access already configured"
-          fi
-        next: configure_shell
-
-      configure_shell:
-        type: action
-        message: "Configuring bash environment..."
-        command: |
-          if [ ! -f "$HOME/.bashrc" ]; then
-            cat > "$HOME/.bashrc" << 'BASH_CONFIG'
-          # Termux bash configuration
-          export EDITOR=vim
-          export VISUAL=vim
-
-          # Useful aliases
-          alias ll='ls -lah'
-          alias la='ls -A'
-          alias l='ls -CF'
-          alias ..='cd ..'
-          alias ...='cd ../..'
-          alias update='pkg update && pkg upgrade'
-          alias cleanup='pkg autoclean && pkg clean'
-
-          # Better history
-          export HISTSIZE=10000
-          export HISTFILESIZE=20000
-          export HISTCONTROL=ignoredups:erasedups
-          shopt -s histappend
-
-          # Colorful prompt
-          PS1='\[\e[1;32m\]\u@termux\[\e[0m\]:\[\e[1;34m\]\w\[\e[0m\]\$ '
-
-          # Load clipilot if available
-          if [ -f "$HOME/.clipilot/clipilot.sh" ]; then
-              source "$HOME/.clipilot/clipilot.sh"
-          fi
-          BASH_CONFIG
-            echo "✅ Created .bashrc configuration"
-          else
-            echo "✅ .bashrc already exists"
-          fi
+      - type: message
+        content: |
+          ╔══════════════════════════════════════════════════════════╗
+          ║       🚀 Termux Complete Setup Wizard                   ║
+          ╚══════════════════════════════════════════════════════════╝
           
-          if [ -n "$BASH_VERSION" ]; then
-            source "$HOME/.bashrc" 2>/dev/null || true
-          fi
-        next: setup_ssh
-
-      setup_ssh:
-        type: action
-        message: "Configuring SSH..."
-        command: |
-          if [ ! -d "$HOME/.ssh" ]; then
-            mkdir -p "$HOME/.ssh"
-            chmod 700 "$HOME/.ssh"
-            echo "✅ Created .ssh directory"
-          fi
-
-          if [ ! -f "$HOME/.ssh/id_rsa" ]; then
-            echo "Generating SSH key pair..."
-            ssh-keygen -t rsa -b 4096 -f "$HOME/.ssh/id_rsa" -N "" -C "termux@android"
-            echo "✅ SSH key pair generated"
-            echo "   Public key: $HOME/.ssh/id_rsa.pub"
-          else
-            echo "✅ SSH key pair already exists"
-          fi
-
-          if ! pgrep sshd > /dev/null 2>&1; then
-            sshd
-            echo "✅ SSH daemon started"
-            echo "   Connect with: ssh -p 8022 $(whoami)@localhost"
-          else
-            echo "✅ SSH daemon already running"
-          fi
-        next: ask_dev_tools
-
-      ask_dev_tools:
-        type: instruction
-        message: "Would you like to install development tools (Python, Node.js, Go, compilers)?"
-        command: |
-          read -p "Install development tools? (y/N): " -n 1 -r
-          echo
-          if [[ $REPLY =~ ^[Yy]$ ]]; then
-            echo "INSTALL_DEV_TOOLS"
-          else
-            echo "SKIP_DEV_TOOLS"
-          fi
-        next: branch_dev_tools
-
-      branch_dev_tools:
-        type: branch
-        message: "Processing choice..."
-        based_on: last_output
-        branches:
-          INSTALL_DEV_TOOLS:
-            next: install_dev_tools
-          SKIP_DEV_TOOLS:
-            next: setup_termux_api
-          default:
-            next: setup_termux_api
-
-      install_dev_tools:
-        type: action
-        message: "Installing development tools..."
-        command: |
-          echo "Installing common development tools..."
-          pkg install -y python nodejs golang make clang pkg-config
-          echo "✅ Development tools installed"
+          This will configure your Termux environment with:
+            • System updates & mirrors
+            • Android storage access
+            • Zsh shell with themes
+            • Essential dev tools (git, gh, vim, llm)
+            • Optional: PHP, Node.js, Golang, Python
           
-          echo ""
-          echo "Installed versions:"
-          python --version 2>&1 | head -1 || echo "  Python: not available"
-          node --version 2>&1 | head -1 || echo "  Node.js: not available"
-          go version 2>&1 | head -1 || echo "  Go: not available"
-        next: setup_termux_api
+          This process may take 10-20 minutes.
 
-      setup_termux_api:
-        type: action
-        message: "Checking Termux API..."
-        command: |
-          if command -v termux-battery-status >/dev/null 2>&1; then
-            echo "✅ Termux API is functional"
-            echo ""
-            echo "Available API commands:"
-            echo "  termux-battery-status    - Battery information"
-            echo "  termux-clipboard-get     - Get clipboard content"
-            echo "  termux-clipboard-set     - Set clipboard content"
-            echo "  termux-notification      - Show notifications"
-            echo "  termux-toast             - Show toast messages"
-            echo "  termux-vibrate           - Vibrate device"
-            echo "  termux-wifi-connectioninfo - WiFi information"
-            echo ""
-            echo "Note: Ensure Termux:API app is installed from same source as Termux"
-          else
-            echo "⚠  Termux API commands not responding"
-            echo "   Install Termux:API app from the same source as Termux"
-          fi
-        next: create_workspace
+      - type: confirm
+        prompt: "Continue with setup?"
+        default: yes
+        on_no: abort
 
-      create_workspace:
-        type: action
-        message: "Creating workspace directories..."
-        command: |
-          mkdir -p "$HOME/projects"
-          mkdir -p "$HOME/scripts"
-          mkdir -p "$HOME/downloads"
-          mkdir -p "$HOME/backup"
+      - type: section
+        title: "Update & Upgrade"
+        steps:
+          - type: command
+            command: DEBIAN_FRONTEND=noninteractive pkg update -y
+            description: Updating package lists
+            show_output: true
           
-          echo "✅ Workspace directories created:"
-          echo "   $HOME/projects   - For development projects"
-          echo "   $HOME/scripts    - For custom scripts"
-          echo "   $HOME/downloads  - For downloaded files"
-          echo "   $HOME/backup     - For backups"
-        next: show_summary
+          - type: command
+            command: DEBIAN_FRONTEND=noninteractive DEBIAN_PRIORITY=critical pkg upgrade -y
+            description: Upgrading packages
+            show_output: true
 
-      show_summary:
-        type: terminal
-        message: |
+      - type: section
+        title: "Configure Mirrors"
+        steps:
+          - type: check_command
+            command: termux-change-repo
+            on_missing: skip
           
-          ==========================================
-            Termux Setup Complete!
-          ==========================================
+          - type: message
+            content: "Running termux-change-repo (select mirrors from the menu)"
           
-          Installed packages:
-            Total packages: $(pkg list-installed 2>/dev/null | wc -l)
-          
-          Environment:
-            Home: $HOME
-            Prefix: $PREFIX
-            Shell: $SHELL
-          
-          Quick tips:
-            • Run 'pkg search <name>' to find packages
-            • Run 'pkg install <name>' to install packages
-            • Run 'update' alias to update all packages
-            • Access Android storage at: $HOME/storage
-            • SSH into Termux: ssh -p 8022 $(whoami)@localhost
-          
-          Recommended next steps:
-            1. Grant storage permission if prompted
-            2. Install Termux:API app for Android integration
-            3. Install dev tools: clipilot run dev_tools_install
-            4. Configure Git: git config --global user.name 'Your Name'
-            5. Configure Git: git config --global user.email 'you@example.com'
-            6. Explore your new environment!
+          - type: command
+            command: termux-change-repo
+            interactive: true
+            continue_on_error: true
 
-metadata:
-  author: TheMobileProf
-  license: MIT
+      - type: section
+        title: "Setup Android Storage"
+        steps:
+          - type: message
+            content: "Setting up access to Android storage. You will be prompted to grant permissions."
+          
+          - type: command
+            command: termux-setup-storage
+            interactive: true
+            continue_on_error: true
+          
+          - type: message
+            content: "Storage will be accessible at ~/storage/"
+
+      - type: section
+        title: "Install Essential Tools"
+        steps:
+          - type: message
+            content: "Installing essential tools: git, gh, curl, wget, man, openssh, zip, unzip"
+          
+          - type: command
+            command: DEBIAN_FRONTEND=noninteractive pkg install -y git gh curl wget man openssh zip unzip
+            show_output: true
+
+      - type: section
+        title: "Install Zsh & Themes"
+        steps:
+          - type: command
+            command: DEBIAN_FRONTEND=noninteractive pkg install -y zsh
+            description: Installing Zsh shell
+            show_output: true
+          
+          - type: check_path
+            path: ~/.oh-my-zsh
+            on_exists: skip_to_p10k
+          
+          - type: message
+            content: "Installing Oh My Zsh..."
+          
+          - type: command
+            command: sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
+            continue_on_error: true
+          
+          - type: label
+            name: skip_to_p10k
+          
+          - type: check_path
+            path: ~/.oh-my-zsh/custom/themes/powerlevel10k
+            on_exists: skip_to_zshrc
+          
+          - type: message
+            content: "Installing Powerlevel10k theme..."
+          
+          - type: command
+            command: git clone --depth=1 https://github.com/romkatv/powerlevel10k.git ~/.oh-my-zsh/custom/themes/powerlevel10k
+            continue_on_error: true
+          
+          - type: label
+            name: skip_to_zshrc
+          
+          - type: file_operation
+            operation: configure_zshrc
+            description: Configuring .zshrc with theme and aliases
+          
+          - type: command
+            command: chsh -s zsh
+            description: Setting Zsh as default shell
+            continue_on_error: true
+
+      - type: section
+        title: "Configure Vim"
+        steps:
+          - type: command
+            command: DEBIAN_FRONTEND=noninteractive pkg install -y vim
+            description: Installing Vim
+            show_output: true
+          
+          - type: file_operation
+            operation: create_vimrc
+            description: Creating Vim configuration
+
+      - type: section
+        title: "Install LLM Tool"
+        steps:
+          - type: check_command
+            command: python
+            on_missing: install_python
+          
+          - type: goto
+            label: install_llm
+          
+          - type: label
+            name: install_python
+          
+          - type: message
+            content: "Installing Python..."
+          
+          - type: command
+            command: DEBIAN_FRONTEND=noninteractive pkg install -y python
+            show_output: true
+          
+          - type: label
+            name: install_llm
+          
+          - type: message
+            content: "Installing llm via pip..."
+          
+          - type: command
+            command: pip install -U llm
+            show_output: true
+          
+          - type: message
+            content: |
+              
+              ╔══════════════════════════════════════════════════════════╗
+              ║  DeepSeek LLM Integration                                ║
+              ╚══════════════════════════════════════════════════════════╝
+              
+              DeepSeek offers powerful AI with affordable API rates.
+              Get your API key at: https://platform.deepseek.com/api_keys
+          
+          - type: confirm
+            prompt: "Do you have a DeepSeek API key?"
+            default: no
+            on_no: skip_deepseek
+          
+          - type: input
+            prompt: "Enter your DeepSeek API key"
+            variable: DEEPSEEK_API_KEY
+            required: false
+          
+          - type: command
+            command: "echo '{{ .DEEPSEEK_API_KEY }}' | llm keys set deepseek"
+            condition: "{{ .DEEPSEEK_API_KEY }}"
+            continue_on_error: true
+          
+          - type: command
+            command: llm install llm-deepseek
+            description: Installing DeepSeek plugin
+            continue_on_error: true
+          
+          - type: message
+            content: |
+              
+              ✅ LLM configured with DeepSeek!
+              Usage: llm -m deepseek/deepseek-chat 'your question'
+          
+          - type: goto
+            label: after_deepseek
+          
+          - type: label
+            name: skip_deepseek
+          
+          - type: message
+            content: |
+              
+              You can configure DeepSeek later by running:
+                llm keys set deepseek
+          
+          - type: label
+            name: after_deepseek
+
+      - type: section
+        title: "Optional Dev Languages"
+        steps:
+          - type: message
+            content: |
+              
+              Optional Development Languages
+              Choose languages to install (you can install more later with pkg install)
+          
+          - type: check_command
+            command: php
+            on_exists: skip_php
+          
+          - type: confirm
+            prompt: "Install PHP?"
+            default: no
+            on_no: skip_php
+          
+          - type: command
+            command: DEBIAN_FRONTEND=noninteractive pkg install -y php
+            description: Installing PHP
+            show_output: true
+          
+          - type: label
+            name: skip_php
+          
+          - type: check_command
+            command: node
+            on_exists: skip_node
+          
+          - type: confirm
+            prompt: "Install Node.js?"
+            default: no
+            on_no: skip_node
+          
+          - type: command
+            command: DEBIAN_FRONTEND=noninteractive pkg install -y nodejs
+            description: Installing Node.js
+            show_output: true
+          
+          - type: label
+            name: skip_node
+          
+          - type: check_command
+            command: go
+            on_exists: skip_go
+          
+          - type: confirm
+            prompt: "Install Golang?"
+            default: no
+            on_no: skip_go
+          
+          - type: command
+            command: DEBIAN_FRONTEND=noninteractive pkg install -y golang
+            description: Installing Golang
+            show_output: true
+          
+          - type: label
+            name: skip_go
+          
+          - type: check_command
+            command: python
+            on_exists: skip_python
+          
+          - type: confirm
+            prompt: "Install Python?"
+            default: no
+            on_no: skip_python
+          
+          - type: command
+            command: DEBIAN_FRONTEND=noninteractive pkg install -y python
+            description: Installing Python
+            show_output: true
+          
+          - type: label
+            name: skip_python
+
+      - type: message
+        content: |
+          
+          ╔══════════════════════════════════════════════════════════╗
+          ║  ✅ Termux setup complete!                               ║
+          ╚══════════════════════════════════════════════════════════╝
+          
+          Restart Termux to apply all changes (especially Zsh).
+          Run 'clio' again to start using your assistant.
+      
+      - type: file_operation
+        operation: mark_complete
+        description: Marking setup as complete
