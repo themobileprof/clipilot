@@ -6,6 +6,7 @@
 *.dylib
 clipilot
 clipilot-*
+!deploy/clipilot-registry.service
 cmd/clipilot/clipilot
 bin/
 *.tar.gz
