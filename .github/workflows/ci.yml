@@ -10,37 +10,34 @@ on:
 permissions:
   contents: write
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  GO_VERSION: '1.24'
+
 jobs:
   test:
     name: Test
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest]
-        go: ['1.24']
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-go@v4
+      - uses: actions/setup-go@v5
         with:
-          go-version: ${{ matrix.go }}
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
 
-      - uses: actions/cache@v3
-        with:
-          path: ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
-
-      - run: go mod download
       - run: go test -v -race -coverprofile=coverage.txt -covermode=atomic ./...
 
-      - uses: codecov/codecov-action@v3
+      - uses: codecov/codecov-action@v5
         if: matrix.os == 'ubuntu-latest'
         with:
           files: ./coverage.txt
           flags: unittests
-          name: codecov-umbrella
+          fail_ci_if_error: false
 
   lint:
     name: Lint
@@ -48,14 +45,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-go@v4
+      - uses: actions/setup-go@v5
         with:
-          go-version: '1.24'
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
 
-      - uses: golangci/golangci-lint-action@v3
+      - uses: golangci/golangci-lint-action@v6
         with:
           version: latest
-          args: --timeout=5m --out-format=colored-line-number
+          args: --timeout=5m
 
   build:
     name: Build
@@ -64,9 +62,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-go@v4
+      - uses: actions/setup-go@v5
         with:
-          go-version: '1.24'
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
 
       - name: Build registry binary
         run: |
@@ -83,7 +82,7 @@ jobs:
   deploy:
     name: Deploy
     runs-on: ubuntu-latest
-    needs: [test, build]
+    needs: [test, build, lint]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     steps:
       - uses: actions/checkout@v4
@@ -104,7 +103,7 @@ jobs:
           tar czf clipilot-deploy.tar.gz -C dist/deploy .
 
       - name: Copy bundle to server
-        uses: appleboy/scp-action@v0.1.7
+        uses: appleboy/scp-action@v1.0.0
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USERNAME }}
@@ -114,7 +113,7 @@ jobs:
           target: /tmp
 
       - name: Deploy on server
-        uses: appleboy/ssh-action@v1.0.0
+        uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USERNAME }}
@@ -134,7 +133,6 @@ jobs:
             ${{ secrets.ENV_FILE }}
             EOF
 
-            # Paths are rewritten to absolute home-directory locations (no sudo).
             {
               grep -v -E '^(DATA_DIR|STATIC_DIR|TEMPLATE_DIR)=' /tmp/clipilot-registry.env || true
               echo "DATA_DIR=$HOME/clipilot-data"
@@ -164,7 +162,7 @@ jobs:
           cd ..
           sha256sum clipilot-modules.tar.gz > clipilot-modules.tar.gz.sha256
 
-      - uses: softprops/action-gh-release@v1
+      - uses: softprops/action-gh-release@v2
         with:
           files: |
             clipilot-modules.tar.gz
