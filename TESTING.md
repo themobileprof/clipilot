@@ -223,7 +223,7 @@ Tests run automatically via GitHub Actions on:
 - ✅ Pull requests
 - ✅ Version tags (releases)
 
-Workflow file: [`.github/workflows/test.yml`](.github/workflows/test.yml)
+Workflow file: [`.github/workflows/ci.yml`](.github/workflows/ci.yml)
 
 ### What CI/CD Runs
 1. **Unit Tests** - All packages with race detection
@@ -275,7 +275,7 @@ Test full workflows and build processes.
 - Registry server build
 - Module loading workflows
 - Cross-platform compilation
-- Docker image building
+- Registry server build verification
 - Module YAML validation
 
 ## 🎯 Testing Best Practices

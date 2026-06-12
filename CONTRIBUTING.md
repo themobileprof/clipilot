@@ -51,5 +51,5 @@ YAML workflows live in `modules/`. Clio syncs them via `/api/v1/modules/changed`
 
 ```bash
 go test ./server/...
-go test -tags=integration ./...   # Docker optional
+go test -tags=integration ./...
 ```

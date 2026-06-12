@@ -5,7 +5,7 @@
 CLIPilot Registry is the backend server that powers [Clio](https://github.com/themobileprof/clio), a lightweight CLI assistant for developers and operations teams. The registry hosts, validates, and distributes YAML workflow modules that Clio executes on client systems.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Build Status](https://github.com/themobileprof/clipilot/workflows/Build%20and%20Test/badge.svg)](https://github.com/themobileprof/clipilot/actions)
+[![Build Status](https://github.com/themobileprof/clipilot/workflows/CI/CD/badge.svg)](https://github.com/themobileprof/clipilot/actions)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
 ## 🏗️ Architecture
@@ -53,9 +53,9 @@ See the [Clio repository](https://github.com/themobileprof/clio) for documentati
 
 If you want to **host your own registry server**, continue below.
 
-## 🐳 Deployment (Docker)
+## 🚀 Deployment
 
-### Quick Deploy with Docker Compose
+### Local Development
 
 1. Clone the repository:
 ```bash
@@ -63,73 +63,32 @@ git clone https://github.com/themobileprof/clipilot.git
 cd clipilot
 ```
 
-2. Create a `.env` file:
+2. Create a `.env` file from `.env.example` and set at least `ADMIN_PASSWORD`.
+
+3. Build and run:
 ```bash
-cat > .env << EOF
-ADMIN_USER=admin
-ADMIN_PASSWORD=your-secure-password
-BASE_URL=https://your-domain.com
-GITHUB_CLIENT_ID=your-github-oauth-client-id
-GITHUB_CLIENT_SECRET=your-github-oauth-client-secret
-GEMINI_API_KEY=your-gemini-api-key  # Optional, for semantic search
-EOF
-```
-
-3. Start the registry:
-```bash
-docker compose up -d
-```
-
-4. Create an admin user and API key:
-```bash
-# Option 1: Environment variables (automatic)
-# Admin user is created from ADMIN_USER/ADMIN_PASSWORD in .env
-
-# Option 2: Manual creation with script
-./scripts/create-admin.sh
-```
-
-The registry will be available at `http://localhost:8082`
-
-### Manual Deployment
-
-#### Prerequisites
-- Go 1.24+
-- SQLite3
-
-#### Build
-
-```bash
-# Clone the repository
-git clone https://github.com/themobileprof/clipilot.git
-cd clipilot
-
-# Build the server
 go build -o clipilot-server ./cmd/registry
-
-# Run the server
-./clipilot-server \
-  --port=8080 \
-  --data=./data \
-  --admin=admin \
-  --password=your-secure-password
-```
-
-#### Admin Setup
-
-After starting the server, create an admin user:
-
-```bash
-# Run the admin creation script
-./scripts/create-admin.sh
-
-# Or use environment variables before starting
-export ADMIN_USER=admin
-export ADMIN_PASSWORD=your-secure-password
 ./clipilot-server
 ```
 
-See [scripts/ADMIN_SETUP.md](scripts/ADMIN_SETUP.md) for detailed instructions.
+The registry will be available at `http://localhost:8080` (or the port set in `PORT`).
+
+### Production
+
+Production deploys run automatically on push to `main` via GitHub Actions (`.github/workflows/ci.yml`).
+
+Required GitHub secrets:
+- `SSH_HOST`, `SSH_USERNAME`, `SSH_PRIVATE_KEY`
+- `ENV_FILE` (production environment variables)
+
+The deploy installs a native binary with systemd at `/opt/clipilot-registry`, with data in `/var/lib/clipilot-registry`.
+
+For manual server deployment:
+```bash
+sudo ./scripts/deploy.sh
+```
+
+See [docs/REGISTRY.md](docs/REGISTRY.md) and [scripts/ADMIN_SETUP.md](scripts/ADMIN_SETUP.md) for configuration details.
 
 ## 🔌 API Endpoints
 

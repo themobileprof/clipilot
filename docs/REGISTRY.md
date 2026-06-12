@@ -169,40 +169,20 @@ Example prompt usage:
 4. **File Storage**: Monitor `data/uploads/` directory size
 5. **Session Security**: Enable secure cookies when using HTTPS
 
-### Docker Deployment
+### Production Deployment
 
-```dockerfile
-FROM golang:1.21-alpine AS builder
-WORKDIR /app
-COPY . .
-RUN go build -o registry ./cmd/registry
+Pushes to `main` deploy automatically via `.github/workflows/ci.yml`.
 
-FROM alpine:latest
-RUN apk --no-cache add ca-certificates
-WORKDIR /root/
-COPY --from=builder /app/registry .
-COPY --from=builder /app/server ./server
-EXPOSE 8080
-CMD ["./registry", "--password=$ADMIN_PASSWORD"]
+Manual server deployment:
+
+```bash
+sudo ./scripts/deploy.sh
 ```
 
-### systemd Service
-
-```ini
-[Unit]
-Description=CLIPilot Registry
-After=network.target
-
-[Service]
-Type=simple
-User=clipilot
-WorkingDirectory=/opt/clipilot-registry
-ExecStart=/opt/clipilot-registry/registry --password=your_password
-Restart=always
-
-[Install]
-WantedBy=multi-user.target
-```
+The service unit is defined in `deploy/clipilot-registry.service`. Production defaults:
+- Binary: `/opt/clipilot-registry/registry`
+- Data: `/var/lib/clipilot-registry`
+- Environment: `/etc/clipilot-registry/env`
 
 ## Security Notes
 

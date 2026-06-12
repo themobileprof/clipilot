@@ -48,7 +48,6 @@ graph TD
 
 ```bash
 go build -o clipilot-server ./cmd/registry
-# or Docker: Dockerfile.registry
 ```
 
 Set `GEMINI_API_KEY` for LLM fallback. Catalog search works without it.

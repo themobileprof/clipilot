@@ -28,28 +28,6 @@ func TestServerBuild(t *testing.T) {
 	}
 }
 
-// TestDockerBuild tests that the registry Docker image builds
-func TestDockerBuild(t *testing.T) {
-	// Check if Docker is available
-	cmd := exec.Command("docker", "version")
-	if err := cmd.Run(); err != nil {
-		t.Skip("Docker not available, skipping Docker build test")
-	}
-
-	// Build Docker image
-	cmd = exec.Command("docker", "build", "-f", "Dockerfile.registry", "-t", "clipilot-registry-test", ".")
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		t.Fatalf("Docker build failed: %v\nOutput: %s", err, output)
-	}
-
-	// Clean up image
-	defer func() {
-		cmd := exec.Command("docker", "rmi", "clipilot-registry-test")
-		_ = cmd.Run() // Ignore errors in cleanup
-	}()
-}
-
 // TestModuleDependencies verifies all module YAML files are valid
 func TestModuleDependencies(t *testing.T) {
 	modulesDir := "modules"
