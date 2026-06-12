@@ -5,13 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{.Title}} - CLIPilot Registry</title>
     <link rel="stylesheet" href="/static/style.css">
-    <!-- Material Icons -->
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-    <!-- Roboto Font -->
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
 </head>
 <body>
-    <!-- Material Design App Bar -->
     <header class="app-bar">
         <div class="container app-bar-content">
             <div class="logo">
@@ -43,33 +40,57 @@
     </header>
     <main class="container">
         <section>
-    <h2>Browse Modules</h2>
-    <p>{{len .Modules}} modules available</p>
-    
-    {{if .Modules}}
-    <div class="module-grid">
-        {{range .Modules}}
-        <div class="module-card">
-            <h3>{{.Name}}</h3>
-            <p class="version">v{{.Version}}</p>
-            <p class="description">{{.Description}}</p>
-            <div class="meta">
-                <span>👤 {{.Author}}</span>
-                <span>⬇️ {{.Downloads}} downloads</span>
+            <h2>Browse Modules</h2>
+            <p>{{.ModuleCount}} modules in the registry. Clio treats <strong>setup wizards</strong> (install/configure once) separately from <strong>automation modules</strong> (repeatable tasks).</p>
+            <p style="margin-top: 0.5rem; color: #666;">In Clio: <code>setup</code> for wizards · <code>modules</code> for automation · <code>catalog</code> for both · <code>download &lt;id&gt;</code> to fetch one module</p>
+
+            {{if .SetupModules}}
+            <h3 style="margin-top: 2rem; margin-bottom: 0.5rem;">⭐ Setup Wizards</h3>
+            <p style="color: #666; margin-bottom: 1rem;">First-class install/configure workflows — run via <code>setup &lt;name&gt;</code> or <code>clio-run-module &lt;id&gt; setup</code></p>
+            <div class="module-grid">
+                {{range .SetupModules}}
+                <div class="module-card">
+                    <h3>{{.Name}}</h3>
+                    <p class="version">v{{.Version}} · <span style="color: #5c6bc0;">SETUP WIZARD</span></p>
+                    <p class="description">{{.Description}}</p>
+                    <div class="meta">
+                        <span>👤 {{.Author}}</span>
+                        <span>⬇️ {{.Downloads}} downloads</span>
+                    </div>
+                    <a href="/modules/{{.ID}}" class="btn btn-primary" download>Download YAML</a>
+                </div>
+                {{end}}
             </div>
-            <a href="/modules/{{.ID}}" class="btn btn-primary" download>Download</a>
-        </div>
-        {{end}}
-    </div>
-    {{else}}
-    <p class="empty">No modules available yet. <a href="/upload">Be the first to upload!</a></p>
-    {{end}}
-</section>
+            {{end}}
+
+            {{if .AutomationModules}}
+            <h3 style="margin-top: 2.5rem; margin-bottom: 0.5rem;">📦 Automation Modules</h3>
+            <p style="color: #666; margin-bottom: 1rem;">Day-to-day task workflows — browse with <code>modules</code>, download with <code>download &lt;id&gt;</code></p>
+            <div class="module-grid">
+                {{range .AutomationModules}}
+                <div class="module-card">
+                    <h3>{{.Name}}</h3>
+                    <p class="version">v{{.Version}}</p>
+                    <p class="description">{{.Description}}</p>
+                    <div class="meta">
+                        <span>👤 {{.Author}}</span>
+                        <span>⬇️ {{.Downloads}} downloads</span>
+                    </div>
+                    <a href="/modules/{{.ID}}" class="btn btn-primary" download>Download YAML</a>
+                </div>
+                {{end}}
+            </div>
+            {{end}}
+
+            {{if not .SetupModules}}{{if not .AutomationModules}}
+            <p class="empty">No modules available yet. <a href="/upload">Be the first to upload!</a></p>
+            {{end}}{{end}}
+        </section>
     </main>
     <footer class="app-footer">
         <div class="container">
-            <p>&copy; 2026 CLIPilot Registry | Open Source CLI Automation</p>
-            <p><a href="https://github.com/themobileprof/clio" target="_blank">GitHub</a> • <a href="/modules">Browse Modules</a> • <a href="/clio">Install Clio</a></p>
+            <p>&copy; 2026 CLIPilot Registry | Module registry for <a href="https://github.com/themobileprof/clio" target="_blank">Clio</a></p>
+            <p><a href="https://github.com/themobileprof/clipilot" target="_blank">CLIPilot GitHub</a> · <a href="/clio">Install Clio</a> · <a href="/">Home</a></p>
         </div>
     </footer>
 </body>

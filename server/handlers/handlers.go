@@ -57,6 +57,20 @@ type ModuleRecord struct {
 	Downloads   int
 }
 
+// First-class Clio setup wizards (install/configure — run once).
+var clioSetupWizards = map[string]struct{}{
+	"termux_setup":    {},
+	"vim_setup":       {},
+	"git_setup":       {},
+	"devtools_setup":  {},
+	"database_setup":  {},
+}
+
+func isClioSetupWizard(name string) bool {
+	_, ok := clioSetupWizards[name]
+	return ok
+}
+
 func New(cfg Config) *Handlers {
 	// Initialize database
 	db, err := sql.Open("sqlite", cfg.DBPath)
@@ -145,11 +159,15 @@ func (h *Handlers) Home(w http.ResponseWriter, r *http.Request) {
 	}
 
 	session := h.auth.GetSession(r)
+	var moduleCount int
+	_ = h.db.QueryRow("SELECT COUNT(*) FROM modules").Scan(&moduleCount)
+
 	data := map[string]interface{}{
 		"Title":       "CLIPilot Registry",
-		"Description": "Community module registry for CLIPilot",
+		"Description": "Module registry for Clio — setup wizards and automation workflows",
 		"LoggedIn":    session != nil,
 		"Session":     session,
+		"ModuleCount": moduleCount,
 	}
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
@@ -175,22 +193,29 @@ func (h *Handlers) ListModules(w http.ResponseWriter, r *http.Request) {
 	}
 	defer rows.Close()
 
-	var modules []ModuleRecord
+	var setupModules []ModuleRecord
+	var automationModules []ModuleRecord
 	for rows.Next() {
 		var m ModuleRecord
 		if err := rows.Scan(&m.ID, &m.Name, &m.Version, &m.Description, &m.Author, &m.UploadedAt, &m.UploadedBy, &m.Downloads); err != nil {
 			log.Printf("Scan error: %v", err)
 			continue
 		}
-		modules = append(modules, m)
+		if isClioSetupWizard(m.Name) {
+			setupModules = append(setupModules, m)
+		} else {
+			automationModules = append(automationModules, m)
+		}
 	}
 
 	session := h.auth.GetSession(r)
 	data := map[string]interface{}{
-		"Title":    "Browse Modules",
-		"Modules":  modules,
-		"LoggedIn": session != nil,
-		"Session":  session,
+		"Title":             "Browse Modules",
+		"SetupModules":      setupModules,
+		"AutomationModules": automationModules,
+		"ModuleCount":       len(setupModules) + len(automationModules),
+		"LoggedIn":          session != nil,
+		"Session":           session,
 	}
 
 	if err := h.templates.ExecuteTemplate(w, "modules.html", data); err != nil {

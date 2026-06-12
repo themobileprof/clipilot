@@ -2,20 +2,19 @@
 
 ## Changes Made
 
-Updated [server/templates/home.html](../server/templates/home.html) to emphasize Clio's key features, with **command search** as the primary use case.
+Updated [server/templates/home.html](../server/templates/home.html) and [server/templates/modules.html](../server/templates/modules.html) to reflect the current Clio architecture.
 
 ### Key Messaging Now Prominent:
-- ✅ **"Don't know the command? Just ask"** - Command search is the most common use
-- ✅ **Man page search** - Clio searches man pages and explains commands
-- ✅ **"Perfect for beginners"** - Natural language interface, no command memorization
-- ✅ **Works offline** - After initial sync, runs completely locally
-- ✅ **Android (Termux) support** - Full support highlighted as first-class platform
-- ✅ **Example usage** - Shows real command search and automation examples
+- ✅ **Plain English → shell commands** — interactive REPL with `>>` prompt, confirm-before-run
+- ✅ **Setup wizards vs automation modules** — clearly separated (matches `catalog` / `setup` / `modules` in Clio)
+- ✅ **Offline-first** — local catalog, cached modules, optional remote search via this registry
+- ✅ **Termux / Android** — `clio-run-module`, lite profile, `sync` / `sync full`
+- ✅ **Registry integration** — modules download on demand from `/api/v1/modules`
 
 ### Hero Section Updated:
-**Title:** "Clio: Your AI CLI Assistant"
+**Title:** "Clio: Your Terminal Assistant"
 
-**Subtitle:** "Don't know the command? Just ask. Clio searches man pages and explains commands in plain English. Perfect for beginners. Works offline on Linux, macOS, and Android (Termux)."
+**Subtitle:** Offline-first CLI assistant. Ask in plain English; modules download from this registry on demand. Linux, macOS, and Termux.
 
 ### Primary Use Case: Command Search
 

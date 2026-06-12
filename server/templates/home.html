@@ -47,14 +47,18 @@
         <div class="container">
             <div class="hero-content">
                 <h1 class="hero-title">
-                    Clio: Your AI CLI Assistant
+                    Clio: Your Terminal Assistant
                 </h1>
                 <p class="hero-subtitle">
-                    <strong>Don't know the command? Just ask.</strong> Clio searches man pages and explains commands in plain English.
-                    <br><strong>Perfect for beginners.</strong> Works <strong>offline</strong> on Linux, macOS, and <strong>Android (Termux)</strong>.
+                    <strong>Stop memorizing commands.</strong> Ask in plain English and Clio suggests the right shell command — with confirmation before anything runs.
+                    <br>Works <strong>offline-first</strong> on Linux, macOS, and <strong>Android (Termux)</strong>. Modules download from this registry on demand.
                 </p>
                 <div class="hero-actions">
-                    <a href="/modules" class="btn-large btn-primary">
+                    <a href="/clio" class="btn-large btn-primary">
+                        <span class="material-icons">download</span>
+                        Install Clio
+                    </a>
+                    <a href="/modules" class="btn-large btn-outlined-light">
                         <span class="material-icons">explore</span>
                         Browse Modules
                     </a>
@@ -82,13 +86,15 @@
                         <span class="terminal-title">terminal</span>
                     </div>
                     <div class="terminal-body">
-                        <p><span class="prompt">$</span> clio "how do I list files?"</p>
-                        <p class="output">📖 Command: <strong>ls</strong> - list directory contents</p>
-                        <p class="output">   Usage: ls [options] [directory]</p>
-                        <p class="output">   Try: ls -lah  (detailed list with hidden files)</p>
-                        <p><span class="prompt">$</span> clio "install docker"</p>
-                        <p class="output">✓ Found module: docker_install</p>
-                        <p class="success">✓ Docker installed!</p>
+                        <p><span class="prompt">$</span> clio</p>
+                        <p class="output">CLIPilot Client (Offline First) - Type 'catalog', 'setup', or ask anything</p>
+                        <p><span class="prompt">&gt;&gt;</span> list files in this folder</p>
+                        <p class="output">⌨️  SHELL COMMAND</p>
+                        <p class="output"><strong>ls -F</strong></p>
+                        <p class="output">Run command? (y/n)</p>
+                        <p><span class="prompt">&gt;&gt;</span> setup termux</p>
+                        <p class="output">⭐ [SETUP WIZARD] Termux Setup</p>
+                        <p class="output">clio-run-module termux_setup setup</p>
                     </div>
                 </div>
             </div>
@@ -105,9 +111,9 @@
                     <p class="stat-label">Ready-to-Use Modules</p>
                 </div>
                 <div class="stat-card">
-                    <span class="material-icons stat-icon">download</span>
-                    <h3 class="stat-number">1-Click</h3>
-                    <p class="stat-label">Installation</p>
+                    <span class="material-icons stat-icon">auto_fix_high</span>
+                    <h3 class="stat-number">5</h3>
+                    <p class="stat-label">Setup Wizards</p>
                 </div>
                 <div class="stat-card">
                     <span class="material-icons stat-icon">devices</span>
@@ -128,29 +134,29 @@
         <div class="container">
             <div class="section-header">
                 <h2>How Clio Works</h2>
-                <p>No command memorization needed—just tell Clio what you want in plain English</p>
+                <p>Three layers: plain-English command lookup, one-time setup wizards, and repeatable automation modules</p>
             </div>
             <div class="features-grid">
                 <div class="feature-card">
                     <div class="feature-icon">
                         <span class="material-icons">search</span>
                     </div>
-                    <h3>Command Search</h3>
-                    <p><strong>Most common use:</strong> Search man pages for any command. "how do I...?" gets instant answers with examples. No more memorizing syntax.</p>
+                    <h3>Plain English → Commands</h3>
+                    <p>Type what you want at the <code>&gt;&gt;</code> prompt. Clio matches your intent to shell commands from an offline catalog, local man pages, and cached modules — then asks before running.</p>
                 </div>
                 <div class="feature-card">
                     <div class="feature-icon">
-                        <span class="material-icons">cloud_off</span>
+                        <span class="material-icons">auto_fix_high</span>
                     </div>
-                    <h3>Offline Ready</h3>
-                    <p><strong>Works without internet:</strong> After the first sync, Clio runs completely offline using local AI. Perfect for remote work or mobile devices.</p>
+                    <h3>Setup Wizards</h3>
+                    <p><strong>Install &amp; configure once.</strong> Five first-class wizards: Termux, Vim, Git, dev tools, and databases. Run <code>setup</code> or <code>setup termux</code> — modules download from this registry.</p>
                 </div>
                 <div class="feature-card">
                     <div class="feature-icon">
-                        <span class="material-icons">phone_android</span>
+                        <span class="material-icons">inventory_2</span>
                     </div>
-                    <h3>Works Everywhere</h3>
-                    <p><strong>Including Android:</strong> Full support for Linux, macOS, and Termux on Android. Automate your phone's CLI with the same power as your desktop.</p>
+                    <h3>Automation Modules</h3>
+                    <p><strong>Repeatable tasks.</strong> Copy files, check disk space, back up folders, and more. Browse with <code>modules</code>, download with <code>download &lt;id&gt;</code>, run via <code>clio-run-module</code>.</p>
                 </div>
             </div>
         </div>
@@ -160,43 +166,60 @@
     <section class="platform-section">
         <div class="container">
             <div class="section-header">
-                <h2>Most Common Use: Finding Commands</h2>
-                <p>Don't know the command? Just ask Clio in plain English</p>
+                <h2>Ask in Plain English</h2>
+                <p>Start Clio with <code>clio</code>, then type naturally at the <code>&gt;&gt;</code> prompt</p>
             </div>
             <div class="platform-grid">
                 <div class="platform-card" style="text-align: left; padding: 1.5rem;">
-                    <h4 style="margin-bottom: 1rem; color: #3f51b5;">🔍 Command Search (Man Pages)</h4>
-                    
-                    <p style="margin-bottom: 0.5rem;"><strong>💬 You ask:</strong> "how do I compress a file?"</p>
-                    <p style="margin-bottom: 1rem; color: #666;"><strong>🤖 Clio finds:</strong> <code>tar -czf archive.tar.gz file</code> and explains the options</p>
-                    
-                    <p style="margin-bottom: 0.5rem;"><strong>💬 You ask:</strong> "what command shows disk space?"</p>
-                    <p style="margin-bottom: 1rem; color: #666;"><strong>🤖 Clio finds:</strong> <code>df -h</code> with usage examples</p>
-                    
-                    <p style="margin-bottom: 0.5rem;"><strong>💬 You ask:</strong> "how to change file permissions?"</p>
-                    <p style="margin-bottom: 1rem; color: #666;"><strong>🤖 Clio finds:</strong> <code>chmod</code> command with practical examples</p>
-                    
-                    <p style="margin-bottom: 0.5rem;"><strong>💬 You ask:</strong> "how do I search inside files?"</p>
-                    <p style="color: #666;"><strong>🤖 Clio finds:</strong> <code>grep -r "pattern" .</code> with explanation</p>
+                    <h4 style="margin-bottom: 1rem; color: #3f51b5;">⌨️ Shell commands</h4>
+                    <p style="margin-bottom: 0.5rem;"><strong>You ask:</strong> <code>check disk space</code></p>
+                    <p style="margin-bottom: 1rem; color: #666;"><strong>Clio suggests:</strong> <code>df -h</code> — confirm before run</p>
+                    <p style="margin-bottom: 0.5rem;"><strong>You ask:</strong> <code>how do I find large files?</code></p>
+                    <p style="margin-bottom: 1rem; color: #666;"><strong>Clio suggests:</strong> <code>find . -type f -size +100M</code></p>
+                    <p style="margin-bottom: 0.5rem;"><strong>You ask:</strong> <code>show hidden files with details</code></p>
+                    <p style="color: #666;"><strong>Clio suggests:</strong> <code>ls -la</code></p>
                 </div>
             </div>
-            
+
             <div class="section-header" style="margin-top: 3rem;">
-                <h2>Automation Workflows</h2>
-                <p>Beyond command search: automate complex multi-step tasks</p>
+                <h2>Setup Wizards vs Automation Modules</h2>
+                <p>Both live in this registry — Clio separates them so you know what you're running</p>
             </div>
             <div class="platform-grid">
                 <div class="platform-card" style="text-align: left; padding: 1.5rem;">
-                    <h4 style="margin-bottom: 1rem; color: #3f51b5;">⚡ Multi-Step Automation</h4>
-                    
-                    <p style="margin-bottom: 0.5rem;"><strong>💬 You say:</strong> "install docker"</p>
-                    <p style="margin-bottom: 1rem; color: #666;"><strong>🤖 Clio does:</strong> Detects your OS, adds repo, installs Docker, starts service, adds you to docker group</p>
-                    
-                    <p style="margin-bottom: 0.5rem;"><strong>💬 You say:</strong> "backup my documents folder"</p>
-                    <p style="margin-bottom: 1rem; color: #666;"><strong>🤖 Clio does:</strong> Creates timestamped compressed backup and confirms location</p>
-                    
-                    <p style="margin-bottom: 0.5rem;"><strong>💬 You say:</strong> "setup python dev environment"</p>
-                    <p style="color: #666;"><strong>🤖 Clio does:</strong> Installs Python, pip, virtualenv, creates venv, installs common packages</p>
+                    <table style="width: 100%; border-collapse: collapse; font-size: 0.95rem;">
+                        <thead>
+                            <tr style="border-bottom: 2px solid #e0e0e0;">
+                                <th style="text-align: left; padding: 0.5rem;"></th>
+                                <th style="text-align: left; padding: 0.5rem; color: #3f51b5;">⭐ Setup Wizards</th>
+                                <th style="text-align: left; padding: 0.5rem; color: #3f51b5;">📦 Automation</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr style="border-bottom: 1px solid #eee;"><td style="padding: 0.5rem;"><strong>When</strong></td><td style="padding: 0.5rem;">Once / occasionally</td><td style="padding: 0.5rem;">Whenever needed</td></tr>
+                            <tr style="border-bottom: 1px solid #eee;"><td style="padding: 0.5rem;"><strong>Purpose</strong></td><td style="padding: 0.5rem;">Install &amp; configure</td><td style="padding: 0.5rem;">Repeat a task</td></tr>
+                            <tr style="border-bottom: 1px solid #eee;"><td style="padding: 0.5rem;"><strong>Browse in Clio</strong></td><td style="padding: 0.5rem;"><code>setup</code></td><td style="padding: 0.5rem;"><code>modules</code></td></tr>
+                            <tr><td style="padding: 0.5rem;"><strong>Label</strong></td><td style="padding: 0.5rem;">[SETUP WIZARD]</td><td style="padding: 0.5rem;">[AUTOMATION]</td></tr>
+                        </tbody>
+                    </table>
+                    <p style="margin-top: 1rem; color: #666;">Wizards: <code>termux_setup</code>, <code>vim_setup</code>, <code>git_setup</code>, <code>devtools_setup</code>, <code>database_setup</code>. See all with <code>catalog</code>.</p>
+                </div>
+            </div>
+
+            <div class="section-header" style="margin-top: 3rem;">
+                <h2>Termux on Android</h2>
+                <p>Clio is built for coding on your phone — modules run via <code>clio-run-module</code></p>
+            </div>
+            <div class="platform-grid">
+                <div class="platform-card" style="text-align: left; padding: 1.5rem;">
+                    <p style="margin-bottom: 0.75rem;">Android restricts some syscalls inside Go binaries, so workflow modules execute through <code>clio-run-module</code> and bash — not inside the main <code>clio</code> process.</p>
+                    <p style="margin-bottom: 0.5rem;"><strong>First run on Termux:</strong></p>
+                    <ol style="margin-left: 1.25rem; color: #666;">
+                        <li>Install: <code>curl -fsSL clipilot.themobileprof.com/clio | sh</code></li>
+                        <li>Run <code>clio</code>, then <code>setup termux</code></li>
+                        <li><code>sync</code> when online to cache automation modules</li>
+                    </ol>
+                    <p style="margin-top: 0.75rem; color: #666;">Lite profile on low-memory devices: <code>sync</code> fetches essentials only; use <code>sync full</code> for the complete catalog.</p>
                 </div>
             </div>
         </div>
@@ -225,21 +248,21 @@
                         <span class="step-number">1</span>
                         <div class="step-content">
                             <h4>Install Clio</h4>
-                            <p>Run the command above to install the Clio CLI assistant</p>
+                            <p>Run the curl command above (or visit <a href="/clio">/clio</a>)</p>
                         </div>
                     </div>
                     <div class="step">
                         <span class="step-number">2</span>
                         <div class="step-content">
-                            <h4>Sync Modules</h4>
-                            <p>Run <code>clio sync</code> to download modules from the registry</p>
+                            <h4>Launch the REPL</h4>
+                            <p>Type <code>clio</code> — use <code>setup termux</code> on first run (Termux), then <code>sync</code> when online</p>
                         </div>
                     </div>
                     <div class="step">
                         <span class="step-number">3</span>
                         <div class="step-content">
-                            <h4>Start Automating</h4>
-                            <p>Just type: <code>clio "your task in plain English"</code> — Clio handles the rest!</p>
+                            <h4>Explore &amp; ask</h4>
+                            <p><code>catalog</code> · <code>setup</code> · <code>modules</code> — or ask anything in plain English at <code>&gt;&gt;</code></p>
                         </div>
                     </div>
                 </div>
@@ -263,7 +286,8 @@
                 <div class="footer-section">
                     <h4>Resources</h4>
                     <a href="/modules">Browse Modules</a>
-                    <a href="/docs">Documentation</a>
+                    <a href="/clio">Install Clio</a>
+                    <a href="https://github.com/themobileprof/clio" target="_blank">Clio on GitHub</a>
                     <a href="/api">API Reference</a>
                 </div>
                 <div class="footer-section">

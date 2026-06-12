@@ -12,7 +12,7 @@ CLIPilot Registry is the backend server that powers [Clio](https://github.com/th
 
 **CLIPilot** is the **server** (this repository) - a web application for browsing, uploading, and managing workflow modules.
 
-**Clio** is the **client** - a Go CLI tool that syncs modules from this registry and executes them locally on user machines.
+**Clio** is the **client** - an offline-first CLI assistant that turns plain English into shell commands, runs **setup wizards** (Termux, Vim, Git, dev tools, databases), and syncs **automation modules** from this registry.
 
 ```
 ┌─────────────────────┐          ┌──────────────────────┐
@@ -35,6 +35,7 @@ CLIPilot Registry is the backend server that powers [Clio](https://github.com/th
 - **🚀 Delta Sync**: Efficient incremental updates for clients
 - **🔑 API Keys**: Secure CI/CD integration for automated uploads
 - **📱 Clio Install**: Hosts the Clio installation script at `/clio`
+- **⭐ Setup Wizards**: First-class install/configure modules (`termux_setup`, `vim_setup`, `git_setup`, `devtools_setup`, `database_setup`)
 
 ## 🚀 Quick Start
 
