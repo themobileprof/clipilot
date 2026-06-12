@@ -98,7 +98,7 @@ jobs:
           mkdir -p dist/deploy/server
           cp bin/registry dist/deploy/registry
           cp -r server/static server/templates dist/deploy/server/
-          cp deploy/clipilot-registry.service dist/deploy/
+          cp deploy/clipilot-registry.user.service dist/deploy/
           cp scripts/remote-deploy.sh dist/deploy/
           chmod +x dist/deploy/remote-deploy.sh
           tar czf clipilot-deploy.tar.gz -C dist/deploy .
@@ -122,24 +122,33 @@ jobs:
           port: ${{ secrets.SSH_PORT || 22 }}
           script: |
             set -euo pipefail
+            export XDG_RUNTIME_DIR="/run/user/$(id -u)"
 
-            mkdir -p /etc/clipilot-registry
-            cat > /etc/clipilot-registry/env << 'EOF'
-            ${{ secrets.ENV_FILE }}
-            EOF
-
-            # Ensure native deployment paths are set
-            grep -q '^DATA_DIR=' /etc/clipilot-registry/env || echo 'DATA_DIR=/var/lib/clipilot-registry' >> /etc/clipilot-registry/env
-            grep -q '^STATIC_DIR=' /etc/clipilot-registry/env || echo 'STATIC_DIR=/opt/clipilot-registry/server/static' >> /etc/clipilot-registry/env
-            grep -q '^TEMPLATE_DIR=' /etc/clipilot-registry/env || echo 'TEMPLATE_DIR=/opt/clipilot-registry/server/templates' >> /etc/clipilot-registry/env
+            echo "Deploying as $(whoami) (home: $HOME)"
 
             rm -rf /tmp/clipilot-deploy
             mkdir -p /tmp/clipilot-deploy
             tar xzf /tmp/clipilot-deploy.tar.gz -C /tmp/clipilot-deploy
 
-            DEPLOY_STAGING_DIR=/tmp/clipilot-deploy bash /tmp/clipilot-deploy/remote-deploy.sh
+            cat > /tmp/clipilot-registry.env << 'EOF'
+            ${{ secrets.ENV_FILE }}
+            EOF
 
-            rm -rf /tmp/clipilot-deploy /tmp/clipilot-deploy.tar.gz
+            # Paths are rewritten to absolute home-directory locations (no sudo).
+            {
+              grep -v -E '^(DATA_DIR|STATIC_DIR|TEMPLATE_DIR)=' /tmp/clipilot-registry.env || true
+              echo "DATA_DIR=$HOME/clipilot-data"
+              echo "STATIC_DIR=$HOME/clipilot-registry/server/static"
+              echo "TEMPLATE_DIR=$HOME/clipilot-registry/server/templates"
+            } > /tmp/clipilot-registry.env.new
+            mv /tmp/clipilot-registry.env.new /tmp/clipilot-registry.env
+
+            DEPLOY_MODE=user \
+              DEPLOY_STAGING_DIR=/tmp/clipilot-deploy \
+              DEPLOY_ENV_FILE=/tmp/clipilot-registry.env \
+              bash /tmp/clipilot-deploy/remote-deploy.sh
+
+            rm -rf /tmp/clipilot-deploy /tmp/clipilot-deploy.tar.gz /tmp/clipilot-registry.env
 
   release:
     name: Release Modules

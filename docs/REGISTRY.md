@@ -105,9 +105,9 @@ data/
 [
   {
     "id": 1,
-    "name": "docker_install",
+    "name": "git_setup",
     "version": "1.0.0",
-    "description": "Install Docker on Ubuntu/Debian",
+    "description": "Install and configure Git",
     "author": "CLIPilot Team",
     "downloads": 42
   }
@@ -171,18 +171,25 @@ Example prompt usage:
 
 ### Production Deployment
 
-Pushes to `main` deploy automatically via `.github/workflows/ci.yml`.
+Pushes to `main` deploy automatically via `.github/workflows/ci.yml` (no sudo; user systemd).
 
-Manual server deployment:
+One-time root setup on the server (use your actual SSH username):
 
 ```bash
-sudo ./scripts/deploy.sh
+sudo loginctl enable-linger YOUR_USERNAME
 ```
 
-The service unit is defined in `deploy/clipilot-registry.service`. Production defaults:
-- Binary: `/opt/clipilot-registry/registry`
-- Data: `/var/lib/clipilot-registry`
-- Environment: `/etc/clipilot-registry/env`
+Manual server deployment (SSH in as that user):
+
+```bash
+./scripts/deploy.sh
+```
+
+Production defaults:
+- Binary: `~/clipilot-registry/registry`
+- Data: `~/clipilot-data/`
+- Environment: `~/clipilot-registry/env`
+- Service: `~/.config/systemd/user/clipilot-registry.service`
 
 ## Security Notes
 

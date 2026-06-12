@@ -14,11 +14,12 @@ The script will prompt for:
 
 ## Production
 
-Set admin credentials in `/etc/clipilot-registry/env`:
+Set admin credentials in the GitHub `ENV_FILE` secret (written to `~/clipilot-registry/env` on deploy):
 
 ```bash
 ADMIN_USER=admin
 ADMIN_PASSWORD=your-secure-password-here
+BASE_URL=https://your-domain.com
 ```
 
 The registry creates the admin user automatically on startup using these credentials.
@@ -26,7 +27,7 @@ The registry creates the admin user automatically on startup using these credent
 To create or update an admin manually:
 
 ```bash
-DB_PATH=/var/lib/clipilot-registry/registry.db ./scripts/create-admin.sh
+DB_PATH=~/clipilot-data/registry.db ./scripts/create-admin.sh
 ```
 
 ## API Key Generation
@@ -52,16 +53,16 @@ After creating the admin user, the script will generate an API key automatically
 Make sure the registry server has started at least once to initialize the database.
 
 ```bash
-sudo systemctl status clipilot-registry
-sudo journalctl -u clipilot-registry -n 50
+systemctl --user status clipilot-registry
+journalctl --user -u clipilot-registry -n 50
 ```
 
 ### Permission Denied
 
-Ensure the `clipilot` service user owns the data directory:
+Ensure your SSH user owns the data directory:
 
 ```bash
-sudo chown -R clipilot:clipilot /var/lib/clipilot-registry
+chown -R "$(whoami):$(whoami)" ~/clipilot-data ~/clipilot-registry
 ```
 
 ### User Already Exists

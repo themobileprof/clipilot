@@ -1,0 +1,14 @@
+[Unit]
+Description=CLIPilot Registry
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/clipilot-registry
+EnvironmentFile=%h/clipilot-registry/env
+ExecStart=%h/clipilot-registry/registry
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target

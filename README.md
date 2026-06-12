@@ -79,13 +79,21 @@ Production deploys run automatically on push to `main` via GitHub Actions (`.git
 
 Required GitHub secrets:
 - `SSH_HOST`, `SSH_USERNAME`, `SSH_PRIVATE_KEY`
-- `ENV_FILE` (production environment variables)
+- `ENV_FILE` (production environment variables; paths are set automatically under `$HOME`)
 
-The deploy installs a native binary with systemd at `/opt/clipilot-registry`, with data in `/var/lib/clipilot-registry`.
+`SSH_USERNAME` should be your existing server user (no special deploy account needed). That user needs **no sudo**. One-time root setup:
 
-For manual server deployment:
 ```bash
-sudo ./scripts/deploy.sh
+sudo loginctl enable-linger YOUR_USERNAME
+```
+
+Deploy layout (under that user's home directory):
+- `~/clipilot-registry/` — binary, static assets, env file
+- `~/clipilot-data/` — SQLite database and uploads
+
+For manual server deployment (SSH in as that user, then):
+```bash
+./scripts/deploy.sh
 ```
 
 See [docs/REGISTRY.md](docs/REGISTRY.md) and [scripts/ADMIN_SETUP.md](scripts/ADMIN_SETUP.md) for configuration details.
@@ -122,42 +130,35 @@ See [docs/REGISTRY.md](docs/REGISTRY.md) and [scripts/ADMIN_SETUP.md](scripts/AD
 Modules are YAML files that define multi-step workflows. Example:
 
 ```yaml
-name: setup_docker
-id: org.example.setup_docker
+name: git_setup
+id: org.example.git_setup
 version: 1.0.0
-description: Install Docker Engine on Linux
-tags: [docker, container, setup]
-requires: [check_os, check_sudo]
-provides: [docker_installed]
+description: Install and configure Git
+tags: [git, setup, devtools]
+requires: [check_sudo]
+provides: [git_installed]
 
 flows:
   main:
-    start: check_platform
+    start: check_git
     steps:
-      check_platform:
+      check_git:
         type: action
-        message: "Checking platform compatibility..."
-        command: |
-          if [ -f /etc/debian_version ]; then
-            echo "debian"
-          elif [ -f /etc/redhat-release ]; then
-            echo "rhel"
-          else
-            echo "unsupported"
-          fi
-        next: install_docker
+        message: "Checking if Git is installed..."
+        command: command -v git && git --version || echo "missing"
+        next: install_git
       
-      install_docker:
+      install_git:
         type: action
-        message: "Installing Docker..."
+        message: "Installing Git..."
         command: |
           sudo apt-get update
-          sudo apt-get install -y docker.io
+          sudo apt-get install -y git
         next: end
       
       end:
         type: terminal
-        message: "Docker installed successfully!"
+        message: "Git installed successfully!"
 ```
 
 ### Uploading to Registry
@@ -171,7 +172,7 @@ flows:
 ```bash
 curl -X POST https://your-registry.com/api/upload \
   -H "Authorization: Bearer YOUR_API_KEY" \
-  -F "file=@setup_docker.yaml"
+  -F "file=@git_setup.yaml"
 ```
 
 ## 🔐 Security

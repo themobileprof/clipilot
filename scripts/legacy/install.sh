@@ -218,7 +218,7 @@ if [ -n "$CLONED_MODULES_DIR" ] && [ -d "$CLONED_MODULES_DIR" ]; then
     MODULE_COUNT=$(ls -1 "${CONFIG_DIR}/modules/"*.yaml 2>/dev/null | wc -l)
     echo -e "${GREEN}✓ Installed $MODULE_COUNT modules${NC}"
 else
-    MODULES=("detect_os.yaml" "git_setup.yaml" "docker_install.yaml" "nginx_setup.yaml" "nodejs_setup.yaml" "python_dev_setup.yaml")
+    MODULES=("detect_os.yaml" "git_setup.yaml" "nginx_setup.yaml" "nodejs_setup.yaml" "python_dev_setup.yaml")
     for module in "${MODULES[@]}"; do
         if command -v curl &> /dev/null; then
             curl -fsSL "${MODULES_BASE_URL}/${module}" -o "${CONFIG_DIR}/modules/${module}" 2>/dev/null || true
