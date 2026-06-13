@@ -44,9 +44,19 @@
             <p>{{.ModuleCount}} modules in the registry. Clio treats <strong>setup wizards</strong> (install/configure once) separately from <strong>automation modules</strong> (repeatable tasks).</p>
             <p style="margin-top: 0.5rem; color: #666;">In Clio: <code>setup</code> for wizards · <code>modules</code> for automation · <code>catalog</code> for both · <code>download &lt;id&gt;</code> to fetch one module</p>
 
+            <div class="callout-box callout-warning" style="margin-top: 1.5rem; max-width: 900px;">
+                <h4>⚠️ How to run modules from Clio</h4>
+                <ol>
+                    <li>Inside Clio (<code>&gt;&gt;</code> prompt): use <code>setup termux</code> or <code>download copy_file</code> — Clio downloads YAML from this registry.</li>
+                    <li>Clio prints a <code>clio-run-module …</code> command. <strong>Do not paste it at <code>&gt;&gt;</code>.</strong></li>
+                    <li>Type <code>exit</code>, then run the command at your normal shell prompt (<code>$</code>).</li>
+                </ol>
+                <p style="margin-top: 0.75rem; margin-bottom: 0;">On Termux, running <code>clio-run-module</code> inside the REPL can cause <code>SIGSYS: bad system call</code>. The bash script is designed to run outside Clio.</p>
+            </div>
+
             {{if .SetupModules}}
             <h3 style="margin-top: 2rem; margin-bottom: 0.5rem;">⭐ Setup Wizards</h3>
-            <p style="color: #666; margin-bottom: 1rem;">First-class install/configure workflows — run via <code>setup &lt;name&gt;</code> or <code>clio-run-module &lt;id&gt; setup</code></p>
+            <p style="color: #666; margin-bottom: 1rem;">Install/configure workflows — in Clio: <code>setup &lt;name&gt;</code>. In shell: <code>clio-run-module &lt;id&gt; setup</code></p>
             <div class="module-grid">
                 {{range .SetupModules}}
                 <div class="module-card">
@@ -65,7 +75,7 @@
 
             {{if .AutomationModules}}
             <h3 style="margin-top: 2.5rem; margin-bottom: 0.5rem;">📦 Automation Modules</h3>
-            <p style="color: #666; margin-bottom: 1rem;">Day-to-day task workflows — browse with <code>modules</code>, download with <code>download &lt;id&gt;</code></p>
+            <p style="color: #666; margin-bottom: 1rem;">Day-to-day tasks — in Clio: <code>modules</code> then <code>download &lt;id&gt;</code>. In shell: <code>clio-run-module &lt;id&gt; setup</code></p>
             <div class="module-grid">
                 {{range .AutomationModules}}
                 <div class="module-card">

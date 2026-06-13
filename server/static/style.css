@@ -1230,3 +1230,61 @@ body.home-page {
     }
 }
 
+/* Callout boxes for operational guides */
+.callout-box {
+    border-left: 4px solid #3f51b5;
+    background: #f5f7ff;
+    padding: 1.25rem 1.5rem;
+    border-radius: 0 8px 8px 0;
+    margin: 1.5rem 0;
+    text-align: left;
+}
+
+.callout-box.callout-warning {
+    border-left-color: #f57c00;
+    background: #fff8f0;
+}
+
+.callout-box h4 {
+    margin: 0 0 0.5rem;
+    color: #1a237e;
+    font-size: 1.05rem;
+}
+
+.callout-box.callout-warning h4 {
+    color: #e65100;
+}
+
+.callout-box p,
+.callout-box li {
+    color: #444;
+    font-size: 0.95rem;
+    line-height: 1.6;
+}
+
+.callout-box ul,
+.callout-box ol {
+    margin: 0.5rem 0 0 1.25rem;
+}
+
+.dual-terminal-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    margin-top: 1rem;
+}
+
+.dual-terminal-grid .terminal-label {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: #5c6bc0;
+    margin-bottom: 0.5rem;
+    text-align: left;
+}
+
+@media (max-width: 768px) {
+    .dual-terminal-grid {
+        grid-template-columns: 1fr;
+    }
+}
+

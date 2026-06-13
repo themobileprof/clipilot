@@ -93,10 +93,115 @@
                         <p class="output"><strong>ls -F</strong></p>
                         <p class="output">Run command? (y/n)</p>
                         <p><span class="prompt">&gt;&gt;</span> setup termux</p>
-                        <p class="output">⭐ [SETUP WIZARD] Termux Setup</p>
-                        <p class="output">clio-run-module termux_setup setup</p>
+                        <p class="output">⭐ [SETUP WIZARD] — exit Clio, then run in shell ↓</p>
                     </div>
                 </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- REPL vs Shell — critical operational guide -->
+    <section class="platform-section" style="background: #fafafa;">
+        <div class="container">
+            <div class="section-header">
+                <h2>REPL vs Shell — Where Commands Run</h2>
+                <p>Clio has <strong>two prompts</strong>. Using the wrong one for module workflows causes errors on Termux.</p>
+            </div>
+
+            <div class="platform-grid">
+                <div class="platform-card" style="text-align: left; padding: 1.5rem;">
+                    <table style="width: 100%; border-collapse: collapse; font-size: 0.95rem;">
+                        <thead>
+                            <tr style="border-bottom: 2px solid #e0e0e0;">
+                                <th style="text-align: left; padding: 0.5rem;">Prompt</th>
+                                <th style="text-align: left; padding: 0.5rem;">What it is</th>
+                                <th style="text-align: left; padding: 0.5rem;">Use for</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr style="border-bottom: 1px solid #eee;">
+                                <td style="padding: 0.5rem;"><code>&gt;&gt;</code></td>
+                                <td style="padding: 0.5rem;">Clio REPL (inside <code>clio</code>)</td>
+                                <td style="padding: 0.5rem;">Plain-English questions, <code>setup</code>, <code>modules</code>, <code>catalog</code>, <code>sync</code></td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 0.5rem;"><code>$</code></td>
+                                <td style="padding: 0.5rem;">Your normal shell (Termux, bash, zsh)</td>
+                                <td style="padding: 0.5rem;"><code>clio-run-module …</code> and anything Clio tells you to run <em>after exiting</em></td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <div class="callout-box callout-warning" style="margin-top: 1.5rem;">
+                        <h4>⚠️ Do not paste <code>clio-run-module</code> at the <code>&gt;&gt;</code> prompt</h4>
+                        <p>Setup wizards and automation modules are <strong>bash workflows</strong>. On Termux/Android they must run via the <code>clio-run-module</code> script in your <strong>normal shell</strong>, not inside the Clio REPL. Pasting the command at <code>&gt;&gt;</code> can mislabel it as an automation module or crash with <code>SIGSYS: bad system call</code>.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section-header" style="margin-top: 2.5rem;">
+                <h3 style="font-size: 1.35rem; color: #333;">Running a setup wizard (correct flow)</h3>
+            </div>
+            <div class="dual-terminal-grid">
+                <div>
+                    <p class="terminal-label">Step 1 — Inside Clio REPL (<code>clio</code>)</p>
+                    <div class="terminal-preview">
+                        <div class="terminal-header">
+                            <div class="terminal-buttons">
+                                <span class="terminal-btn red"></span>
+                                <span class="terminal-btn yellow"></span>
+                                <span class="terminal-btn green"></span>
+                            </div>
+                            <span class="terminal-title">clio</span>
+                        </div>
+                        <div class="terminal-body">
+                            <p><span class="prompt">&gt;&gt;</span> setup termux</p>
+                            <p class="output">⭐ [SETUP WIZARD] Termux Setup</p>
+                            <p class="output">Run in your shell (exit Clio first):</p>
+                            <p class="output"><strong>clio-run-module termux_setup setup</strong></p>
+                            <p><span class="prompt">&gt;&gt;</span> exit</p>
+                        </div>
+                    </div>
+                </div>
+                <div>
+                    <p class="terminal-label">Step 2 — In your shell (after <code>exit</code>)</p>
+                    <div class="terminal-preview">
+                        <div class="terminal-header">
+                            <div class="terminal-buttons">
+                                <span class="terminal-btn red"></span>
+                                <span class="terminal-btn yellow"></span>
+                                <span class="terminal-btn green"></span>
+                            </div>
+                            <span class="terminal-title">termux</span>
+                        </div>
+                        <div class="terminal-body">
+                            <p><span class="prompt">$</span> clio-run-module termux_setup setup</p>
+                            <p class="output">Downloading termux_setup from registry…</p>
+                            <p class="output">🚀 Termux Complete Setup Wizard</p>
+                            <p class="success">✓ Wizard runs via bash (safe on Android)</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section-header" style="margin-top: 2.5rem;">
+                <h3 style="font-size: 1.35rem; color: #333;">Match labels in Clio</h3>
+                <p>Clio shows a header so you know what kind of result you got</p>
+            </div>
+            <div class="platform-grid">
+                <div class="platform-card" style="text-align: left; padding: 1.5rem;">
+                    <ul style="list-style: none; padding: 0; margin: 0;">
+                        <li style="margin-bottom: 1rem;"><strong>⌨️ [SHELL COMMAND]</strong> — a single Linux command (e.g. <code>ls</code>, <code>df -h</code>). You can run it from the REPL menu after confirming.</li>
+                        <li style="margin-bottom: 1rem;"><strong>⭐ [SETUP WIZARD]</strong> — install/configure once (<code>termux_setup</code>, <code>git_setup</code>, …). Clio prints <code>clio-run-module … setup</code> — run that in your <strong>shell</strong> after <code>exit</code>.</li>
+                        <li><strong>📦 [AUTOMATION MODULE]</strong> — repeatable task workflows. Download with <code>download &lt;id&gt;</code>, then run <code>clio-run-module &lt;id&gt; setup</code> in your shell.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="callout-box" style="margin-top: 2rem;">
+                <h4>💡 Why <code>clio-run-module</code> exists</h4>
+                <p>Android's security layer blocks some syscalls inside Go binaries. The <code>clio</code> program handles natural-language lookup and module downloads; the separate <code>clio-run-module</code> bash script executes multi-step YAML workflows safely. Both are installed together:</p>
+                <p style="margin-top: 0.5rem;"><code>curl -fsSL clipilot.themobileprof.com/clio | sh</code></p>
             </div>
         </div>
     </section>
@@ -208,18 +313,20 @@
 
             <div class="section-header" style="margin-top: 3rem;">
                 <h2>Termux on Android</h2>
-                <p>Clio is built for coding on your phone — modules run via <code>clio-run-module</code></p>
+                <p>Module workflows always use <code>clio-run-module</code> in your shell — never inside the <code>&gt;&gt;</code> REPL</p>
             </div>
             <div class="platform-grid">
                 <div class="platform-card" style="text-align: left; padding: 1.5rem;">
-                    <p style="margin-bottom: 0.75rem;">Android restricts some syscalls inside Go binaries, so workflow modules execute through <code>clio-run-module</code> and bash — not inside the main <code>clio</code> process.</p>
+                    <p style="margin-bottom: 0.75rem;">Android restricts syscalls inside Go binaries. Clio downloads modules from this registry; the <code>clio-run-module</code> bash script runs them safely outside the REPL.</p>
                     <p style="margin-bottom: 0.5rem;"><strong>First run on Termux:</strong></p>
                     <ol style="margin-left: 1.25rem; color: #666;">
                         <li>Install: <code>curl -fsSL clipilot.themobileprof.com/clio | sh</code></li>
-                        <li>Run <code>clio</code>, then <code>setup termux</code></li>
-                        <li><code>sync</code> when online to cache automation modules</li>
+                        <li>Run <code>clio</code>, then <code>setup termux</code> (or <code>sync</code> first if offline)</li>
+                        <li>Type <code>exit</code> to leave the REPL</li>
+                        <li>In shell: <code>clio-run-module termux_setup setup</code></li>
                     </ol>
                     <p style="margin-top: 0.75rem; color: #666;">Lite profile on low-memory devices: <code>sync</code> fetches essentials only; use <code>sync full</code> for the complete catalog.</p>
+                    <p style="margin-top: 0.75rem; color: #666;"><strong>Troubleshooting:</strong> <code>SIGSYS: bad system call</code> means you tried to run a module workflow inside the REPL — exit Clio and use <code>clio-run-module</code> in your shell instead.</p>
                 </div>
             </div>
         </div>
@@ -263,6 +370,13 @@
                         <div class="step-content">
                             <h4>Explore &amp; ask</h4>
                             <p><code>catalog</code> · <code>setup</code> · <code>modules</code> — or ask anything in plain English at <code>&gt;&gt;</code></p>
+                        </div>
+                    </div>
+                    <div class="step">
+                        <span class="step-number">4</span>
+                        <div class="step-content">
+                            <h4>Run module workflows in your shell</h4>
+                            <p>When Clio shows <code>clio-run-module …</code>, type <code>exit</code> first, then paste the command at the <code>$</code> prompt</p>
                         </div>
                     </div>
                 </div>
