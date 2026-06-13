@@ -3,7 +3,7 @@
 
 set -euo pipefail
 
-DATA_DIR="${DATA_DIR:-/var/lib/clipilot-registry}"
+DATA_DIR="${DATA_DIR:-$HOME/clipilot-data}"
 DB_PATH="$DATA_DIR/registry.db"
 
 if [ ! -f "$DB_PATH" ]; then

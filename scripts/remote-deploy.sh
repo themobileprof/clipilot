@@ -10,7 +10,6 @@ DEPLOY_MODE="${DEPLOY_MODE:-user}"
 
 if [ "$DEPLOY_MODE" != "user" ]; then
   echo "Error: only DEPLOY_MODE=user is supported (no sudo required)."
-  echo "Set DEPLOY_MODE=user or omit it."
   exit 1
 fi
 
@@ -33,14 +32,12 @@ ensure_user_systemd() {
 
   if [ ! -d "$XDG_RUNTIME_DIR" ]; then
     echo "Error: user systemd session is not available."
-    echo "Ask an admin to run once as root:"
-    echo "  loginctl enable-linger $(whoami)"
+    echo "Ask an admin to run once as root: loginctl enable-linger $(whoami)"
     exit 1
   fi
 
   if ! loginctl show-user "$(whoami)" -p Linger 2>/dev/null | grep -q 'yes'; then
     echo "Warning: systemd linger may not be enabled for $(whoami)."
-    echo "If deploy fails, run as root: loginctl enable-linger $(whoami)"
   fi
 }
 
@@ -89,35 +86,34 @@ install_files() {
 }
 
 deploy_clio_install_script() {
-  if [ ! -f "$DATA_DIR/registry.db" ] || ! command -v sqlite3 >/dev/null 2>&1; then
-    echo "Skipping Clio install script sync (database not ready or sqlite3 missing)"
+  local port="${PORT:-8080}"
+  local tmp_script="/tmp/clio-install-$$.sh"
+  local cookie_jar="/tmp/clipilot-cookies-$$.txt"
+  local script_version
+
+  if ! curl -fsSL https://raw.githubusercontent.com/themobileprof/clio/main/install.sh -o "$tmp_script"; then
+    echo "Warning: could not download Clio install script"
     return 0
   fi
 
-  local script_version checksum filename file_path upload_dir tmp_script
-  tmp_script="/tmp/clio-install-$$.sh"
-
-  curl -fsSL https://raw.githubusercontent.com/themobileprof/clio/main/install.sh -o "$tmp_script" 2>/dev/null || return 0
-  [ -f "$tmp_script" ] || return 0
-
   script_version=$(grep -m1 '^VERSION=' "$tmp_script" | cut -d'=' -f2 | tr -d '"' || echo "auto")
-  checksum=$(sha256sum "$tmp_script" | awk '{print $1}')
-  filename="install-${script_version}-${checksum:0:8}.sh"
-  upload_dir="$DATA_DIR/uploads/install_scripts"
-  file_path="$upload_dir/$filename"
 
-  mkdir -p "$upload_dir"
-  cp "$tmp_script" "$file_path"
-  chmod 644 "$file_path"
+  if curl -fsS -c "$cookie_jar" -b "$cookie_jar" \
+    -X POST "http://127.0.0.1:${port}/login" \
+    -d "username=${ADMIN_USER:-admin}&password=${ADMIN_PASSWORD}" \
+    -o /dev/null; then
+    if curl -fsS -b "$cookie_jar" \
+      -X POST "http://127.0.0.1:${port}/api/install-script/upload" \
+      -F "file=@${tmp_script};filename=install.sh" \
+      -F "version=${script_version}" >/dev/null; then
+      echo "Clio install script uploaded via API (v${script_version})"
+      rm -f "$tmp_script" "$cookie_jar"
+      return 0
+    fi
+  fi
 
-  sqlite3 "$DATA_DIR/registry.db" <<EOF
-UPDATE install_scripts SET is_active = 0 WHERE is_active = 1;
-INSERT INTO install_scripts (version, file_path, checksum_sha256, size_bytes, uploaded_by, is_active, uploaded_at)
-VALUES ('$script_version', '$file_path', '$checksum', $(wc -c < "$tmp_script"), NULL, 1, CURRENT_TIMESTAMP);
-EOF
-
-  rm -f "$tmp_script"
-  echo "Clio install script deployed (v${script_version})"
+  echo "Warning: API upload failed; server will bootstrap /clio on startup"
+  rm -f "$tmp_script" "$cookie_jar"
 }
 
 verify_health() {
@@ -140,6 +136,16 @@ verify_health() {
   return 1
 }
 
+verify_clio_endpoint() {
+  local port="${PORT:-8080}"
+  if curl -fsS "http://127.0.0.1:${port}/clio" | head -1 | grep -q '#!/'; then
+    echo "Clio install endpoint ready"
+    return 0
+  fi
+  echo "Warning: /clio not serving install script yet"
+  return 0
+}
+
 ensure_user_systemd
 write_env_file
 install_files
@@ -150,6 +156,7 @@ install_files
 
 verify_health
 deploy_clio_install_script
+verify_clio_endpoint
 
 echo ""
 echo "Deployment complete"

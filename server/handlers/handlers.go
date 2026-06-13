@@ -92,6 +92,13 @@ func New(cfg Config) *Handlers {
 		log.Fatalf("Failed to create admin user: %v", err)
 	}
 
+	if err := os.MkdirAll(cfg.UploadsDir, 0755); err != nil {
+		log.Fatalf("Failed to create uploads directory: %v", err)
+	}
+	if err := EnsureClioInstallScript(db, cfg.UploadsDir); err != nil {
+		log.Printf("Warning: failed to bootstrap Clio install script: %v", err)
+	}
+
 	// Bootstrap: discover and submit server's own commands if low on data
 	// This runs asynchronously to not block server startup
 	go func() {
