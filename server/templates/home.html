@@ -54,8 +54,8 @@
                     <br>Works <strong>offline-first</strong> on Linux, macOS, and <strong>Android (Termux)</strong>. Modules download from this registry on demand.
                 </p>
                 <div class="hero-actions">
-                    <a href="/clio" class="btn-large btn-primary">
-                        <span class="material-icons">download</span>
+                    <a href="#install-clio" class="btn-large btn-primary">
+                        <span class="material-icons">terminal</span>
                         Install Clio
                     </a>
                     <a href="/modules" class="btn-large btn-outlined-light">
@@ -333,17 +333,17 @@
     </section>
 
     <!-- Quick Start -->
-    <section class="quickstart-section">
+    <section id="install-clio" class="quickstart-section">
         <div class="container">
             <div class="quickstart-card">
                 <div class="quickstart-header">
-                    <h2>Get Started in Seconds</h2>
-                    <p>Install Clio on Linux, macOS, or Android (Termux)—no experience needed</p>
+                    <h2>Install Clio from your terminal</h2>
+                    <p>Copy the command below, paste it into a terminal on Linux, macOS, or Android (Termux), and press Enter.</p>
                 </div>
                 <div class="code-block">
                     <div class="code-header">
                         <span class="material-icons">terminal</span>
-                        <span>Installation Command</span>
+                        <span>Run in your terminal</span>
                         <button class="copy-btn" onclick="copyToClipboard()">
                             <span class="material-icons">content_copy</span>
                         </button>
@@ -354,22 +354,22 @@
                     <div class="step">
                         <span class="step-number">1</span>
                         <div class="step-content">
-                            <h4>Install Clio</h4>
-                            <p>Run the curl command above (or visit <a href="/clio">/clio</a>)</p>
+                            <h4>Open a terminal</h4>
+                            <p>Linux/macOS: Terminal or your preferred emulator. Android: Termux.</p>
                         </div>
                     </div>
                     <div class="step">
                         <span class="step-number">2</span>
                         <div class="step-content">
-                            <h4>Launch the REPL</h4>
-                            <p>Type <code>clio</code> — use <code>setup termux</code> on first run (Termux), then <code>sync</code> when online</p>
+                            <h4>Paste and run the command</h4>
+                            <p>Copy the <code>curl … | sh</code> line above. The installer downloads Clio and adds it to your PATH.</p>
                         </div>
                     </div>
                     <div class="step">
                         <span class="step-number">3</span>
                         <div class="step-content">
-                            <h4>Explore &amp; ask</h4>
-                            <p><code>catalog</code> · <code>setup</code> · <code>modules</code> — or ask anything in plain English at <code>&gt;&gt;</code></p>
+                            <h4>Launch the REPL</h4>
+                            <p>Type <code>clio</code> — use <code>setup termux</code> on first run (Termux), then <code>sync</code> when online</p>
                         </div>
                     </div>
                     <div class="step">
@@ -400,7 +400,7 @@
                 <div class="footer-section">
                     <h4>Resources</h4>
                     <a href="/modules">Browse Modules</a>
-                    <a href="/clio">Install Clio</a>
+                    <a href="/#install-clio">Install Clio</a>
                     <a href="https://github.com/themobileprof/clio" target="_blank">Clio on GitHub</a>
                     <a href="/api">API Reference</a>
                 </div>

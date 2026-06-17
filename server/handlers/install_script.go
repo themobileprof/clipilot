@@ -190,10 +190,16 @@ func (h *Handlers) UploadInstallScript(w http.ResponseWriter, r *http.Request) {
 }
 
 // GetInstallScript serves the latest active install script at GET /clio
-// Public endpoint - no authentication required
+// Public endpoint - no authentication required.
+// Browsers are redirected to the install instructions; curl and pipes receive the shell script.
 func (h *Handlers) GetInstallScript(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	if prefersHTMLResponse(r) {
+		http.Redirect(w, r, "/#install-clio", http.StatusSeeOther)
 		return
 	}
 
@@ -385,6 +391,15 @@ func (h *Handlers) ActivateInstallScript(w http.ResponseWriter, r *http.Request)
 	}); err != nil {
 		log.Printf("Failed to encode activation response: %v", err)
 	}
+}
+
+// prefersHTMLResponse returns true when the client is likely a browser (not curl piping to sh).
+func prefersHTMLResponse(r *http.Request) bool {
+	accept := r.Header.Get("Accept")
+	if accept == "" || accept == "*/*" {
+		return false
+	}
+	return strings.Contains(accept, "text/html")
 }
 
 // hashAPIKey creates a SHA256 hash of an API key for storage/comparison
