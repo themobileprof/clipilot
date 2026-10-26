@@ -1,6 +1,6 @@
 name: neovim_setup
 id: neovim_setup
-version: 1.2.0
+version: 1.3.0
 description: Neovim with a small plugin set for generating code, rewriting it, and editing
 tags:
   - neovim
@@ -283,11 +283,42 @@ flows:
                   },
                 })
 
+                local site_rules = " This site uses Pico CSS classless at css/pico.classless.min.css. When asked for a page, write a complete HTML document. Include <link rel=\"stylesheet\" href=\"css/pico.classless.min.css\"> in the head. Use header, nav, main, footer, h1, p, a, ul, article, form, label, input, button, table. Do not add a style element. Do not create or edit a CSS file. Link pages with relative hrefs such as index.html and about.html."
+
+                local function ask(label, cmd, range)
+                  vim.ui.input({ prompt = label }, function(input)
+                    if not input or input:match("^%s*$") then
+                      return
+                    end
+                    local full = input
+                    if vim.api.nvim_buf_get_name(0):match("%.html?$") then
+                      full = input .. site_rules
+                    end
+                    vim.schedule(function()
+                      vim.api.nvim_cmd({ cmd = cmd, args = { full }, range = range }, {})
+                    end)
+                  end)
+                end
+
                 vim.keymap.set("n", "<leader>gc", "<cmd>GpChatNew vsplit<cr>", { desc = "AI chat" })
-                vim.keymap.set("n", "<leader>ga", "<cmd>GpAppend<cr>", { desc = "Generate code after cursor" })
-                vim.keymap.set("n", "<leader>gr", "<cmd>GpRewrite<cr>", { desc = "Rewrite this line" })
-                vim.keymap.set("v", "<leader>ga", ":<C-u>'<,'>GpAppend<cr>", { desc = "Generate code after selection" })
-                vim.keymap.set("v", "<leader>gr", ":<C-u>'<,'>GpRewrite<cr>", { desc = "Rewrite selection" })
+                vim.keymap.set("n", "<leader>ga", function()
+                  local line = vim.api.nvim_win_get_cursor(0)[1]
+                  ask("Generate: ", "GpAppend", { line, line })
+                end, { desc = "Generate code after cursor" })
+                vim.keymap.set("n", "<leader>gr", function()
+                  local line = vim.api.nvim_win_get_cursor(0)[1]
+                  ask("Rewrite: ", "GpRewrite", { line, line })
+                end, { desc = "Rewrite this line" })
+                vim.keymap.set("v", "<leader>ga", function()
+                  local a = vim.fn.line("v")
+                  local b = vim.fn.line(".")
+                  ask("Generate: ", "GpAppend", { math.min(a, b), math.max(a, b) })
+                end, { desc = "Generate code after selection" })
+                vim.keymap.set("v", "<leader>gr", function()
+                  local a = vim.fn.line("v")
+                  local b = vim.fn.line(".")
+                  ask("Rewrite: ", "GpRewrite", { math.min(a, b), math.max(a, b) })
+                end, { desc = "Rewrite selection" })
               end
               NVEOF
             description: Writing ~/.config/nvim/init.lua
@@ -343,6 +374,7 @@ flows:
 
           Generate:      put the cursor where the code should go, press ,ga
                          type what you want, press Enter
+          HTML files:    Pico rules are added to that prompt for you
           Edit with AI:  select lines with V, press ,gr, say what to change
           Chat:          ,gc
           Find a file:   ,p or Ctrl-p

@@ -1,6 +1,6 @@
 name: Termux Complete Setup
 id: termux_setup
-version: 1.0.0
+version: 1.2.0
 description: Complete development environment setup for Termux including Zsh, Git, LLM, and dev languages
 tags:
   - termux
@@ -27,8 +27,7 @@ flows:
             • Android storage access
             • Zsh shell with themes
             • Essential dev tools (git, gh, llm)
-            • Editor plugins are a separate step: setup neovim
-            • Optional: PHP, Node.js, Golang, Python
+            • Optional: HTML pages (Pico CSS saved on the device), PHP, Node.js, Golang, Python
           
           This process may take 10-20 minutes.
 
@@ -240,6 +239,28 @@ flows:
               Optional Development Languages
               Choose languages to install (you can install more later with pkg install)
           
+          - type: command
+            interactive: true
+            continue_on_error: true
+            description: Pico CSS for HTML pages
+            command: |
+              echo "HTML pages use Pico CSS. A yes saves it on this device for later."
+              read -r -p "Build HTML pages? [Y/n]: " BUILD_HTML || BUILD_HTML=n
+              BUILD_HTML=$(printf '%s' "$BUILD_HTML" | tr '[:upper:]' '[:lower:]')
+              if [ -z "$BUILD_HTML" ] || [ "$BUILD_HTML" = "y" ] || [ "$BUILD_HTML" = "yes" ]; then
+                mkdir -p "$HOME/.clio/share"
+                if curl -fsSL -o "$HOME/.clio/share/pico.classless.min.css" \
+                    https://cdn.jsdelivr.net/npm/@picocss/pico@2.1.1/css/pico.classless.min.css \
+                  && [ -s "$HOME/.clio/share/pico.classless.min.css" ]; then
+                  echo "Saved Pico CSS to ~/.clio/share/pico.classless.min.css"
+                else
+                  rm -f "$HOME/.clio/share/pico.classless.min.css"
+                  echo "Could not download Pico CSS. Copy it into a site later from the CDN."
+                fi
+              else
+                echo "Skipped Pico CSS."
+              fi
+
           - type: check_command
             command: php
             on_exists: skip_php
