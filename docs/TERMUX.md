@@ -299,7 +299,7 @@ ssh -p 8022 user@phone-ip
 ```bash
 clipilot run nodejs_setup          # Install Node.js
 clipilot run git_setup              # Configure Git
-clipilot run vim_dev_setup          # Set up Vim for coding
+clipilot run neovim_setup           # Neovim with plugins for writing code
 ```
 
 ### Database Administration

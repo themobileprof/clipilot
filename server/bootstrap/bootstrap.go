@@ -9,10 +9,21 @@ import (
 	"strings"
 	"time"
 
-	"github.com/themobileprof/clipilot/internal/models"
 	"github.com/themobileprof/clipilot/internal/utils/safeexec"
 	yaml "gopkg.in/yaml.v3"
 )
+
+// moduleSeed is the identity of a module file. Flows are left unparsed so
+// both the older map format and the Clio wizard list format can be registered.
+type moduleSeed struct {
+	ID          string `yaml:"id"`
+	Name        string `yaml:"name"`
+	Version     string `yaml:"version"`
+	Description string `yaml:"description"`
+	Metadata    struct {
+		Author string `yaml:"author"`
+	} `yaml:"metadata"`
+}
 
 // SeedBuiltinModules scans the modules directory and registers them in the database
 func SeedBuiltinModules(db *sql.DB, modulesDir string) error {
@@ -36,9 +47,20 @@ func SeedBuiltinModules(db *sql.DB, modulesDir string) error {
 			continue
 		}
 
-		var module models.Module
+		// Wizard modules use a list of flows. The older models.Module type
+		// expects a map, so only the identity fields are read here. Clio
+		// downloads the file as stored and runs it itself.
+		var module moduleSeed
 		if err := yaml.Unmarshal(data, &module); err != nil {
 			log.Printf("Warning: failed to parse %s: %v", path, err)
+			continue
+		}
+		name := module.ID
+		if name == "" {
+			name = module.Name
+		}
+		if name == "" || module.Version == "" {
+			log.Printf("Warning: skipping %s: missing id and version", entry.Name())
 			continue
 		}
 
@@ -52,7 +74,7 @@ func SeedBuiltinModules(db *sql.DB, modulesDir string) error {
 				file_path = excluded.file_path,
 				uploaded_by = 'system',
 				description = excluded.description
-		`, module.Name, module.Version, module.Description, module.Metadata.Author, path, entry.Name())
+		`, name, module.Version, module.Description, module.Metadata.Author, path, entry.Name())
 
 		if err != nil {
 			log.Printf("Warning: failed to seed %s: %v", module.Name, err)
@@ -64,7 +86,6 @@ func SeedBuiltinModules(db *sql.DB, modulesDir string) error {
 	log.Printf("✓ Seeded %d builtin modules", count)
 	return nil
 }
-
 
 // DiscoverAndSubmitCommands discovers commands on the server and submits them for enhancement
 func DiscoverAndSubmitCommands(db *sql.DB, minCommands int) error {
@@ -165,7 +186,7 @@ func discoverServerCommands() (map[string]string, error) {
 			if _, exists := commands[cmdName]; exists {
 				continue
 			}
-			
+
 			description := getCommandDescription(cmdName)
 			commands[cmdName] = description
 		}

@@ -59,11 +59,11 @@ type ModuleRecord struct {
 
 // First-class Clio setup wizards (install/configure — run once).
 var clioSetupWizards = map[string]struct{}{
-	"termux_setup":    {},
-	"vim_setup":       {},
-	"git_setup":       {},
-	"devtools_setup":  {},
-	"database_setup":  {},
+	"termux_setup":   {},
+	"neovim_setup":   {},
+	"git_setup":      {},
+	"devtools_setup": {},
+	"database_setup": {},
 }
 
 func isClioSetupWizard(name string) bool {

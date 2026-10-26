@@ -97,6 +97,7 @@ jobs:
           mkdir -p dist/deploy/server
           cp bin/registry dist/deploy/registry
           cp -r server/static server/templates dist/deploy/server/
+          cp -r modules dist/deploy/modules
           cp deploy/clipilot-registry.user.service dist/deploy/
           cp scripts/remote-deploy.sh dist/deploy/
           chmod +x dist/deploy/remote-deploy.sh

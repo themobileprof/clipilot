@@ -76,10 +76,14 @@ install_files() {
     exit 1
   fi
 
-  mkdir -p "$INSTALL_DIR/server/static" "$INSTALL_DIR/server/templates" "$DATA_DIR/uploads"
+  mkdir -p "$INSTALL_DIR/server/static" "$INSTALL_DIR/server/templates" "$INSTALL_DIR/modules" "$DATA_DIR/uploads"
   install -m 755 "$DEPLOY_STAGING_DIR/registry" "$INSTALL_DIR/registry"
   cp -r "$DEPLOY_STAGING_DIR/server/static/." "$INSTALL_DIR/server/static/"
   cp -r "$DEPLOY_STAGING_DIR/server/templates/." "$INSTALL_DIR/server/templates/"
+  if [ -d "$DEPLOY_STAGING_DIR/modules" ]; then
+    rm -rf "$INSTALL_DIR/modules"
+    cp -r "$DEPLOY_STAGING_DIR/modules" "$INSTALL_DIR/modules"
+  fi
   mkdir -p "$(dirname "$SERVICE_UNIT")"
   install -m 644 "$DEPLOY_STAGING_DIR/clipilot-registry.user.service" "$SERVICE_UNIT"
   chmod 750 "$DATA_DIR"

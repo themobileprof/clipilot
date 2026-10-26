@@ -1,7 +1,7 @@
 name: Termux Complete Setup
 id: termux_setup
 version: 1.0.0
-description: Complete development environment setup for Termux including Zsh, Vim, Git, LLM, and dev languages
+description: Complete development environment setup for Termux including Zsh, Git, LLM, and dev languages
 tags:
   - termux
   - setup
@@ -26,7 +26,8 @@ flows:
             • System updates & mirrors
             • Android storage access
             • Zsh shell with themes
-            • Essential dev tools (git, gh, vim, llm)
+            • Essential dev tools (git, gh, llm)
+            • Editor plugins are a separate step: setup neovim
             • Optional: PHP, Node.js, Golang, Python
           
           This process may take 10-20 minutes.
@@ -134,16 +135,20 @@ flows:
             continue_on_error: true
 
       - type: section
-        title: "Configure Vim"
+        title: "Neovim"
         steps:
           - type: command
-            command: DEBIAN_FRONTEND=noninteractive pkg install -y vim
-            description: Installing Vim
+            command: DEBIAN_FRONTEND=noninteractive pkg install -y neovim
+            description: Installing Neovim
             show_output: true
-          
-          - type: file_operation
-            operation: create_vimrc
-            description: Creating Vim configuration
+            continue_on_error: true
+
+          - type: message
+            content: |
+              Neovim is installed. Plugins, DeepSeek, and key maps are a
+              second wizard. After this one finishes, run:
+
+                clio-run-module neovim_setup setup
 
       - type: section
         title: "Install LLM Tool"

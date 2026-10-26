@@ -1,0 +1,358 @@
+name: neovim_setup
+id: neovim_setup
+version: 1.2.0
+description: Neovim with a small plugin set for generating code, rewriting it, and editing
+tags:
+  - neovim
+  - nvim
+  - editor
+  - gp.nvim
+  - deepseek
+  - setup
+  - development
+estimated_time: "5-15 minutes"
+
+flows:
+  - name: setup
+    description: Neovim editor that generates code and rewrites a selection
+    steps:
+      - type: message
+        content: |
+          ╔══════════════════════════════════════════════════════════╗
+          ║  ✨ Neovim — generate code, then edit it                  ║
+          ╚══════════════════════════════════════════════════════════╝
+
+          Installs Neovim and a small plugin set:
+            • gp.nvim     generate code and rewrite a selection (DeepSeek)
+            • nvim-tree   file tree
+            • fzf         find a file
+            • Comment     gcc comments a line
+            • autopairs   insert the closing bracket
+            • lualine     status line
+            • gruvbox     colors
+
+            ,ga   generate code after the cursor or selection
+            ,gr   rewrite the current line, or the selected lines
+            ,gc   open a chat beside the file
+            ,e    file tree     ,p  find file     ,w  save     ,q  quit
+
+          The API key is saved in ~/.config/gp/deepseek.key (mode 600).
+          The editor config is ~/.config/nvim/init.lua.
+
+      - type: confirm
+        prompt: "Continue with Neovim setup?"
+        default: yes
+        on_no: abort
+
+      - type: section
+        title: "Install Neovim"
+        steps:
+          - type: command
+            command: |
+              if command -v pkg >/dev/null 2>&1 && [ -n "${PREFIX:-}" ]; then
+                DEBIAN_FRONTEND=noninteractive pkg install -y neovim git curl fzf
+              elif command -v apt-get >/dev/null 2>&1; then
+                sudo apt-get update && sudo apt-get install -y neovim git curl fzf
+              elif command -v brew >/dev/null 2>&1; then
+                brew install neovim git curl fzf
+              else
+                echo "Install neovim, git, curl, and fzf with your package manager first."
+                exit 1
+              fi
+              command -v nvim >/dev/null 2>&1
+              nvim --version | head -n 1
+            description: Installing Neovim, fzf, git, and curl
+            show_output: true
+
+      - type: section
+        title: "Plugin Manager"
+        steps:
+          - type: command
+            command: |
+              curl -fLo "${XDG_DATA_HOME:-$HOME/.local/share}/nvim/site/autoload/plug.vim" --create-dirs \
+                https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim
+            description: Installing vim-plug for Neovim
+            show_output: true
+
+      - type: section
+        title: "Editor Config"
+        steps:
+          - type: command
+            command: |
+              mkdir -p "$HOME/.config/nvim" "$HOME/.config/gp" "$HOME/.local/state/nvim/undo"
+              if [ -f "$HOME/.config/nvim/init.lua" ] && [ ! -f "$HOME/.config/nvim/init.lua.clio-backup" ]; then
+                cp "$HOME/.config/nvim/init.lua" "$HOME/.config/nvim/init.lua.clio-backup"
+                echo "Backed up existing init.lua to ~/.config/nvim/init.lua.clio-backup"
+              fi
+              if [ -f "$HOME/.config/nvim/init.vim" ]; then
+                echo "Note: ~/.config/nvim/init.lua overrides init.vim. Your init.vim was left in place."
+              fi
+              cat > "$HOME/.config/nvim/init.lua" << 'NVEOF'
+              -- Neovim for writing code, set up by Clio.
+              -- Leader is comma.
+              --   ,w   save          ,q   quit         ,e   file tree
+              --   ,p   find file     Ctrl-p  find file
+              --   ,gc  AI chat       ,ga  generate after the cursor
+              --   ,gr  rewrite the current line, or a visual selection
+              --   gcc  comment the current line
+              -- Model lives in the agents below. deepseek-flash is the default.
+              -- Change it to deepseek-v4-pro for a stronger model.
+              -- Key file: ~/.config/gp/deepseek.key
+
+              vim.g.mapleader = ","
+              vim.g.maplocalleader = ","
+
+              vim.opt.number = true
+              vim.opt.relativenumber = true
+              vim.opt.cursorline = true
+              vim.opt.showmatch = true
+              vim.opt.wildmenu = true
+              vim.opt.wildmode = "longest:full,full"
+              vim.opt.laststatus = 2
+              vim.opt.ruler = true
+              vim.opt.showcmd = true
+              vim.opt.scrolloff = 5
+              vim.opt.autoindent = true
+              vim.opt.smartindent = true
+              vim.opt.expandtab = true
+              vim.opt.shiftwidth = 4
+              vim.opt.tabstop = 4
+              vim.opt.softtabstop = 4
+              vim.opt.ignorecase = true
+              vim.opt.smartcase = true
+              vim.opt.incsearch = true
+              vim.opt.hlsearch = true
+              vim.opt.hidden = true
+              vim.opt.history = 1000
+              vim.opt.undolevels = 1000
+              vim.opt.backspace = { "indent", "eol", "start" }
+              vim.opt.encoding = "utf-8"
+              vim.opt.fileencoding = "utf-8"
+              vim.opt.mouse = "a"
+              vim.opt.clipboard = "unnamedplus"
+              vim.opt.autoread = true
+              vim.opt.lazyredraw = true
+              vim.opt.backup = false
+              vim.opt.writebackup = false
+              vim.opt.swapfile = false
+              vim.opt.undofile = true
+              vim.opt.splitbelow = true
+              vim.opt.splitright = true
+              vim.opt.termguicolors = false
+              vim.opt.background = "dark"
+
+              local undodir = vim.fn.expand("~/.local/state/nvim/undo")
+              if vim.fn.isdirectory(undodir) == 0 then
+                vim.fn.mkdir(undodir, "p")
+              end
+              vim.opt.undodir = undodir
+
+              vim.keymap.set("n", "<leader>w", "<cmd>w<cr>")
+              vim.keymap.set("n", "<leader>q", "<cmd>q<cr>")
+              vim.keymap.set("n", "<leader><space>", "<cmd>nohlsearch<cr>")
+              vim.keymap.set("n", "<C-h>", "<C-w>h")
+              vim.keymap.set("n", "<C-j>", "<C-w>j")
+              vim.keymap.set("n", "<C-k>", "<C-w>k")
+              vim.keymap.set("n", "<C-l>", "<C-w>l")
+              vim.keymap.set("v", "<", "<gv")
+              vim.keymap.set("v", ">", ">gv")
+
+              vim.api.nvim_create_autocmd("FileType", {
+                pattern = { "javascript", "typescript", "json", "html", "css", "scss", "yaml", "lua" },
+                callback = function()
+                  vim.opt_local.shiftwidth = 2
+                  vim.opt_local.tabstop = 2
+                  vim.opt_local.softtabstop = 2
+                end,
+              })
+              vim.api.nvim_create_autocmd("FileType", {
+                pattern = "go",
+                callback = function()
+                  vim.opt_local.expandtab = false
+                  vim.opt_local.shiftwidth = 4
+                  vim.opt_local.tabstop = 4
+                end,
+              })
+
+              if vim.fn.exists("*plug#begin") == 1 or vim.fn.filereadable(vim.fn.stdpath("data") .. "/site/autoload/plug.vim") == 1 then
+                local plug_path = vim.fn.stdpath("data") .. "/site/plugged"
+                vim.cmd("call plug#begin('" .. plug_path .. "')")
+                vim.cmd("Plug 'ellisonleao/gruvbox.nvim'")
+                vim.cmd("Plug 'nvim-tree/nvim-tree.lua'")
+                vim.cmd("Plug 'nvim-lualine/lualine.nvim'")
+                vim.cmd("Plug 'numToStr/Comment.nvim'")
+                vim.cmd("Plug 'windwp/nvim-autopairs'")
+                vim.cmd("Plug 'junegunn/fzf.vim'")
+                vim.cmd("Plug 'Robitx/gp.nvim'")
+                vim.cmd("call plug#end()")
+              else
+                vim.notify("vim-plug is missing. Re-run: setup neovim", vim.log.levels.WARN)
+              end
+
+              local function setup_plugin(name, configure)
+                local ok, mod = pcall(require, name)
+                if not ok then
+                  return false
+                end
+                if configure then
+                  local configured, err = pcall(configure, mod)
+                  if not configured then
+                    vim.notify(name .. ": " .. tostring(err), vim.log.levels.WARN)
+                    return false
+                  end
+                end
+                return true
+              end
+
+              pcall(vim.cmd.colorscheme, "gruvbox")
+
+              if not setup_plugin("nvim-tree", function(mod)
+                vim.g.loaded_netrw = 1
+                vim.g.loaded_netrwPlugin = 1
+                mod.setup({
+                  view = { width = 28 },
+                  git = { enable = false },
+                  renderer = {
+                    icons = {
+                      show = { file = false, folder = false, folder_arrow = true, git = false, modified = false },
+                      glyphs = {
+                        folder = { arrow_closed = ">", arrow_open = "v" },
+                      },
+                    },
+                  },
+                })
+                vim.keymap.set("n", "<leader>e", "<cmd>NvimTreeToggle<cr>")
+                vim.keymap.set("n", "<leader>f", "<cmd>NvimTreeFindFile<cr>")
+              end) then
+                vim.keymap.set("n", "<leader>e", "<cmd>Lexplore<cr>")
+              end
+
+              setup_plugin("lualine", function(mod)
+                mod.setup({ options = { icons_enabled = false, theme = "auto" } })
+              end)
+
+              setup_plugin("Comment", function(mod)
+                mod.setup()
+              end)
+
+              setup_plugin("nvim-autopairs", function(mod)
+                mod.setup()
+              end)
+
+              if vim.fn.exists(":Files") == 2 then
+                vim.keymap.set("n", "<C-p>", "<cmd>Files<cr>")
+                vim.keymap.set("n", "<leader>p", "<cmd>Files<cr>")
+              end
+
+              local ok, gp = pcall(require, "gp")
+              if not ok then
+                vim.notify("gp.nvim is not installed yet. Run :PlugInstall", vim.log.levels.WARN)
+              else
+                gp.setup({
+                  default_chat_agent = "ChatDeepSeek",
+                  default_command_agent = "CodeDeepSeek",
+                  providers = {
+                    openai = {
+                      endpoint = "https://api.deepseek.com/chat/completions",
+                      secret = { "cat", vim.fn.expand("~/.config/gp/deepseek.key") },
+                    },
+                  },
+                  agents = {
+                    { name = "ChatGPT4o", disable = true },
+                    { name = "ChatGPT4o-mini", disable = true },
+                    { name = "ChatGPT-o3-mini", disable = true },
+                    { name = "CodeGPT4o", disable = true },
+                    { name = "CodeGPT-o3-mini", disable = true },
+                    { name = "CodeGPT4o-mini", disable = true },
+                    {
+                      provider = "openai",
+                      name = "ChatDeepSeek",
+                      chat = true,
+                      command = false,
+                      model = { model = "deepseek-flash", temperature = 0.7, top_p = 1 },
+                      system_prompt = require("gp.defaults").chat_system_prompt,
+                    },
+                    {
+                      provider = "openai",
+                      name = "CodeDeepSeek",
+                      chat = false,
+                      command = true,
+                      model = { model = "deepseek-flash", temperature = 0.2, top_p = 1 },
+                      system_prompt = require("gp.defaults").code_system_prompt,
+                    },
+                  },
+                })
+
+                vim.keymap.set("n", "<leader>gc", "<cmd>GpChatNew vsplit<cr>", { desc = "AI chat" })
+                vim.keymap.set("n", "<leader>ga", "<cmd>GpAppend<cr>", { desc = "Generate code after cursor" })
+                vim.keymap.set("n", "<leader>gr", "<cmd>GpRewrite<cr>", { desc = "Rewrite this line" })
+                vim.keymap.set("v", "<leader>ga", ":<C-u>'<,'>GpAppend<cr>", { desc = "Generate code after selection" })
+                vim.keymap.set("v", "<leader>gr", ":<C-u>'<,'>GpRewrite<cr>", { desc = "Rewrite selection" })
+              end
+              NVEOF
+            description: Writing ~/.config/nvim/init.lua
+            show_output: true
+
+      - type: section
+        title: "DeepSeek API Key"
+        steps:
+          - type: command
+            command: |
+              KEY_FILE="$HOME/.config/gp/deepseek.key"
+              mkdir -p "$(dirname "$KEY_FILE")"
+              REPLACE=y
+              if [ -s "$KEY_FILE" ]; then
+                echo "A DeepSeek key is already at $KEY_FILE"
+                read -r -p "Replace it? [y/N]: " REPLACE
+                REPLACE=$(printf '%s' "$REPLACE" | tr '[:upper:]' '[:lower:]')
+              fi
+              if [ "$REPLACE" = "y" ] || [ "$REPLACE" = "yes" ]; then
+                echo "Get a key at https://platform.deepseek.com/api_keys"
+                read -r -s -p "DeepSeek API key (hidden, Enter to skip): " KEY
+                echo
+                if [ -n "$KEY" ]; then
+                  umask 077
+                  printf '%s' "$KEY" > "$KEY_FILE"
+                  chmod 600 "$KEY_FILE"
+                  echo "Key saved. Neovim reads it when you generate or edit code."
+                else
+                  echo "Skipped. Save a key later with: nvim $KEY_FILE"
+                fi
+              fi
+            description: Saving the DeepSeek API key
+            show_output: true
+            interactive: true
+
+      - type: section
+        title: "Install plugins"
+        steps:
+          - type: command
+            command: |
+              nvim --headless "+PlugInstall" "+qa"
+            description: Installing plugins (needs a network connection)
+            show_output: true
+            continue_on_error: true
+
+      - type: message
+        content: |
+          ╔══════════════════════════════════════════════════════════╗
+          ║  ✅ Neovim setup complete                                 ║
+          ╚══════════════════════════════════════════════════════════╝
+
+          Open a file:   nvim index.html
+
+          Generate:      put the cursor where the code should go, press ,ga
+                         type what you want, press Enter
+          Edit with AI:  select lines with V, press ,gr, say what to change
+          Chat:          ,gc
+          Find a file:   ,p or Ctrl-p
+          Comment:       gcc on a line, gc on a selection
+          Plain editing: ,w saves, ,q quits, ,e is the file tree
+
+          Config:  nvim ~/.config/nvim/init.lua
+          Key:     ~/.config/gp/deepseek.key
+          Plugins: open Neovim and run :PlugUpdate
+
+          gp.nvim cannot turn DeepSeek's thinking mode off. The first reply
+          can take longer and use more data. The text that lands in the
+          buffer is the answer, not the reasoning.

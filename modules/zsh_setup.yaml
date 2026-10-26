@@ -8,7 +8,6 @@ provides:
   - ohmyzsh_installed
 requires:
   - check_command_exists
-  - vim_dev_setup
   - git_setup
 size_kb: 20
 

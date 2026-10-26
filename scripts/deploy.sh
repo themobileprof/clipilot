@@ -22,6 +22,7 @@ cd "$REPO_DIR"
 mkdir -p "$STAGING_DIR/server"
 CGO_ENABLED=0 go build -ldflags="-s -w" -o "$STAGING_DIR/registry" ./cmd/registry
 cp -r server/static server/templates "$STAGING_DIR/server/"
+cp -r modules "$STAGING_DIR/modules"
 cp deploy/clipilot-registry.user.service "$STAGING_DIR/"
 cp scripts/remote-deploy.sh "$STAGING_DIR/"
 chmod +x "$STAGING_DIR/remote-deploy.sh"
