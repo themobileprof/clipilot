@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Install Clio — CLIPilot</title>
+    <meta name="description" content="Install Clio on Termux or a computer, sync the wizards, and set up Neovim and GitHub.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@500;700&family=IBM+Plex+Mono&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=Syne:wght@700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/guide.css">
+</head>
+<body class="guide-page">
+    <header class="guide-bar">
+        <a class="guide-brand" href="/">CLIPilot</a>
+        <nav class="guide-nav">
+            <a href="/install" aria-current="page">Install</a>
+            <a href="/use">Use</a>
+            <a href="/modules">Modules</a>
+            {{if .LoggedIn}}<a href="/logout">Logout</a>{{else}}<a href="/login">Login</a>{{end}}
+        </nav>
+    </header>
+
+    <main class="guide-wrap">
+        <p class="guide-kicker">Page 1</p>
+        <h1>Install Clio</h1>
+        <p class="guide-lead">Do these steps from top to bottom. Commands under Terminal run in the shell. When a step says to quit, type <code>exit</code> before the next command.</p>
+
+        <div class="guide-need">
+            <strong>Have these ready</strong>
+            <ul>
+                <li>A phone with Termux, or a Linux computer</li>
+                <li>A <a href="https://github.com">GitHub</a> account</li>
+                <li>A <a href="https://platform.deepseek.com/api_keys">DeepSeek API key</a></li>
+            </ul>
+        </div>
+
+        <article class="step">
+            <div class="step-no">1</div>
+            <div>
+                <h2>Open a terminal</h2>
+                <p class="where">Phone</p>
+                <p>Install Termux from <a href="https://f-droid.org/en/packages/com.termux/">F-Droid</a> or the <a href="https://github.com/termux/termux-app/releases">Termux releases</a>. The Google Play copy is too old. Open it. You should see a <code>$</code> prompt.</p>
+                <p class="where">Computer</p>
+                <p>Open the terminal.</p>
+            </div>
+        </article>
+
+        <article class="step">
+            <div class="step-no">2</div>
+            <div>
+                <h2>Install</h2>
+                <p class="where">Terminal</p>
+                <div class="cmd">
+                    <div class="cmd-bar"><span>Terminal</span><button type="button" data-copy>Copy</button></div>
+                    <pre>curl -fsSL https://clipilot.themobileprof.com/clio | sh</pre>
+                </div>
+                <p>If that fails:</p>
+                <div class="cmd">
+                    <div class="cmd-bar"><span>Terminal</span><button type="button" data-copy>Copy</button></div>
+                    <pre>curl -sfL https://raw.githubusercontent.com/themobileprof/clio/main/install.sh | bash</pre>
+                </div>
+                <p>Close the terminal and open it again. On a computer, if <code>clio</code> is still missing:</p>
+                <div class="cmd">
+                    <div class="cmd-bar"><span>Terminal</span><button type="button" data-copy>Copy</button></div>
+                    <pre>export PATH="$HOME/.local/bin:$PATH"</pre>
+                </div>
+                <p class="check">Check: <code>clio</code> shows <code>&gt;&gt;</code>. Type <code>exit</code>.</p>
+            </div>
+        </article>
+
+        <article class="step">
+            <div class="step-no">3</div>
+            <div>
+                <h2>Download the wizards</h2>
+                <p class="where">Terminal</p>
+                <div class="cmd">
+                    <div class="cmd-bar"><span>Terminal</span><button type="button" data-copy>Copy</button></div>
+                    <pre>clio</pre>
+                </div>
+                <p>At <code>&gt;&gt;</code> type <code>sync</code>, wait until it finishes, then <code>exit</code>.</p>
+                <p>On Termux, run each wizard in the shell. Running one at <code>&gt;&gt;</code> can crash the app.</p>
+                <p class="check">Check: <code>clio</code>, then <code>setup</code>, lists Neovim and Git. Type <code>exit</code>.</p>
+            </div>
+        </article>
+
+        <article class="step">
+            <div class="step-no">4</div>
+            <div>
+                <h2>Prepare the phone</h2>
+                <p>Skip this step on a computer.</p>
+                <p class="where">Terminal</p>
+                <div class="cmd">
+                    <div class="cmd-bar"><span>Terminal</span><button type="button" data-copy>Copy</button></div>
+                    <pre>clio-run-module termux_setup setup</pre>
+                </div>
+                <p>Say yes to storage and the shell. When it asks <strong>Build HTML pages?</strong>, say yes. Pico CSS is saved at <code>~/.clio/share/pico.classless.min.css</code>. Say no to extra languages unless you want them. If the shell switches to Zsh, open a new Termux session.</p>
+            </div>
+        </article>
+
+        <article class="step">
+            <div class="step-no">5</div>
+            <div>
+                <h2>Set up Neovim</h2>
+                <p class="where">Terminal</p>
+                <div class="cmd">
+                    <div class="cmd-bar"><span>Terminal</span><button type="button" data-copy>Copy</button></div>
+                    <pre>clio-run-module neovim_setup setup</pre>
+                </div>
+                <p>Paste your DeepSeek key when asked. The typing is hidden. The key is stored in <code>~/.config/gp/deepseek.key</code>, outside any site, so it is not pushed to GitHub.</p>
+                <p>If plugin install fails, open Neovim with <code>nvim</code>, run <code>:PlugInstall</code>, wait, then <code>:qa</code>.</p>
+                <table class="keys">
+                    <tr><th>Keys</th><th>Action</th></tr>
+                    <tr><td><code>,ga</code></td><td>Generate after the cursor</td></tr>
+                    <tr><td><code>,gr</code></td><td>Rewrite the selection</td></tr>
+                    <tr><td><code>:w</code></td><td>Save</td></tr>
+                    <tr><td><code>:q</code></td><td>Quit</td></tr>
+                </table>
+                <p>Press <code>i</code> to type. Press Esc to leave typing mode. On an HTML file, <code>,ga</code> and <code>,gr</code> add the Pico rules to the sentence you type.</p>
+                <p class="check">Check: <code>nvim --version</code> prints a version.</p>
+            </div>
+        </article>
+
+        <article class="step">
+            <div class="step-no">6</div>
+            <div>
+                <h2>Set up Git and GitHub</h2>
+                <p class="where">Terminal</p>
+                <div class="cmd">
+                    <div class="cmd-bar"><span>Terminal</span><button type="button" data-copy>Copy</button></div>
+                    <pre>clio-run-module git_setup setup
+gh auth login</pre>
+                </div>
+                <p>Use your GitHub email in the wizard. For <code>gh auth login</code>, choose GitHub.com, HTTPS, and a web browser.</p>
+                <p class="check">Check: <code>gh auth status</code> and <code>git config --global user.name</code> both print your details.</p>
+                <a class="next-door" href="/use">Next: use Clio</a>
+            </div>
+        </article>
+    </main>
+    <p class="guide-foot"><a href="/">CLIPilot</a> · <a href="/use">Use Clio</a></p>
+    <script src="/static/guide.js"></script>
+</body>
+</html>

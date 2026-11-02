@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Use Clio — CLIPilot</title>
+    <meta name="description" content="Generate a website with Clio, push it to GitHub, and deploy it over SSH.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@500;700&family=IBM+Plex+Mono&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=Syne:wght@700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/guide.css">
+</head>
+<body class="guide-page">
+    <header class="guide-bar">
+        <a class="guide-brand" href="/">CLIPilot</a>
+        <nav class="guide-nav">
+            <a href="/install">Install</a>
+            <a href="/use" aria-current="page">Use</a>
+            <a href="/modules">Modules</a>
+            {{if .LoggedIn}}<a href="/logout">Logout</a>{{else}}<a href="/login">Login</a>{{end}}
+        </nav>
+    </header>
+
+    <main class="guide-wrap">
+        <p class="guide-kicker">Page 2</p>
+        <h1>Use Clio</h1>
+        <p class="guide-lead">Finish <a href="/install">Install Clio</a> first. Commands under Terminal run in the shell. Commands under Neovim run inside the editor. Quit Neovim before the next Terminal block.</p>
+
+        <article class="step">
+            <div class="step-no">1</div>
+            <div>
+                <h2>Start the site</h2>
+                <p>Pico CSS styles ordinary tags. The model writes the HTML. You type only the sentence that describes the page.</p>
+                <p class="where">Terminal, before Neovim</p>
+                <div class="cmd">
+                    <div class="cmd-bar"><span>Terminal</span><button type="button" data-copy>Copy</button></div>
+                    <pre>mkdir -p ~/my-site/css
+cd ~/my-site
+cp ~/.clio/share/pico.classless.min.css css/
+nvim index.html</pre>
+                </div>
+                <p>If that file is missing, download it once and copy it again:</p>
+                <div class="cmd">
+                    <div class="cmd-bar"><span>Terminal</span><button type="button" data-copy>Copy</button></div>
+                    <pre>mkdir -p ~/.clio/share
+curl -fsSL -o ~/.clio/share/pico.classless.min.css \
+  https://cdn.jsdelivr.net/npm/@picocss/pico@2.1.1/css/pico.classless.min.css
+cp ~/.clio/share/pico.classless.min.css css/</pre>
+                </div>
+            </div>
+        </article>
+
+        <article class="step">
+            <div class="step-no">2</div>
+            <div>
+                <h2>Generate the homepage</h2>
+                <p class="where">Neovim</p>
+                <p>Press <code>,ga</code> and type:</p>
+                <div class="cmd">
+                    <div class="cmd-bar"><span>Prompt</span><button type="button" data-copy>Copy</button></div>
+                    <pre>A personal homepage with my name, a short intro, and a link to about.html.</pre>
+                </div>
+                <p>The editor adds the Pico rules to that sentence. Save with <code>:w</code>, then quit with <code>:q</code>.</p>
+            </div>
+        </article>
+
+        <article class="step">
+            <div class="step-no">3</div>
+            <div>
+                <h2>Generate the about page</h2>
+                <p class="where">Terminal</p>
+                <div class="cmd">
+                    <div class="cmd-bar"><span>Terminal</span><button type="button" data-copy>Copy</button></div>
+                    <pre>nvim about.html</pre>
+                </div>
+                <p class="where">Neovim</p>
+                <p>Press <code>,ga</code> and type:</p>
+                <div class="cmd">
+                    <div class="cmd-bar"><span>Prompt</span><button type="button" data-copy>Copy</button></div>
+                    <pre>An about page with one paragraph and a link back to index.html.</pre>
+                </div>
+                <p><code>:w</code> then <code>:q</code>.</p>
+                <p class="where">Terminal, after you quit</p>
+                <div class="cmd">
+                    <div class="cmd-bar"><span>Terminal</span><button type="button" data-copy>Copy</button></div>
+                    <pre>find . -type f | sort
+grep pico index.html</pre>
+                </div>
+                <p class="check">You should see <code>css/pico.classless.min.css</code>, <code>index.html</code>, and <code>about.html</code>.</p>
+                <p>On a phone, preview with <code>python3 -m http.server 8080</code> and open <code>http://127.0.0.1:8080</code>. Press Ctrl-C when you are done. If <code>python3</code> is missing: <code>pkg install -y python</code>.</p>
+            </div>
+        </article>
+
+        <article class="step">
+            <div class="step-no">4</div>
+            <div>
+                <h2>Push to GitHub</h2>
+                <p>Stay in <code>~/my-site</code>. Neovim must be closed.</p>
+                <p class="where">Terminal</p>
+                <div class="cmd">
+                    <div class="cmd-bar"><span>Terminal</span><button type="button" data-copy>Copy</button></div>
+                    <pre>git init
+git add index.html about.html css
+git status
+git commit -m "Add my first homepage"
+gh repo create my-site --public --source=. --remote=origin --push</pre>
+                </div>
+                <p>If the name <code>my-site</code> is taken, pick another and run <code>gh repo create</code> again.</p>
+                <p class="check">Check: <code>gh repo view</code> prints a URL. The HTML files and <code>css</code> are there.</p>
+            </div>
+        </article>
+
+        <article class="step">
+            <div class="step-no">5</div>
+            <div>
+                <h2>Deploy over SSH</h2>
+                <p>You need a hostname and username. This page does not create the server.</p>
+                <p class="where">Terminal, on your device</p>
+                <div class="cmd">
+                    <div class="cmd-bar"><span>Terminal</span><button type="button" data-copy>Copy</button></div>
+                    <pre>pkg install -y openssh
+ssh-keygen -t ed25519 -C "student-site"
+cat ~/.ssh/id_ed25519.pub
+ssh USER@HOST</pre>
+                </div>
+                <p>Skip the package install on a computer if <code>ssh-keygen</code> already exists. Press Enter for the file location and an empty passphrase. Send the <code>.pub</code> line to whoever runs the server. Type <code>yes</code> at the first fingerprint prompt. <code>exit</code> returns you to your device.</p>
+                <p class="where">On the server, with sudo</p>
+                <div class="cmd">
+                    <div class="cmd-bar"><span>Server</span><button type="button" data-copy>Copy</button></div>
+                    <pre>sudo apt-get update
+sudo apt-get install -y nginx
+sudo mkdir -p /var/www/my-site
+sudo chown "$USER" /var/www/my-site
+git clone https://github.com/YOUR_USER/my-site.git /var/www/my-site
+sudo tee /etc/nginx/sites-available/my-site >/dev/null << 'EOF'
+server {
+    listen 80;
+    server_name _;
+    root /var/www/my-site;
+    index index.html;
+}
+EOF
+sudo ln -sf /etc/nginx/sites-available/my-site /etc/nginx/sites-enabled/my-site
+sudo rm -f /etc/nginx/sites-enabled/default
+sudo nginx -t
+sudo systemctl reload nginx</pre>
+                </div>
+                <p>Open <code>http://HOST</code> in a browser.</p>
+                <p class="where">On the server, without sudo</p>
+                <div class="cmd">
+                    <div class="cmd-bar"><span>Server</span><button type="button" data-copy>Copy</button></div>
+                    <pre>mkdir -p ~/sites
+git clone https://github.com/YOUR_USER/my-site.git ~/sites/my-site
+cd ~/sites/my-site
+python3 -m http.server 8080</pre>
+                </div>
+                <p>Open <code>http://HOST:8080</code>. This stops when you press Ctrl-C or the SSH session ends.</p>
+            </div>
+        </article>
+
+        <article class="step">
+            <div class="step-no">6</div>
+            <div>
+                <h2>Publish a change</h2>
+                <p class="where">Terminal, then Neovim</p>
+                <div class="cmd">
+                    <div class="cmd-bar"><span>Terminal</span><button type="button" data-copy>Copy</button></div>
+                    <pre>cd ~/my-site
+nvim index.html</pre>
+                </div>
+                <p>Edit with <code>i</code>, or select lines and press <code>,gr</code>. <code>:w</code> then <code>:q</code>.</p>
+                <p class="where">Terminal, after you quit</p>
+                <div class="cmd">
+                    <div class="cmd-bar"><span>Terminal</span><button type="button" data-copy>Copy</button></div>
+                    <pre>git add .
+git commit -m "Update the homepage"
+git push</pre>
+                </div>
+                <p class="where">On the server</p>
+                <div class="cmd">
+                    <div class="cmd-bar"><span>Server</span><button type="button" data-copy>Copy</button></div>
+                    <pre>ssh USER@HOST
+cd /var/www/my-site
+git pull</pre>
+                </div>
+                <p>If you used the home-folder copy, <code>cd ~/sites/my-site</code> before <code>git pull</code>. Reload the browser.</p>
+                <p class="where">When you forget a command</p>
+                <div class="cmd">
+                    <div class="cmd-bar"><span>Terminal</span><button type="button" data-copy>Copy</button></div>
+                    <pre>clio</pre>
+                </div>
+                <p>Ask in a sentence, for example <code>how do I see my git status</code>, then <code>exit</code>. Run Git, <code>gh</code>, and <code>ssh</code> yourself.</p>
+            </div>
+        </article>
+    </main>
+    <p class="guide-foot"><a href="/install">Install Clio</a> · <a href="/">CLIPilot</a></p>
+    <script src="/static/guide.js"></script>
+</body>
+</html>

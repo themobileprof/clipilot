@@ -80,6 +80,8 @@ func main() {
 
 	// Public routes
 	mux.HandleFunc("/", h.Home)
+	mux.HandleFunc("/install", h.InstallGuide)
+	mux.HandleFunc("/use", h.UseGuide)
 	mux.HandleFunc("/health", h.APIv1Health) // Enhanced health check
 	mux.HandleFunc("/modules", h.ListModules)
 	mux.HandleFunc("/modules/", h.GetModule)

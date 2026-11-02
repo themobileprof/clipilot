@@ -164,21 +164,37 @@ func (h *Handlers) Home(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
+	h.renderGuide(w, r, "home.html", "CLIPilot", "Install Clio, then use it to build and publish a site.")
+}
 
+// InstallGuide is the step-by-step Clio installation page.
+func (h *Handlers) InstallGuide(w http.ResponseWriter, r *http.Request) {
+	if r.URL.Path != "/install" {
+		http.NotFound(w, r)
+		return
+	}
+	h.renderGuide(w, r, "install.html", "Install Clio", "Install Clio on Termux or a computer.")
+}
+
+// UseGuide is the step-by-step Clio usage page.
+func (h *Handlers) UseGuide(w http.ResponseWriter, r *http.Request) {
+	if r.URL.Path != "/use" {
+		http.NotFound(w, r)
+		return
+	}
+	h.renderGuide(w, r, "use.html", "Use Clio", "Generate a site with Clio, push it to GitHub, and deploy it.")
+}
+
+func (h *Handlers) renderGuide(w http.ResponseWriter, r *http.Request, name, title, description string) {
 	session := h.auth.GetSession(r)
-	var moduleCount int
-	_ = h.db.QueryRow("SELECT COUNT(*) FROM modules").Scan(&moduleCount)
-
 	data := map[string]interface{}{
-		"Title":       "CLIPilot Registry",
-		"Description": "Module registry for Clio — setup wizards and automation workflows",
+		"Title":       title,
+		"Description": description,
 		"LoggedIn":    session != nil,
 		"Session":     session,
-		"ModuleCount": moduleCount,
 	}
-
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	if err := h.templates.ExecuteTemplate(w, "home.html", data); err != nil {
+	if err := h.templates.ExecuteTemplate(w, name, data); err != nil {
 		log.Printf("Template error: %v", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 	}
