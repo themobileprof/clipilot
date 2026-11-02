@@ -1,6 +1,6 @@
 name: Termux Complete Setup
 id: termux_setup
-version: 1.2.0
+version: 1.2.1
 description: Complete development environment setup for Termux including Zsh, Git, LLM, and dev languages
 tags:
   - termux
@@ -82,10 +82,10 @@ flows:
         title: "Install Essential Tools"
         steps:
           - type: message
-            content: "Installing essential tools: git, gh, curl, wget, man, openssh, zip, unzip"
+            content: "Installing essential tools: ca-certificates, git, gh, curl, wget, man, openssh, zip, unzip"
           
           - type: command
-            command: DEBIAN_FRONTEND=noninteractive pkg install -y git gh curl wget man openssh zip unzip
+            command: DEBIAN_FRONTEND=noninteractive pkg install -y ca-certificates git gh curl wget man openssh zip unzip
             show_output: true
 
       - type: section
