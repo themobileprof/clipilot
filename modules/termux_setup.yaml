@@ -1,6 +1,6 @@
 name: Termux Complete Setup
 id: termux_setup
-version: 1.2.1
+version: 1.2.2
 description: Complete development environment setup for Termux including Zsh, Git, LLM, and dev languages
 tags:
   - termux
@@ -147,7 +147,7 @@ flows:
               Neovim is installed. Plugins, DeepSeek, and key maps are a
               second wizard. After this one finishes, run:
 
-                clio-run-module neovim_setup setup
+                clio neovim_setup
 
       - type: section
         title: "Install LLM Tool"

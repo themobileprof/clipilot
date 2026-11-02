@@ -79,8 +79,8 @@
                     <pre>clio</pre>
                 </div>
                 <p>At <code>&gt;&gt;</code> type <code>sync</code>, wait until it finishes, then <code>exit</code>.</p>
-                <p>On Termux, run each wizard in the shell. Running one at <code>&gt;&gt;</code> can crash the app.</p>
-                <p class="check">Check: run <code>clio</code> again. At the <code>&gt;&gt;</code> prompt, type <code>setup</code>. Neovim and Git should be named on the screen. Type <code>exit</code> to leave Clio.</p>
+                <p>On a phone, run each wizard in the shell after you type <code>exit</code>. Running one at <code>&gt;&gt;</code> can crash the app.</p>
+                <p class="check">Check: run <code>clio</code> again. At the <code>&gt;&gt;</code> prompt, type <code>setup</code>. You should see a list that names Neovim and Git, each marked downloaded or not downloaded. Type <code>exit</code> to leave Clio.</p>
             </div>
         </article>
 
@@ -92,7 +92,7 @@
                 <p class="where">Terminal</p>
                 <div class="cmd">
                     <div class="cmd-bar"><span>Terminal</span><button type="button" data-copy>Copy</button></div>
-                    <pre>clio-run-module termux_setup setup</pre>
+                    <pre>clio termux_setup</pre>
                 </div>
                 <p>Say yes to storage and the shell. When it asks <strong>Build HTML pages?</strong>, say yes. Pico CSS is saved at <code>~/.clio/share/pico.classless.min.css</code>. Say no to extra languages unless you want them. If the shell switches to Zsh, open a new Termux session.</p>
             </div>
@@ -105,7 +105,7 @@
                 <p class="where">Terminal</p>
                 <div class="cmd">
                     <div class="cmd-bar"><span>Terminal</span><button type="button" data-copy>Copy</button></div>
-                    <pre>clio-run-module neovim_setup setup</pre>
+                    <pre>clio neovim_setup</pre>
                 </div>
                 <p>Paste your DeepSeek key when asked. The typing is hidden. The key is stored in <code>~/.config/gp/deepseek.key</code>, outside any site, so it is not pushed to GitHub.</p>
                 <p>If plugin install fails, open Neovim with <code>nvim</code>, run <code>:PlugInstall</code>, wait, then <code>:qa</code>.</p>
@@ -128,7 +128,7 @@
                 <p class="where">Terminal</p>
                 <div class="cmd">
                     <div class="cmd-bar"><span>Terminal</span><button type="button" data-copy>Copy</button></div>
-                    <pre>clio-run-module git_setup setup
+                    <pre>clio git_setup
 gh auth login</pre>
                 </div>
                 <p>Use your GitHub email in the wizard. For <code>gh auth login</code>, choose GitHub.com, HTTPS, and a web browser.</p>

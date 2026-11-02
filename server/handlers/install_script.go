@@ -255,7 +255,7 @@ func (h *Handlers) GetInstallScript(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Disposition", "inline; filename=\"install.sh\"")
 	w.Header().Set("X-Script-Version", version)
 	w.Header().Set("X-Script-Checksum", checksum)
-	w.Header().Set("Cache-Control", "public, max-age=3600") // Cache for 1 hour
+	w.Header().Set("Cache-Control", "public, max-age=60")
 
 	// Check ETag for caching
 	etag := fmt.Sprintf(`"%s"`, checksum[:16])
