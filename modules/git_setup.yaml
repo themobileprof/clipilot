@@ -1,6 +1,6 @@
 name: Git & GitHub CLI Setup
 id: git_setup
-version: 1.0.0
+version: 1.0.1
 description: Install Git and gh, configure identity and useful defaults
 tags:
   - git
@@ -50,7 +50,7 @@ flows:
                 brew install git gh
               else
                 echo "Install git and gh with your package manager."
-                exit 1
+                false
               fi
               git --version
               command -v gh >/dev/null 2>&1 && gh --version || echo "gh not installed — optional"
@@ -70,14 +70,18 @@ flows:
               [ -n "$CURRENT_NAME" ] && echo "Current name:  $CURRENT_NAME"
               [ -n "$CURRENT_EMAIL" ] && echo "Current email: $CURRENT_EMAIL"
               echo ""
-              read -p "Your name (for commits): " GIT_NAME
-              read -p "Your email: " GIT_EMAIL
-              [ -n "$GIT_NAME" ] && git config --global user.name "$GIT_NAME"
-              [ -n "$GIT_EMAIL" ] && git config --global user.email "$GIT_EMAIL"
+              read -r -p "Your name (for commits): " GIT_NAME || GIT_NAME=""
+              read -r -p "Your email: " GIT_EMAIL || GIT_EMAIL=""
+              if [ -n "$GIT_NAME" ]; then
+                git config --global user.name "$GIT_NAME"
+              fi
+              if [ -n "$GIT_EMAIL" ]; then
+                git config --global user.email "$GIT_EMAIL"
+              fi
               echo ""
               echo "Configured:"
-              git config --global user.name
-              git config --global user.email
+              git config --global --get user.name || echo "(name not set)"
+              git config --global --get user.email || echo "(email not set)"
             description: Setting Git name and email
             interactive: true
 

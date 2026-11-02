@@ -1,6 +1,6 @@
 name: Termux Complete Setup
 id: termux_setup
-version: 1.2.2
+version: 1.2.3
 description: Complete development environment setup for Termux including Zsh, Git, LLM, and dev languages
 tags:
   - termux
@@ -176,8 +176,9 @@ flows:
             content: "Installing llm via pip..."
           
           - type: command
-            command: pip install -U llm
+            command: python -m pip install -U llm
             show_output: true
+            continue_on_error: true
           
           - type: message
             content: |
@@ -200,7 +201,7 @@ flows:
             required: false
           
           - type: command
-            command: "echo '{{ .DEEPSEEK_API_KEY }}' | llm keys set deepseek"
+            command: "printf '%s\n' \"$DEEPSEEK_API_KEY\" | llm keys set deepseek"
             condition: "{{ .DEEPSEEK_API_KEY }}"
             continue_on_error: true
           
@@ -274,6 +275,7 @@ flows:
             command: DEBIAN_FRONTEND=noninteractive pkg install -y php
             description: Installing PHP
             show_output: true
+            continue_on_error: true
           
           - type: label
             name: skip_php
@@ -291,6 +293,7 @@ flows:
             command: DEBIAN_FRONTEND=noninteractive pkg install -y nodejs
             description: Installing Node.js
             show_output: true
+            continue_on_error: true
           
           - type: label
             name: skip_node
@@ -308,6 +311,7 @@ flows:
             command: DEBIAN_FRONTEND=noninteractive pkg install -y golang
             description: Installing Golang
             show_output: true
+            continue_on_error: true
           
           - type: label
             name: skip_go
@@ -325,6 +329,7 @@ flows:
             command: DEBIAN_FRONTEND=noninteractive pkg install -y python
             description: Installing Python
             show_output: true
+            continue_on_error: true
           
           - type: label
             name: skip_python

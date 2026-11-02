@@ -1,6 +1,6 @@
 name: Dev Tools Setup
 id: devtools_setup
-version: 1.0.0
+version: 1.0.1
 description: Interactive install of common frontend/backend languages and build tools
 tags:
   - development
@@ -62,7 +62,9 @@ flows:
         steps:
           - type: command
             command: |
-              [ -z "$CLIO_INSTALL" ] && exit 0
+              if [ -z "$CLIO_INSTALL" ]; then
+                echo "No package manager found, so nothing will be installed."
+              else
               echo ""
               read -p "Install Python? [Y/n]: " r
               r=$(echo "${r:-Y}" | tr '[:upper:]' '[:lower:]')
@@ -85,6 +87,7 @@ flows:
               echo ""
               echo "Will install:$SELECTED"
               export CLIO_SELECTED="$SELECTED"
+              fi
             description: Selecting tools to install
             interactive: true
 
@@ -93,7 +96,7 @@ flows:
         steps:
           - type: command
             command: |
-              [ -z "$CLIO_INSTALL" ] || [ -z "$CLIO_SELECTED" ] && exit 0
+              if [ -n "$CLIO_INSTALL" ] && [ -n "$CLIO_SELECTED" ]; then
               for tool in $CLIO_SELECTED; do
                 case "$tool" in
                   python)
@@ -139,6 +142,7 @@ flows:
               command -v go >/dev/null 2>&1 && go version
               command -v php >/dev/null 2>&1 && php --version | head -1
               command -v rustc >/dev/null 2>&1 && rustc --version
+              fi
             description: Installing selected dev tools
             show_output: true
             continue_on_error: true

@@ -1,6 +1,6 @@
 name: neovim_setup
 id: neovim_setup
-version: 1.3.0
+version: 1.3.1
 description: Neovim with a small plugin set for generating code, rewriting it, and editing
 tags:
   - neovim
@@ -57,10 +57,10 @@ flows:
                 brew install neovim git curl fzf
               else
                 echo "Install neovim, git, curl, and fzf with your package manager first."
-                exit 1
+                false
               fi
               command -v nvim >/dev/null 2>&1
-              nvim --version | head -n 1
+              nvim --version | head -n 1 || true
             description: Installing Neovim, fzf, git, and curl
             show_output: true
 
@@ -334,12 +334,12 @@ flows:
               REPLACE=y
               if [ -s "$KEY_FILE" ]; then
                 echo "A DeepSeek key is already at $KEY_FILE"
-                read -r -p "Replace it? [y/N]: " REPLACE
+                read -r -p "Replace it? [y/N]: " REPLACE || REPLACE=n
                 REPLACE=$(printf '%s' "$REPLACE" | tr '[:upper:]' '[:lower:]')
               fi
               if [ "$REPLACE" = "y" ] || [ "$REPLACE" = "yes" ]; then
                 echo "Get a key at https://platform.deepseek.com/api_keys"
-                read -r -s -p "DeepSeek API key (hidden, Enter to skip): " KEY
+                read -r -s -p "DeepSeek API key (hidden, Enter to skip): " KEY || KEY=""
                 echo
                 if [ -n "$KEY" ]; then
                   umask 077

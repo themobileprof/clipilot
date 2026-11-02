@@ -1,6 +1,6 @@
 name: Database Setup
 id: database_setup
-version: 1.0.0
+version: 1.0.1
 description: Choose and install common databases (PostgreSQL, MariaDB, Redis, SQLite)
 tags:
   - database
@@ -54,6 +54,7 @@ flows:
                 export CLIO_ENV="mac"
               else
                 export CLIO_INSTALL=""
+                export CLIO_ENV=""
                 echo "⚠️  Install databases manually for your system."
               fi
               SELECTED=""
@@ -88,7 +89,7 @@ flows:
         steps:
           - type: command
             command: |
-              [ -z "$CLIO_INSTALL" ] || [ -z "$CLIO_DB_SELECTED" ] && exit 0
+              if [ -n "$CLIO_INSTALL" ] && [ -n "$CLIO_DB_SELECTED" ]; then
               for db in $CLIO_DB_SELECTED; do
                 case "$db" in
                   postgresql)
@@ -130,6 +131,7 @@ flows:
                     $CLIO_INSTALL sqlite ;;
                 esac
               done
+              fi
             description: Installing databases
             show_output: true
             continue_on_error: true
