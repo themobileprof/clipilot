@@ -1,6 +1,6 @@
 name: Termux Complete Setup
 id: termux_setup
-version: 1.2.3
+version: 1.2.4
 description: Complete development environment setup for Termux including Zsh, Git, LLM, and dev languages
 tags:
   - termux
@@ -213,8 +213,9 @@ flows:
           - type: message
             content: |
               
-              ✅ LLM configured with DeepSeek!
-              Usage: llm -m deepseek/deepseek-chat 'your question'
+              ✅ DeepSeek is ready.
+              Ask:  clio ask 'your question'
+              Key:  clio key
           
           - type: goto
             label: after_deepseek
@@ -225,8 +226,10 @@ flows:
           - type: message
             content: |
               
-              You can configure DeepSeek later by running:
-                llm keys set deepseek
+              You can save the DeepSeek key later by running:
+                clio key
+              Then ask with:
+                clio ask 'your question'
           
           - type: label
             name: after_deepseek
