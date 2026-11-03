@@ -1,6 +1,6 @@
 name: Termux Complete Setup
 id: termux_setup
-version: 1.2.4
+version: 1.2.5
 description: Complete development environment setup for Termux including Zsh, Git, LLM, and dev languages
 tags:
   - termux
@@ -215,7 +215,8 @@ flows:
               
               ✅ DeepSeek is ready.
               Ask:  clio ask 'your question'
-              Key:  clio key
+              Online, this asks DeepSeek. With no internet, Clio uses its command list.
+              Key:  clio key deepseek
           
           - type: goto
             label: after_deepseek
@@ -227,12 +228,67 @@ flows:
             content: |
               
               You can save the DeepSeek key later by running:
-                clio key
+                clio key deepseek
               Then ask with:
                 clio ask 'your question'
           
           - type: label
             name: after_deepseek
+
+          - type: message
+            content: |
+              
+              ╔══════════════════════════════════════════════════════════╗
+              ║  Gemini                                                  ║
+              ╚══════════════════════════════════════════════════════════╝
+              
+              Gemini 3.8 Flash is free of charge for a new AI Studio key.
+              Get your API key at: https://aistudio.google.com/apikey
+          
+          - type: confirm
+            prompt: "Do you have a Gemini API key?"
+            default: no
+            on_no: skip_gemini
+          
+          - type: input
+            prompt: "Enter your Gemini API key"
+            variable: GEMINI_API_KEY
+            required: false
+          
+          - type: command
+            command: "printf '%s\n' \"$GEMINI_API_KEY\" | llm keys set gemini"
+            condition: "{{ .GEMINI_API_KEY }}"
+            continue_on_error: true
+          
+          - type: command
+            command: llm install llm-gemini
+            description: Installing Gemini plugin
+            continue_on_error: true
+          
+          - type: message
+            content: |
+              
+              ✅ Gemini is ready.
+              Clio asks DeepSeek when that key exists.
+              To ask Gemini instead, run:
+                clio model gemini
+          
+          - type: goto
+            label: after_gemini
+          
+          - type: label
+            name: skip_gemini
+          
+          - type: message
+            content: |
+              
+              You can save the Gemini key later by running:
+                clio key gemini
+              To ask Gemini instead of DeepSeek, run:
+                clio model gemini
+          
+          - type: label
+            name: after_gemini
 
       - type: section
         title: "Optional Dev Languages"
