@@ -31,7 +31,7 @@
             <ul>
                 <li>A phone with Termux, or a Linux computer</li>
                 <li>A <a href="https://github.com">GitHub</a> account</li>
-                <li>A <a href="https://platform.deepseek.com/api_keys">DeepSeek API key</a></li>
+                <li>A DeepSeek API key and a Gemini API key. Step 4 creates them.</li>
             </ul>
         </div>
 
@@ -87,6 +87,20 @@
         <article class="step">
             <div class="step-no">4</div>
             <div>
+                <h2>Get the API keys</h2>
+                <p>Do this in a browser before the wizards. Neovim asks for the DeepSeek key. Gemini is the free key from Google AI Studio. Keep both private. Do not save either key inside a site folder.</p>
+                <p class="where">DeepSeek</p>
+                <p>Open <a href="https://platform.deepseek.com/api_keys">platform.deepseek.com/api_keys</a>, sign in, and create a key. Copy it. DeepSeek charges for use. Paste this key when Neovim setup asks. The typing is hidden, and the key is stored in <code>~/.config/gp/deepseek.key</code>.</p>
+                <p class="where">Gemini</p>
+                <p>Open <a href="https://aistudio.google.com/apikey">aistudio.google.com/apikey</a>, sign in, and create a key on a project with no billing account. New accounts can call some models, including <code>gemini-3.8-flash</code>, at no charge, within that project's limits. Google may use free-tier prompts to improve its products.</p>
+                <p>The $300 Google Cloud welcome credit does not pay for AI Studio or this API. A free Gemini plan for students is the Gemini app, and it does not create this key.</p>
+                <p class="check">Check: you can see a DeepSeek key and a Gemini key, and neither is inside a folder you will push to GitHub.</p>
+            </div>
+        </article>
+
+        <article class="step">
+            <div class="step-no">5</div>
+            <div>
                 <h2>Prepare the phone</h2>
                 <p>Skip this step on a computer.</p>
                 <p class="where">Terminal</p>
@@ -94,12 +108,12 @@
                     <div class="cmd-bar"><span>Terminal</span><button type="button" data-copy>Copy</button></div>
                     <pre>clio termux_setup</pre>
                 </div>
-                <p>Say yes to storage and the shell. When it asks <strong>Build HTML pages?</strong>, say yes. Pico CSS is saved at <code>~/.clio/share/pico.classless.min.css</code>. Say no to extra languages unless you want them. If the shell switches to Zsh, open a new Termux session.</p>
+                <p>Say yes to storage and the shell. When it asks <strong>Build HTML pages?</strong>, say yes. Pico CSS is saved at <code>~/.clio/share/pico.classless.min.css</code>. Say no to extra languages unless you want them. If it asks for a DeepSeek key, paste the one from step 4, or say no. That copy is only for the <code>llm</code> command in the shell. If the shell switches to Zsh, open a new Termux session.</p>
             </div>
         </article>
 
         <article class="step">
-            <div class="step-no">5</div>
+            <div class="step-no">6</div>
             <div>
                 <h2>Set up Neovim</h2>
                 <p class="where">Terminal</p>
@@ -107,7 +121,7 @@
                     <div class="cmd-bar"><span>Terminal</span><button type="button" data-copy>Copy</button></div>
                     <pre>clio neovim_setup</pre>
                 </div>
-                <p>Paste your DeepSeek key when asked. The typing is hidden. The key is stored in <code>~/.config/gp/deepseek.key</code>, outside any site, so it is not pushed to GitHub.</p>
+                <p>Paste the DeepSeek key from step 4 when asked. The typing is hidden. The key stays in <code>~/.config/gp/deepseek.key</code>, outside any site, so it is not pushed to GitHub.</p>
                 <p>If plugin install fails, open Neovim with <code>nvim</code>, run <code>:PlugInstall</code>, wait, then <code>:qa</code>.</p>
                 <table class="keys">
                     <tr><th>Keys</th><th>Action</th></tr>
@@ -122,7 +136,7 @@
         </article>
 
         <article class="step">
-            <div class="step-no">6</div>
+            <div class="step-no">7</div>
             <div>
                 <h2>Set up Git and GitHub</h2>
                 <p class="where">Terminal</p>
