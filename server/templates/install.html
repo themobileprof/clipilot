@@ -109,7 +109,7 @@
                     <pre>clio termux_setup</pre>
                 </div>
                 <p>Say yes to storage and the shell. When it asks <strong>Build HTML pages?</strong>, say yes. Pico CSS is saved at <code>~/.clio/share/pico.classless.min.css</code>. Say no to extra languages unless you want them. If it asks for a DeepSeek or Gemini key, paste the one from step 4, or say no and save it later with <code>clio key deepseek</code> or <code>clio key gemini</code>. If the shell switches to Zsh, open a new Termux session.</p>
-                <p>Ask a question from the terminal. When the phone is online and a DeepSeek or Gemini key is saved, Clio asks that model for a full answer. With no internet or no working key, it answers from its own command list. <code>clio model gemini</code> chooses Gemini. Otherwise DeepSeek is used when that key exists.</p>
+                <p>Ask a question from the terminal. Clio checks a DeepSeek or Gemini key when you save it. A later question uses the saved key. If the model cannot answer, Clio uses its own command list. <code>clio model gemini</code> chooses Gemini. Otherwise DeepSeek is used when that key exists.</p>
                 <div class="cmd">
                     <div class="cmd-bar"><span>Terminal</span><button type="button" data-copy>Copy</button></div>
                     <pre>clio ask 'your question'

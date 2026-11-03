@@ -1,6 +1,6 @@
 name: Termux Complete Setup
 id: termux_setup
-version: 1.2.5
+version: 1.2.6
 description: Complete development environment setup for Termux including Zsh, Git, LLM, and dev languages
 tags:
   - termux
@@ -201,7 +201,7 @@ flows:
             required: false
           
           - type: command
-            command: "printf '%s\n' \"$DEEPSEEK_API_KEY\" | llm keys set deepseek"
+            command: "printf '%s\n' \"$DEEPSEEK_API_KEY\" | clio key deepseek"
             condition: "{{ .DEEPSEEK_API_KEY }}"
             continue_on_error: true
           
@@ -215,7 +215,7 @@ flows:
               
               ✅ DeepSeek is ready.
               Ask:  clio ask 'your question'
-              Online, this asks DeepSeek. With no internet, Clio uses its command list.
+              The key is checked when you save it. Later questions use the saved key.
               Key:  clio key deepseek
           
           - type: goto
@@ -256,7 +256,7 @@ flows:
             required: false
           
           - type: command
-            command: "printf '%s\n' \"$GEMINI_API_KEY\" | llm keys set gemini"
+            command: "printf '%s\n' \"$GEMINI_API_KEY\" | clio key gemini"
             condition: "{{ .GEMINI_API_KEY }}"
             continue_on_error: true
           
