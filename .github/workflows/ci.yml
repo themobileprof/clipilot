@@ -93,6 +93,8 @@ jobs:
           path: bin
 
       - name: Package deployment bundle
+        env:
+          ENV_FILE_SECRET: ${{ secrets.ENV_FILE }}
         run: |
           mkdir -p dist/deploy/server
           cp bin/registry dist/deploy/registry
@@ -101,6 +103,28 @@ jobs:
           cp deploy/clio-registry.user.service dist/deploy/
           cp scripts/remote-deploy.sh dist/deploy/
           chmod +x dist/deploy/remote-deploy.sh
+
+          # Bake ENV_FILE into the bundle (multiline SSH env is unreliable).
+          printf '%s\n' "$ENV_FILE_SECRET" > dist/deploy/deploy.env
+          sed -i 's/^[[:space:]]*//; s/\r$//' dist/deploy/deploy.env
+          {
+            grep -v -E '^(DATA_DIR|STATIC_DIR|TEMPLATE_DIR)=' dist/deploy/deploy.env || true
+            echo "DATA_DIR=__DATA_DIR__"
+            echo "STATIC_DIR=__STATIC_DIR__"
+            echo "TEMPLATE_DIR=__TEMPLATE_DIR__"
+          } > dist/deploy/deploy.env.new
+          mv dist/deploy/deploy.env.new dist/deploy/deploy.env
+          grep -q '^PORT=' dist/deploy/deploy.env || echo 'PORT=8082' >> dist/deploy/deploy.env
+          # Log only the port number length / presence, not secret values
+          if grep -q '^PORT=8082$' dist/deploy/deploy.env; then
+            echo "Bundle includes PORT=8082"
+          elif grep -q '^PORT=' dist/deploy/deploy.env; then
+            echo "Bundle includes a custom PORT"
+          else
+            echo "ERROR: PORT missing from deploy.env" >&2
+            exit 1
+          fi
+
           tar czf clio-deploy.tar.gz -C dist/deploy .
 
       - name: Copy bundle to server
@@ -115,14 +139,11 @@ jobs:
 
       - name: Deploy on server
         uses: appleboy/ssh-action@v1.2.0
-        env:
-          ENV_FILE_SECRET: ${{ secrets.ENV_FILE }}
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USERNAME }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: ${{ secrets.SSH_PORT || 22 }}
-          envs: ENV_FILE_SECRET
           script: |
             set -euo pipefail
             export XDG_RUNTIME_DIR="/run/user/$(id -u)"
@@ -133,21 +154,20 @@ jobs:
             mkdir -p /tmp/clio-deploy
             tar xzf /tmp/clio-deploy.tar.gz -C /tmp/clio-deploy
 
-            # Write ENV_FILE without YAML-indent pollution.
-            printf '%s\n' "$ENV_FILE_SECRET" > /tmp/clio-registry.env
-            sed -i 's/^[[:space:]]*//; s/\r$//' /tmp/clio-registry.env
+            sed \
+              -e "s|__DATA_DIR__|$HOME/clio-data|g" \
+              -e "s|__STATIC_DIR__|$HOME/clio-registry/server/static|g" \
+              -e "s|__TEMPLATE_DIR__|$HOME/clio-registry/server/templates|g" \
+              /tmp/clio-deploy/deploy.env > /tmp/clio-registry.env
 
-            # Keep PORT from ENV_FILE; default only if missing. Rewrite data/asset paths.
-            {
-              grep -v -E '^(DATA_DIR|STATIC_DIR|TEMPLATE_DIR)=' /tmp/clio-registry.env || true
-              echo "DATA_DIR=$HOME/clio-data"
-              echo "STATIC_DIR=$HOME/clio-registry/server/static"
-              echo "TEMPLATE_DIR=$HOME/clio-registry/server/templates"
-            } > /tmp/clio-registry.env.new
-            mv /tmp/clio-registry.env.new /tmp/clio-registry.env
-            grep -q '^PORT=' /tmp/clio-registry.env || echo 'PORT=8082' >> /tmp/clio-registry.env
-
-            echo "Deploy PORT=$(grep '^PORT=' /tmp/clio-registry.env | head -1)"
+            if grep -q '^PORT=8082$' /tmp/clio-registry.env; then
+              echo "Using PORT=8082 from ENV_FILE"
+            elif grep -q '^PORT=' /tmp/clio-registry.env; then
+              echo "Using custom PORT from ENV_FILE"
+            else
+              echo "PORT missing; defaulting to 8082"
+              echo 'PORT=8082' >> /tmp/clio-registry.env
+            fi
 
             DEPLOY_MODE=user \
               DEPLOY_STAGING_DIR=/tmp/clio-deploy \
