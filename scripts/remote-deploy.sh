@@ -79,11 +79,19 @@ write_env_file() {
   # Drop a leftover .env in the install dir — it can override PORT after migration.
   rm -f "$INSTALL_DIR/.env"
   {
-    grep -v -E '^[[:space:]]*(DATA_DIR|STATIC_DIR|TEMPLATE_DIR)=' "$DEPLOY_ENV_FILE" | sed 's/^[[:space:]]*//' || true
+    grep -v -E '^[[:space:]]*(DATA_DIR|STATIC_DIR|TEMPLATE_DIR|PORT)=' "$DEPLOY_ENV_FILE" | sed 's/^[[:space:]]*//' || true
     echo "DATA_DIR=$DATA_DIR"
     echo "STATIC_DIR=$STATIC_DIR"
     echo "TEMPLATE_DIR=$TEMPLATE_DIR"
   } > "$ENV_FILE"
+
+  # Normalize PORT: strip quotes/whitespace; default 8082 (8080 is often Apache).
+  port_val=$(grep -E '^[[:space:]]*PORT=' "$DEPLOY_ENV_FILE" | tail -1 | sed 's/^[[:space:]]*PORT=//' | tr -d ' \t\r"'"'" || true)
+  if ! [[ "$port_val" =~ ^[0-9]+$ ]]; then
+    port_val=8082
+  fi
+  echo "PORT=$port_val" >> "$ENV_FILE"
+  echo "Listen PORT=$port_val"
   chmod 600 "$ENV_FILE"
 }
 
