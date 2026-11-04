@@ -1,0 +1,65 @@
+# Nginx for Clio registry at clio.themobileprof.com
+# Copy to /etc/nginx/sites-available/clio and enable:
+#   sudo ln -s /etc/nginx/sites-available/clio /etc/nginx/sites-enabled/
+#   sudo certbot --nginx -d clio.themobileprof.com
+#   sudo nginx -t && sudo systemctl reload nginx
+#
+# Point proxy_pass to the port in ~/clio-registry/env (often 8082).
+
+# Prefer the new hostname
+server {
+    listen 80;
+    listen [::]:80;
+    server_name clio.themobileprof.com;
+
+    location /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+    }
+
+    location / {
+        return 301 https://$host$request_uri;
+    }
+}
+
+server {
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
+    server_name clio.themobileprof.com;
+
+    # After certbot, these paths will exist:
+    ssl_certificate     /etc/letsencrypt/live/clio.themobileprof.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/clio.themobileprof.com/privkey.pem;
+    include             /etc/letsencrypt/options-ssl-nginx.conf;
+    ssl_dhparam         /etc/letsencrypt/ssl-dhparams.pem;
+
+    client_max_body_size 10M;
+
+    location / {
+        proxy_pass http://127.0.0.1:8082;
+        proxy_http_version 1.1;
+        proxy_set_header Host              $host;
+        proxy_set_header X-Real-IP         $remote_addr;
+        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+
+# Optional: redirect the previous hostname to clio.themobileprof.com
+server {
+    listen 80;
+    listen [::]:80;
+    server_name clipilot.themobileprof.com;
+    return 301 https://clio.themobileprof.com$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
+    server_name clipilot.themobileprof.com;
+
+    # Cert for the previous hostname (if you still hold one):
+    ssl_certificate     /etc/letsencrypt/live/clipilot.themobileprof.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/clipilot.themobileprof.com/privkey.pem;
+
+    return 301 https://clio.themobileprof.com$request_uri;
+}

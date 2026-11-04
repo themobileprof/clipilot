@@ -98,10 +98,10 @@ jobs:
           cp bin/registry dist/deploy/registry
           cp -r server/static server/templates dist/deploy/server/
           cp -r modules dist/deploy/modules
-          cp deploy/clipilot-registry.user.service dist/deploy/
+          cp deploy/clio-registry.user.service dist/deploy/
           cp scripts/remote-deploy.sh dist/deploy/
           chmod +x dist/deploy/remote-deploy.sh
-          tar czf clipilot-deploy.tar.gz -C dist/deploy .
+          tar czf clio-deploy.tar.gz -C dist/deploy .
 
       - name: Copy bundle to server
         uses: appleboy/scp-action@v1.0.0
@@ -110,7 +110,7 @@ jobs:
           username: ${{ secrets.SSH_USERNAME }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: ${{ secrets.SSH_PORT || 22 }}
-          source: clipilot-deploy.tar.gz
+          source: clio-deploy.tar.gz
           target: /tmp
 
       - name: Deploy on server
@@ -126,28 +126,28 @@ jobs:
 
             echo "Deploying as $(whoami) (home: $HOME)"
 
-            rm -rf /tmp/clipilot-deploy
-            mkdir -p /tmp/clipilot-deploy
-            tar xzf /tmp/clipilot-deploy.tar.gz -C /tmp/clipilot-deploy
+            rm -rf /tmp/clio-deploy
+            mkdir -p /tmp/clio-deploy
+            tar xzf /tmp/clio-deploy.tar.gz -C /tmp/clio-deploy
 
-            cat > /tmp/clipilot-registry.env << 'EOF'
+            cat > /tmp/clio-registry.env << 'EOF'
             ${{ secrets.ENV_FILE }}
             EOF
 
             {
-              grep -v -E '^(DATA_DIR|STATIC_DIR|TEMPLATE_DIR)=' /tmp/clipilot-registry.env || true
-              echo "DATA_DIR=$HOME/clipilot-data"
-              echo "STATIC_DIR=$HOME/clipilot-registry/server/static"
-              echo "TEMPLATE_DIR=$HOME/clipilot-registry/server/templates"
-            } > /tmp/clipilot-registry.env.new
-            mv /tmp/clipilot-registry.env.new /tmp/clipilot-registry.env
+              grep -v -E '^(DATA_DIR|STATIC_DIR|TEMPLATE_DIR)=' /tmp/clio-registry.env || true
+              echo "DATA_DIR=$HOME/clio-data"
+              echo "STATIC_DIR=$HOME/clio-registry/server/static"
+              echo "TEMPLATE_DIR=$HOME/clio-registry/server/templates"
+            } > /tmp/clio-registry.env.new
+            mv /tmp/clio-registry.env.new /tmp/clio-registry.env
 
             DEPLOY_MODE=user \
-              DEPLOY_STAGING_DIR=/tmp/clipilot-deploy \
-              DEPLOY_ENV_FILE=/tmp/clipilot-registry.env \
-              bash /tmp/clipilot-deploy/remote-deploy.sh
+              DEPLOY_STAGING_DIR=/tmp/clio-deploy \
+              DEPLOY_ENV_FILE=/tmp/clio-registry.env \
+              bash /tmp/clio-deploy/remote-deploy.sh
 
-            rm -rf /tmp/clipilot-deploy /tmp/clipilot-deploy.tar.gz /tmp/clipilot-registry.env
+            rm -rf /tmp/clio-deploy /tmp/clio-deploy.tar.gz /tmp/clio-registry.env
 
   release:
     name: Release Modules
@@ -159,14 +159,14 @@ jobs:
       - name: Package modules
         run: |
           cd modules
-          tar czf ../clipilot-modules.tar.gz *.yaml
+          tar czf ../clio-modules.tar.gz *.yaml
           cd ..
-          sha256sum clipilot-modules.tar.gz > clipilot-modules.tar.gz.sha256
+          sha256sum clio-modules.tar.gz > clio-modules.tar.gz.sha256
 
       - uses: softprops/action-gh-release@v2
         with:
           files: |
-            clipilot-modules.tar.gz
-            clipilot-modules.tar.gz.sha256
+            clio-modules.tar.gz
+            clio-modules.tar.gz.sha256
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

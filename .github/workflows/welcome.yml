@@ -14,7 +14,7 @@ jobs:
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
           issue-message: |
-            👋 Thanks for opening your first issue! We appreciate your contribution to CLIPilot.
+            👋 Thanks for opening your first issue! We appreciate your contribution to Clio.
             
             A maintainer will review your issue soon. In the meantime:
             - Check our [Contributing Guide](../CONTRIBUTING.md)
@@ -32,4 +32,4 @@ jobs:
             
             Check out our [Contributing Guide](../CONTRIBUTING.md) for more information.
             
-            Thanks for contributing to CLIPilot! ❤️
+            Thanks for contributing to Clio! ❤️

@@ -3,11 +3,11 @@
 
 set -e
 
-echo "=== Testing CLIPilot Command Indexing ===="
+echo "=== Testing Clio Command Indexing ===="
 echo ""
 
 # Build
-echo "1. Building CLIPilot..."
+echo "1. Building Clio..."
 go build -o bin/clipilot ./cmd/clipilot
 echo "✓ Build successful"
 echo ""

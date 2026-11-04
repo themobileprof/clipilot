@@ -1,4 +1,4 @@
-# CLIPilot Server Transformation - Summary & Validation Report
+# Clio registry server Transformation - Summary & Validation Report
 
 **Date:** February 28, 2026  
 **Architecture Change:** Monolithic CLI+Server → Pure Server (Registry Only)  
@@ -12,7 +12,7 @@
 
 **Before:**
 ```
-CLIPilot (Monolithic)
+Clio (Monolithic)
 ├── cmd/clipilot/          # CLI binary
 ├── cmd/registry/          # Server binary
 ├── internal/engine/       # Execution engine
@@ -24,8 +24,8 @@ CLIPilot (Monolithic)
 
 **After:**
 ```
-CLIPilot (Server Only)
-├── cmd/registry/          # Server binary (renamed to clipilot-server)
+Clio (Server Only)
+├── cmd/registry/          # Server binary (renamed to clio-server)
 ├── server/
 │   ├── handlers/          # HTTP handlers
 │   │   ├── handlers.go
@@ -114,7 +114,7 @@ CLIPilot (Server Only)
     - Docker deployment guide
     - Admin setup instructions
     - API endpoint documentation
-    - Clear separation: CLIPilot (server) vs Clio (client)
+    - Clear separation: Clio (server) vs Clio (client)
     
 14. **Update CI/CD workflows**
     - [.github/workflows/test.yml](.github/workflows/test.yml) - Removed CLI build, kept server
@@ -169,9 +169,9 @@ PASS: TestAPIEndpointsExist (0.00s)
 
 ### Build Verification
 ```bash
-$ go build -o clipilot-server ./cmd/registry
-$ ls -lh clipilot-server
--rwxrwxr-x 1 samuel samuel 19M Feb 28 09:09 clipilot-server
+$ go build -o clio-server ./cmd/registry
+$ ls -lh clio-server
+-rwxrwxr-x 1 samuel samuel 19M Feb 28 09:09 clio-server
 ```
 
 ---
@@ -184,7 +184,7 @@ $ ls -lh clipilot-server
   ```bash
   ADMIN_USER=admin
   ADMIN_PASSWORD=<secure-password>
-  BASE_URL=https://clipilot.themobileprof.com
+  BASE_URL=https://clio.themobileprof.com
   GITHUB_CLIENT_ID=<oauth-client-id>
   GITHUB_CLIENT_SECRET=<oauth-secret>
   GEMINI_API_KEY=<gemini-api-key>  # Optional for semantic search
@@ -198,7 +198,7 @@ $ ls -lh clipilot-server
 - [ ] **Create admin user & API key**
   ```bash
   ./scripts/create-admin.sh
-  # Save the API key to GitHub Secrets as CLIPILOT_API_KEY
+  # Save the API key to GitHub Secrets as CLIO_API_KEY
   ```
 
 - [ ] **Configure reverse proxy (nginx/Caddy)**
@@ -208,16 +208,16 @@ $ ls -lh clipilot-server
 
 - [ ] **Test endpoints**
   ```bash
-  curl https://clipilot.themobileprof.com/health
-  curl https://clipilot.themobileprof.com/api/v1/modules?limit=5
-  curl https://clipilot.themobileprof.com/clio | head -20
+  curl https://clio.themobileprof.com/health
+  curl https://clio.themobileprof.com/api/v1/modules?limit=5
+  curl https://clio.themobileprof.com/clio | head -20
   ```
 
 - [ ] **Update Clio repository**
-  - Add `CLIPILOT_API_KEY` to GitHub Secrets
+  - Add `CLIO_API_KEY` to GitHub Secrets
   - Update `.github/workflows/release.yml` to upload install script
   - Implement registry sync in `internal/modules/sync.go`
-  - Update config to use `clipilot.themobileprof.com` as registry URL
+  - Update config to use `clio.themobileprof.com` as registry URL
 
 ---
 
@@ -312,9 +312,9 @@ $ ls -lh clipilot-server
    - Use "docs/CLIO_MIGRATION_GUIDE.md" as reference
 
 2. **Update CI/CD** (High Priority)
-   - Add `CLIPILOT_API_KEY` to GitHub Secrets
+   - Add `CLIO_API_KEY` to GitHub Secrets
    - Upload install script after release build
-   - Test download from `clipilot.themobileprof.com/clio`
+   - Test download from `clio.themobileprof.com/clio`
 
 3. **Testing** (Medium Priority)
    - Integration test with live registry
@@ -340,4 +340,4 @@ $ ls -lh clipilot-server
 ---
 
 **Transformation completed successfully on February 28, 2026.**  
-**CLIPilot is now a pure server ready for production deployment.**
+**Clio is now a pure server ready for production deployment.**

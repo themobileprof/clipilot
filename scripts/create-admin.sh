@@ -1,5 +1,5 @@
 #!/bin/bash
-# CLIPilot Registry - Admin User Bootstrap Script
+# Clio registry - Admin User Bootstrap Script
 # Creates an admin user and generates an API key for CI/CD integration
 
 set -e
@@ -17,7 +17,7 @@ ADMIN_USERNAME="${ADMIN_USERNAME:-admin}"
 ADMIN_EMAIL="${ADMIN_EMAIL:-admin@localhost}"
 
 echo -e "${BLUE}======================================${NC}"
-echo -e "${BLUE}  CLIPilot Registry - Admin Setup${NC}"
+echo -e "${BLUE}  Clio registry - Admin Setup${NC}"
 echo -e "${BLUE}======================================${NC}"
 echo ""
 
@@ -133,18 +133,18 @@ echo ""
 echo -e "${BLUE}Usage Examples:${NC}"
 echo ""
 echo -e "${YELLOW}1. Login to web UI:${NC}"
-echo "   https://clipilot.themobileprof.com/login"
+echo "   https://clio.themobileprof.com/login"
 echo "   Username: $ADMIN_USERNAME"
 echo "   Password: [your password]"
 echo ""
 echo -e "${YELLOW}2. Upload install script via API:${NC}"
-echo "   curl -X POST https://clipilot.themobileprof.com/api/install-script/upload \\"
+echo "   curl -X POST https://clio.themobileprof.com/api/install-script/upload \\"
 echo "     -H \"Authorization: Bearer $API_KEY\" \\"
 echo "     -F \"file=@install.sh\" \\"
 echo "     -F \"version=v1.0.0\""
 echo ""
 echo -e "${YELLOW}3. Store in GitHub Secrets (for Clio CI/CD):${NC}"
-echo "   Name: CLIPILOT_API_KEY"
+echo "   Name: CLIO_API_KEY"
 echo "   Value: $API_KEY"
 echo ""
 echo -e "${RED}⚠️  IMPORTANT: Save this API key securely!${NC}"

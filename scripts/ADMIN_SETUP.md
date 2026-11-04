@@ -1,6 +1,6 @@
 # Admin User Creation
 
-This directory contains scripts for creating admin users in the CLIPilot Registry.
+This directory contains scripts for creating admin users in the Clio registry.
 
 ## Local Development
 
@@ -14,7 +14,7 @@ The script will prompt for:
 
 ## Production
 
-Set admin credentials in the GitHub `ENV_FILE` secret (written to `~/clipilot-registry/env` on deploy):
+Set admin credentials in the GitHub `ENV_FILE` secret (written to `~/clio-registry/env` on deploy):
 
 ```bash
 ADMIN_USER=admin
@@ -27,7 +27,7 @@ The registry creates the admin user automatically on startup using these credent
 To create or update an admin manually:
 
 ```bash
-DB_PATH=~/clipilot-data/registry.db ./scripts/create-admin.sh
+DB_PATH=~/clio-data/registry.db ./scripts/create-admin.sh
 ```
 
 ## API Key Generation
@@ -35,7 +35,7 @@ DB_PATH=~/clipilot-data/registry.db ./scripts/create-admin.sh
 After creating the admin user, the script will generate an API key automatically.
 
 **Save this API key securely** — you'll need it for:
-- Clio CI/CD (add as `CLIPILOT_API_KEY` secret in GitHub)
+- Clio CI/CD (add as `CLIO_API_KEY` secret in GitHub)
 - Automated module uploads
 - Admin API operations
 
@@ -53,8 +53,8 @@ After creating the admin user, the script will generate an API key automatically
 Make sure the registry server has started at least once to initialize the database.
 
 ```bash
-systemctl --user status clipilot-registry
-journalctl --user -u clipilot-registry -n 50
+systemctl --user status clio-registry
+journalctl --user -u clio-registry -n 50
 ```
 
 ### Permission Denied
@@ -62,7 +62,7 @@ journalctl --user -u clipilot-registry -n 50
 Ensure your SSH user owns the data directory:
 
 ```bash
-chown -R "$(whoami):$(whoami)" ~/clipilot-data ~/clipilot-registry
+chown -R "$(whoami):$(whoami)" ~/clio-data ~/clio-registry
 ```
 
 ### User Already Exists

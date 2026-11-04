@@ -18,7 +18,7 @@ cat > "$HOOK_FILE" << 'EOF'
 # Pre-commit hook to run tests
 
 echo "========================================================"
-echo "🤖 CLIPilot Pre-Commit Check"
+echo "🤖 Clio Pre-Commit Check"
 echo "========================================================"
 
 # Check if tests script exists

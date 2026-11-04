@@ -1,4 +1,4 @@
-# CLIPilot Testing
+# Clio Testing
 
 ## 🚀 Quick Start
 
@@ -326,7 +326,7 @@ For testing the web-based module registry:
 ### Test in Browser (Easiest Method)
 
 1. **Open the home page**: http://localhost:8080
-   - You should see the CLIPilot Registry landing page
+   - You should see the Clio registry landing page
    - Check for: hero section, feature cards, quick start guide
 
 2. **Browse modules**: http://localhost:8080/modules
@@ -356,7 +356,7 @@ For testing the web-based module registry:
 ### Test 1: Server Health Check
 ```bash
 # Check home page
-curl -s http://localhost:8080/ | grep -q "CLIPilot Registry" && echo "✓ Home page OK" || echo "✗ Home page failed"
+curl -s http://localhost:8080/ | grep -q "Clio registry" && echo "✓ Home page OK" || echo "✗ Home page failed"
 
 # Check API endpoint
 curl -s http://localhost:8080/api/modules | grep -q "^\[" && echo "✓ API OK" || echo "✗ API failed"
@@ -400,7 +400,7 @@ flows:
     steps:
       greet:
         type: instruction
-        message: "Hello from CLIPilot!"
+        message: "Hello from Clio!"
         next: finish
       finish:
         type: terminal
@@ -483,22 +483,22 @@ curl -b cookies.txt -X POST http://localhost:8080/api/upload \
 - [ ] 404 for non-existent module
 - [ ] Protected pages redirect to login
 
-## 🎯 Test with CLIPilot CLI
+## 🎯 Test with Clio
 
 ### Test Module Installation
 ```bash
 # Install module from registry
-clipilot modules install 1
+clio modules install 1
 
 # Should see: ✓ Module test_hello_world (v1.0.0) installed successfully!
 
 # List installed modules
-clipilot modules list
+clio modules list
 
 # Should include test_hello_world
 
 # Run the module
-clipilot run test_hello_world
+clio run test_hello_world
 ```
 
 ## 📊 Performance Testing

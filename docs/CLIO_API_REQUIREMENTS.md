@@ -1,6 +1,6 @@
-# Clio Client - API Requirements for CLIPilot Server
+# Clio Client - API Requirements for Clio registry server
 
-This document outlines all API endpoints that Clio needs from CLIPilot server to function properly.
+This document outlines all API endpoints that Clio needs from Clio registry server to function properly.
 
 ## Current State Analysis
 
@@ -13,10 +13,10 @@ GET https://api.github.com/repos/themobileprof/clipilot/contents/modules
 GET {download_url} // For each YAML file
 ```
 
-**Remote Search (Already Exists on CLIPilot):**
+**Remote Search (Already Exists on Clio):**
 ```go
 // Current: internal/layer4/client.go
-POST https://clipilot.themobileprof.com/api/commands/search
+POST https://clio.themobileprof.com/api/commands/search
 Request: {"query": "...", "os": "linux", "arch": "arm64"}
 Response: {"results": [{"name": "...", "description": "...", "usage": "..."}]}
 ```
@@ -414,7 +414,7 @@ func Sync() error {
 ### Phase 2: Default to Registry
 ```go
 // Add config: ~/.clio/config.yaml
-registry_url: https://clipilot.themobileprof.com
+registry_url: https://clio.themobileprof.com
 fallback_to_github: true
 ```
 

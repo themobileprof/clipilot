@@ -1,6 +1,6 @@
 #!/bin/bash
 # Module Query Helper Script
-# Query modules by tags from the CLIPilot registry
+# Query modules by tags from the Clio registry
 # Set REGISTRY_URL environment variable or it will fail
 
 REGISTRY_URL="${REGISTRY_URL:-}"
@@ -15,7 +15,7 @@ fi
 
 usage() {
     cat << EOF
-CLIPilot Module Tag Query Tool
+Clio Module Tag Query Tool
 
 Usage: $0 <command> [options]
 
@@ -92,7 +92,7 @@ count_by_tags() {
 
 # Show summary with counts
 show_summary() {
-    echo "CLIPilot Module Registry - Tag Summary"
+    echo "Clio Module Registry - Tag Summary"
     echo "======================================="
     echo ""
     echo "Complexity Levels:"

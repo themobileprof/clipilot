@@ -1,6 +1,6 @@
-# CLIPilot + Clio Architecture
+# Clio + Clio Architecture
 
-CLIPilot is the **registry server**. **Clio** is the only supported CLI client.
+Clio is the **registry server**. **Clio** is the only supported CLI client.
 
 ```mermaid
 graph TD
@@ -19,10 +19,10 @@ graph TD
 
 - Offline phrase + verb-noun matching (Nigerian Pidgin aware)
 - Local module sync and `clio-run-module` execution
-- Remote fallback: `POST https://clipilot.themobileprof.com/api/commands/search`
+- Remote fallback: `POST https://clio.themobileprof.com/api/commands/search`
 - Local SQLite cache of remote results (`query_cache` in `~/.clio/clio.db`)
 
-## CLIPilot server (this repo)
+## Clio registry server (this repo)
 
 | Endpoint | Purpose |
 |----------|---------|
@@ -47,7 +47,7 @@ graph TD
 ## Deployment
 
 ```bash
-go build -o clipilot-server ./cmd/registry
+go build -o clio-server ./cmd/registry
 ```
 
 Set `GEMINI_API_KEY` for LLM fallback. Catalog search works without it.

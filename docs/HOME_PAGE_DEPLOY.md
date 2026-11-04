@@ -19,7 +19,7 @@ The deployment workflow automatically fetches and uploads the latest Clio instal
 
 1. **Fetch**: Downloads `install.sh` from `https://raw.githubusercontent.com/themobileprof/clio/main/install.sh`
 2. **Extract Version**: Reads `VERSION=` from the script
-3. **Store**: Saves to `/var/lib/clipilot-registry/uploads/install_scripts/`
+3. **Store**: Saves to `/var/lib/clio-registry/uploads/install_scripts/`
 4. **Activate**: Script becomes available at `/clio`
 
 Implementation: [scripts/remote-deploy.sh](../scripts/remote-deploy.sh), invoked by [.github/workflows/ci.yml](../.github/workflows/ci.yml).
@@ -36,7 +36,7 @@ git commit -m "Update home page messaging"
 git push origin main
 ```
 
-The CI/CD workflow builds the binary, copies it to the server, and restarts the `clipilot-registry` systemd service.
+The CI/CD workflow builds the binary, copies it to the server, and restarts the `clio-registry` systemd service.
 
 ---
 
@@ -60,8 +60,8 @@ Hard refresh the browser (`Ctrl+Shift+R` / `Cmd+Shift+R`).
 Check the service on the production server:
 
 ```bash
-sudo systemctl status clipilot-registry
-sudo journalctl -u clipilot-registry -n 50
+sudo systemctl status clio-registry
+sudo journalctl -u clio-registry -n 50
 curl http://127.0.0.1:8080/health
 ```
 
@@ -74,8 +74,8 @@ Check GitHub Actions logs for the **Deploy** job in `.github/workflows/ci.yml`.
 ## Testing Locally
 
 ```bash
-go build -o clipilot-server ./cmd/registry
-./clipilot-server
+go build -o clio-server ./cmd/registry
+./clio-server
 curl http://localhost:8080/ | grep "Clio"
 ```
 

@@ -1,6 +1,6 @@
 #!/bin/bash
-# CLIPilot Uninstall Script
-# Removes CLIPilot binary, data, and configuration
+# Clio Uninstall Script
+# Removes Clio binary, data, and configuration
 
 set -e
 
@@ -13,7 +13,7 @@ NC='\033[0m' # No Color
 
 echo ""
 echo "╔══════════════════════════════════════════════════════════╗"
-echo "║            CLIPilot Uninstall Utility                   ║"
+echo "║            Clio Uninstall Utility                   ║"
 echo "╚══════════════════════════════════════════════════════════╝"
 echo ""
 
@@ -43,7 +43,7 @@ DATA_DIR="$HOME/.clipilot"
 BINARY_NAME="clipilot"
 
 # Show what will be removed
-echo -e "${BLUE}📋 Found the following CLIPilot components:${NC}"
+echo -e "${BLUE}📋 Found the following Clio components:${NC}"
 echo ""
 
 FOUND_BINARY=false
@@ -68,16 +68,16 @@ echo ""
 
 # Check if anything was found
 if [ "$FOUND_BINARY" = false ] && [ "$FOUND_DATA" = false ]; then
-    echo -e "${YELLOW}⚠️  CLIPilot does not appear to be installed.${NC}"
+    echo -e "${YELLOW}⚠️  Clio does not appear to be installed.${NC}"
     echo ""
-    echo "If you installed CLIPilot in a custom location, you'll need to remove it manually."
+    echo "If you installed Clio in a custom location, you'll need to remove it manually."
     exit 0
 fi
 
 # Confirm uninstallation
 echo -e "${YELLOW}⚠️  This will permanently delete:${NC}"
 if [ "$FOUND_BINARY" = true ]; then
-    echo "   • CLIPilot binary ($BINARY_NAME)"
+    echo "   • Clio binary ($BINARY_NAME)"
 fi
 if [ "$FOUND_DATA" = true ]; then
     echo "   • All your modules and settings"
@@ -96,7 +96,7 @@ if [[ ! $REPLY =~ ^[Yy]$ ]]; then
 fi
 
 echo ""
-echo -e "${BLUE}🗑️  Uninstalling CLIPilot...${NC}"
+echo -e "${BLUE}🗑️  Uninstalling Clio...${NC}"
 echo ""
 
 # Remove binary
@@ -130,14 +130,14 @@ if [ "$FOUND_DATA" = true ]; then
 fi
 
 echo ""
-echo -e "${GREEN}✅ CLIPilot has been uninstalled!${NC}"
+echo -e "${GREEN}✅ Clio has been uninstalled!${NC}"
 echo ""
 echo -e "${BLUE}📝 Note:${NC} The following were ${YELLOW}not${NC} removed:"
-echo "   • Packages installed using CLIPilot modules"
-echo "   • System commands indexed by CLIPilot"
-echo "   • Any files created using CLIPilot"
+echo "   • Packages installed using Clio modules"
+echo "   • System commands indexed by Clio"
+echo "   • Any files created using Clio"
 echo ""
-echo "Thank you for trying CLIPilot! 👋"
+echo "Thank you for trying Clio! 👋"
 echo ""
 echo "To reinstall later, visit: https://github.com/themobileprof/clipilot"
 echo ""

@@ -31,7 +31,7 @@ type GitHubUserInfo struct {
 }
 
 const (
-	sessionCookie = "clipilot_session"
+	sessionCookie = "clio_session"
 	sessionTTL    = 24 * time.Hour
 )
 

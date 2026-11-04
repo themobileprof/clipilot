@@ -1,6 +1,6 @@
 # Clio Migration Guide - Client-Server Architecture Split
 
-This document provides comprehensive guidance for migrating Clio from a GitHub-based module sync to a CLIPilot registry-based architecture.
+This document provides comprehensive guidance for migrating Clio from a GitHub-based module sync to a Clio registry-based architecture.
 
 ## Table of Contents
 1. [Overview](#overview)
@@ -20,9 +20,9 @@ This document provides comprehensive guidance for migrating Clio from a GitHub-b
 
 ### Why This Split?
 
-**Before:** Clio fetched modules directly from GitHub's CLIPilot repository using GitHub API.
+**Before:** Clio fetched modules directly from GitHub's Clio repository using GitHub API.
 
-**After:** Clio fetches modules from CLIPilot's dedicated registry server at `clipilot.themobileprof.com`.
+**After:** Clio fetches modules from Clio's dedicated registry server at `clio.themobileprof.com`.
 
 **Benefits:**
 - **Curated modules**: Registry validates and approves modules before listing
@@ -37,9 +37,9 @@ This document provides comprehensive guidance for migrating Clio from a GitHub-b
 | Component | Hosted Where | Responsibility |
 |-----------|-------------|----------------|
 | **Clio CLI Binary** | GitHub Releases | Client application, installed on user systems |
-| **Install Script** | CLIPilot Server (`/clio`) | Downloads Clio binary from GitHub, handles installation |
-| **Module YAMLs** | CLIPilot Registry | Workflow modules, synced to client |
-| **Web UI** | CLIPilot Server | Module browsing, upload, management |
+| **Install Script** | Clio registry server (`/clio`) | Downloads Clio binary from GitHub, handles installation |
+| **Module YAMLs** | Clio registry | Workflow modules, synced to client |
+| **Web UI** | Clio registry server | Module browsing, upload, management |
 
 ---
 
@@ -58,7 +58,7 @@ This document provides comprehensive guidance for migrating Clio from a GitHub-b
          ↓
 ┌─────────────────┐
 │  GitHub Repo    │
-│  clipilot       │
+│  clio       │
 │  /modules/*.yaml│
 └─────────────────┘
 ```
@@ -75,8 +75,8 @@ This document provides comprehensive guidance for migrating Clio from a GitHub-b
          │ /api/v1/modules
          ↓
 ┌──────────────────────┐
-│  CLIPilot Server     │
-│  clipilot.themobileprof.com │
+│  Clio registry server     │
+│  clio.themobileprof.com │
 │  - Module Registry   │
 │  - Web UI            │
 │  - Install Script    │
@@ -91,18 +91,18 @@ This document provides comprehensive guidance for migrating Clio from a GitHub-b
 
 **Location:** `/home/samuel/sites/clio/install.sh`
 
-**Reason:** CLIPilot server now hosts the install script at `clipilot.themobileprof.com/clio`. Clio's CI/CD uploads it there.
+**Reason:** Clio registry server now hosts the install script at `clio.themobileprof.com/clio`. Clio's CI/CD uploads it there.
 
 **Action:**
 ```bash
 cd /path/to/clio
 git rm install.sh
-git commit -m "Remove install.sh - now hosted by CLIPilot server"
+git commit -m "Remove install.sh - now hosted by Clio registry server"
 ```
 
 **Update README.md installation instructions to:**
 ```bash
-curl -fsSL clipilot.themobileprof.com/clio | sh
+curl -fsSL clio.themobileprof.com/clio | sh
 ```
 
 ---
@@ -115,7 +115,7 @@ curl -fsSL clipilot.themobileprof.com/clio | sh
 ```go
 const (
 	RepoOwner = "themobileprof"
-	RepoName  = "clipilot"
+	RepoName  = "clio"
 	ModulesPath = "modules"
 	GitHubAPI = "https://api.github.com/repos"
 )
@@ -174,7 +174,7 @@ import (
 
 const (
 	// Registry API base URL (configurable via config)
-	DefaultRegistryURL = "https://clipilot.themobileprof.com"
+	DefaultRegistryURL = "https://clio.themobileprof.com"
 )
 
 type RegistryModule struct {
@@ -200,7 +200,7 @@ type ChangedModulesResponse struct {
 	SyncTimestamp string `json:"sync_timestamp"`
 }
 
-// Sync downloads modules from CLIPilot registry using delta sync
+// Sync downloads modules from Clio registry using delta sync
 func Sync() error {
 	registryURL := getRegistryURL() // Read from config, default to DefaultRegistryURL
 	
@@ -417,8 +417,8 @@ func SaveLastSyncTimestamp(t time.Time) error {
 3. Script installs binary
 
 ###New Flow
-1. User runs: `curl -fsSL clipilot.themobileprof.com/clio | sh`
-2. CLIPilot server returns `install.sh` (uploaded by Clio's CI/CD)
+1. User runs: `curl -fsSL clio.themobileprof.com/clio | sh`
+2. Clio registry server returns `install.sh` (uploaded by Clio's CI/CD)
 3. Script downloads `clio` binary from Clio's GitHub releases (unchanged)
 4. Script installs binary
 
@@ -430,7 +430,7 @@ func SaveLastSyncTimestamp(t time.Time) error {
 
 ### Update `.github/workflows/release.yml`
 
-Add a step to upload the install script to CLIPilot server after building binaries:
+Add a step to upload the install script to Clio registry server after building binaries:
 
 ```yaml
 name: Release Binaries
@@ -446,23 +446,23 @@ jobs:
   # ... existing build jobs ...
   
   upload-install-script:
-    name: Upload Install Script to CLIPilot
+    name: Upload Install Script to Clio
     runs-on: ubuntu-latest
     needs: releases-matrix # Run after binaries are uploaded
     steps:
       - uses: actions/checkout@v4
       
-      - name: Upload install script to CLIPilot server
+      - name: Upload install script to Clio registry server
         run: |
-          curl -X POST https://clipilot.themobileprof.com/api/install-script/upload \
-            -H "Authorization: Bearer ${{ secrets.CLIPILOT_API_KEY }}" \
+          curl -X POST https://clio.themobileprof.com/api/install-script/upload \
+            -H "Authorization: Bearer ${{ secrets.CLIO_API_KEY }}" \
             -F "file=@install.sh" \
             -F "version=${{ github.ref_name }}"
         continue-on-error: true # Don't fail release if upload fails
 ```
 
 **Required GitHub Secret:**
-- `CLIPILOT_API_KEY` - Generate from CLIPilot admin dashboard (requires admin role)
+- `CLIO_API_KEY` - Generate from Clio admin dashboard (requires admin role)
 
 ---
 
@@ -474,7 +474,7 @@ Clio should support a configuration file for registry URL:
 
 ```yaml
 # ~/.clio/config.yaml
-registry_url: https://clipilot.themobileprof.com
+registry_url: https://clio.themobileprof.com
 cache_ttl: 24h # How long to cache module list
 sync_interval: 168h # Auto-sync every 7 days (optional)
 ```
@@ -500,7 +500,7 @@ type Config struct {
 }
 
 var defaultConfig = Config{
-	RegistryURL:    "https://clipilot.themobileprof.com",
+	RegistryURL:    "https://clio.themobileprof.com",
 	CacheTTL:       "24h",
 	SyncInterval:   "168h",
 }
@@ -543,12 +543,12 @@ func Load() (Config, error) {
 - [ ] **Delta Sync**: Run sync twice - second run should be faster (only changed modules)
 - [ ] **ETag Caching**: Check that unchanged modules return HTTP 304
 - [ ] **Offline Mode**: Disconnect network, run `clio` - verify cached modules execute
-- [ ] **Install Script**: Test `curl -fsSL clipilot.themobileprof.com/clio | sh` (when deployed)
+- [ ] **Install Script**: Test `curl -fsSL clio.themobileprof.com/clio | sh` (when deployed)
 - [ ] **First Run**: Delete `~/.clio/`, run `clio` - verify initializes properly
 
 ### Integration Testing
 
-- [ ] **API Connectivity**: Verify Clio can reach `clipilot.themobileprof.com`
+- [ ] **API Connectivity**: Verify Clio can reach `clio.themobileprof.com`
 - [ ] **Module Download**: Test `/api/v1/modules/:id/download` endpoint
 - [ ] **Changed Endpoint**: Test `/api/v1/modules/changed?since=<timestamp>`
 - [ ] **Error Handling**: What happens if registry is down? (Should use cached modules)
@@ -556,7 +556,7 @@ func Load() (Config, error) {
 
 ### CI/CD Testing
 
-- [ ] **Install Script Upload**: Tag a release, verify script uploads to CLIPilot
+- [ ] **Install Script Upload**: Tag a release, verify script uploads to Clio
 - [ ] **Binary Integrity**: Download binary via install script, verify checksums
 - [ ] **Version Matching**: Ensure install script downloads correct binary version
 
@@ -612,7 +612,7 @@ func Sync() error {
 1. Delete `SyncFromGitHub()` function and GitHub API constants
 2. Remove `--github` fallback flag
 3. Update all documentation to only mention registry
-4. Delete `install.sh` from Clio repo (now hosted by CLIPilot)
+4. Delete `install.sh` from Clio repo (now hosted by Clio)
 
 **Timeline:** After Phase 2 has been stable for 1 month
 
@@ -621,8 +621,8 @@ func Sync() error {
 ## Summary
 
 **What Changes:**
-- Module sync source: GitHub API → CLIPilot registry
-- Install script hosting: Clio repo → CLIPilot server
+- Module sync source: GitHub API → Clio registry
+- Install script hosting: Clio repo → Clio registry server
 - Binary hosting: **No change** (stays on GitHub releases)
 
 **What Clio Gains:**
@@ -647,21 +647,21 @@ func Sync() error {
 ## Support & Questions
 
 **Registry API Documentation:**  
-See `docs/CLIO_API_REQUIREMENTS.md` in CLIPilot repo for full endpoint specs.
+See `docs/CLIO_API_REQUIREMENTS.md` in Clio repo for full endpoint specs.
 
 **Testing the Registry:**
 ```bash
 # List modules
-curl https://clipilot.themobileprof.com/api/v1/modules?limit=5
+curl https://clio.themobileprof.com/api/v1/modules?limit=5
 
 # Get module metadata
-curl https://clipilot.themobileprof.com/api/v1/modules/copy_file
+curl https://clio.themobileprof.com/api/v1/modules/copy_file
 
 # Download module
-curl https://clipilot.themobileprof.com/api/v1/modules/copy_file/download
+curl https://clio.themobileprof.com/api/v1/modules/copy_file/download
 
 # Check changed modules
-curl "https://clipilot.themobileprof.com/api/v1/modules/changed?since=2026-01-01T00:00:00Z"
+curl "https://clio.themobileprof.com/api/v1/modules/changed?since=2026-01-01T00:00:00Z"
 ```
 
-**Contact:** Open an issue in either CLIPilot or Clio repos for migration support.
+**Contact:** Open an issue in either Clio or Clio repos for migration support.

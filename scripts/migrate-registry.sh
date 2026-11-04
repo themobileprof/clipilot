@@ -1,9 +1,9 @@
 #!/bin/bash
-# Migration script to add registry support to existing clipilot database
+# Migration script to add registry support to an existing local Clio/client database
 
 DB_PATH="${1:-$HOME/.clipilot/clipilot.db}"
 
-echo "Migrating CLIPilot database: $DB_PATH"
+echo "Migrating Clio database: $DB_PATH"
 echo "==========================================="
 
 sqlite3 "$DB_PATH" << 'EOF'
@@ -49,6 +49,6 @@ echo ""
 echo "✓ Database migration complete!"
 echo ""
 echo "Next steps:"
-echo "  1. Run 'clipilot' to start the interactive assistant"
+echo "  1. Run 'clio' to start the interactive assistant"
 echo "  2. Run 'sync' to fetch available modules from registry"
 echo "  3. Run 'modules list --all' to see all modules"

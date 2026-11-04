@@ -1,11 +1,11 @@
-# CLIPilot Registry — AI Agent Instructions
+# Clio registry — AI Agent Instructions
 
-**CLIPilot is a server-only project.** The CLI client is **[Clio](https://github.com/themobileprof/clio)** — never add `cmd/clipilot` or a REPL here.
+**Clio is a server-only project.** The CLI client is **[Clio](https://github.com/themobileprof/clio)** — never add `cmd/clio (in the Clio repo)` or a REPL here.
 
 ## Build
 
 ```bash
-go build -o clipilot-server ./cmd/registry
+go build -o clio-server ./cmd/registry
 go test ./server/...
 ```
 

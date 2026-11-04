@@ -56,7 +56,7 @@ func main() {
 		log.Fatalf("Failed to create uploads directory: %v", err)
 	}
 
-	fmt.Printf("CLIPilot Registry v%s\n", version)
+	fmt.Printf("Clio registry v%s\n", version)
 	fmt.Printf("Starting server on port %s\n", port)
 	fmt.Printf("Data directory: %s\n", dataDir)
 	fmt.Printf("Admin user: %s\n", adminUser)

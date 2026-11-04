@@ -9,13 +9,13 @@ We release patches for security vulnerabilities in the following versions:
 | Latest  | :white_check_mark: |
 | < Latest| :x:                |
 
-We recommend always using the latest version of CLIPilot.
+We recommend always using the latest version of Clio.
 
 ## Reporting a Vulnerability
 
 **Please do not report security vulnerabilities through public GitHub issues.**
 
-If you discover a security vulnerability in CLIPilot, please report it privately:
+If you discover a security vulnerability in Clio, please report it privately:
 
 1. **Email**: Send details to the project maintainers through GitHub
 2. **GitHub Security**: Use GitHub's private security advisory feature
@@ -35,13 +35,13 @@ If you discover a security vulnerability in CLIPilot, please report it privately
 
 ## Security Best Practices
 
-When using CLIPilot:
+When using Clio:
 
 1. **Review Commands**: Always review commands before confirming execution
 2. **Module Sources**: Only install modules from trusted sources
 3. **Credentials**: Don't hardcode credentials in modules
 4. **Registry**: Use strong passwords for registry authentication
-5. **Updates**: Keep CLIPilot updated to the latest version
+5. **Updates**: Keep Clio updated to the latest version
 6. **Permissions**: Run with minimum required permissions
 
 ## Registry Security
@@ -70,4 +70,4 @@ Security updates will be:
 - Announced through GitHub releases
 - Tagged with "security" label
 
-Thank you for helping keep CLIPilot and its users safe!
+Thank you for helping keep Clio and its users safe!

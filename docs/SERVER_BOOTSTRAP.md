@@ -2,7 +2,7 @@
 
 ## Overview
 
-When the CLIPilot registry server starts for the first time with few or no enhanced commands, it automatically discovers commands available on the server and submits them for enhancement. This ensures the registry has a baseline dataset of commands even before users start syncing.
+When the Clio registry server starts for the first time with few or no enhanced commands, it automatically discovers commands available on the server and submits them for enhancement. This ensures the registry has a baseline dataset of commands even before users start syncing.
 
 ## How It Works
 
@@ -79,7 +79,7 @@ Bootstrap runs automatically when registry starts:
 ./bin/registry
 
 # Output:
-# CLIPilot Registry v1.0.0
+# Clio registry v1.0.0
 # Starting server on port 8080
 # ...
 # 2026/01/15 23:25:29 Current enhanced commands: 0

@@ -4,9 +4,9 @@
 *.dll
 *.so
 *.dylib
-clipilot
+clio-server
 clipilot-*
-!deploy/clipilot-registry.user.service
+!deploy/clio-registry.user.service
 cmd/clipilot/clipilot
 bin/
 *.tar.gz

@@ -1,8 +1,8 @@
-# CLIPilot Registry 🚀
+# Clio registry
 
-**A module registry server for CLI automation workflows**
+**Module registry and install site for [Clio](https://github.com/themobileprof/clio)**
 
-CLIPilot Registry is the backend server that powers [Clio](https://github.com/themobileprof/clio), a lightweight CLI assistant for developers and operations teams. The registry hosts, validates, and distributes YAML workflow modules that Clio executes on client systems.
+Clio is a CLI pilot for navigating the Linux terminal—especially on mobile. This repository is the server behind **clio.themobileprof.com**: install docs, module distribution, and the install script at `/clio`.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Build Status](https://github.com/themobileprof/clipilot/workflows/CI/CD/badge.svg)](https://github.com/themobileprof/clipilot/actions)
@@ -10,18 +10,18 @@ CLIPilot Registry is the backend server that powers [Clio](https://github.com/th
 
 ## 🏗️ Architecture
 
-**CLIPilot** is the **server** (this repository) - a web application for browsing, uploading, and managing workflow modules.
+**This repo** is the **server** — install docs, module browser, and API at `clio.themobileprof.com`.
 
-**Clio** is the **client** - an offline-first CLI assistant that turns plain English into shell commands, runs **setup wizards** (Termux, Neovim, Git, dev tools, databases), and syncs **automation modules** from this registry.
+**Clio** is the **client** — offline-first terminal assistant that turns plain English into shell commands, runs setup wizards, and syncs modules from this registry.
 
 ```
 ┌─────────────────────┐          ┌──────────────────────┐
-│   Clio Client       │  HTTPS   │  CLIPilot Registry   │
-│   (User's Machine)  │ <──────> │  (Server)            │
+│   Clio (client)     │  HTTPS   │  clio.themobileprof  │
+│   User's machine    │ <──────> │  (this server)       │
 │                     │  Sync    │                      │
-│  - Intent Detection │          │  - Module Storage    │
-│  - Module Execution │          │  - Web UI            │
-│  - Offline Ready    │          │  - API Endpoints     │
+│  - Intent detection │          │  - Module storage    │
+│  - Module execution │          │  - Install / use UI  │
+│  - Offline ready    │          │  - API endpoints     │
 └─────────────────────┘          └──────────────────────┘
 ```
 
@@ -44,7 +44,7 @@ CLIPilot Registry is the backend server that powers [Clio](https://github.com/th
 If you want to **use** CLI automation, install the Clio client:
 
 ```bash
-curl -fsSL clipilot.themobileprof.com/clio | sh
+curl -fsSL clio.themobileprof.com/clio | sh
 ```
 
 See the [Clio repository](https://github.com/themobileprof/clio) for documentation.
@@ -67,8 +67,8 @@ cd clipilot
 
 3. Build and run:
 ```bash
-go build -o clipilot-server ./cmd/registry
-./clipilot-server
+go build -o clio-server ./cmd/registry
+./clio-server
 ```
 
 The registry will be available at `http://localhost:8080` (or the port set in `PORT`).
@@ -88,8 +88,8 @@ sudo loginctl enable-linger YOUR_USERNAME
 ```
 
 Deploy layout (under that user's home directory):
-- `~/clipilot-registry/` — binary, static assets, env file
-- `~/clipilot-data/` — SQLite database and uploads
+- `~/clio-registry/` — binary, static assets, env file
+- `~/clio-data/` — SQLite database and uploads
 
 For manual server deployment (SSH in as that user, then):
 ```bash
@@ -203,7 +203,7 @@ For Clio client changes, visit the [Clio repository](https://github.com/themobil
 ## 📚 Documentation
 
 - [CLIO_API_REQUIREMENTS.md](docs/CLIO_API_REQUIREMENTS.md) - API specification for clients
-- [CLIO_MIGRATION_GUIDE.md](docs/CLIO_MIGRATION_GUIDE.md) - Migration from CLIPilot to Clio
+- [CLIO_MIGRATION_GUIDE.md](docs/CLIO_MIGRATION_GUIDE.md) - Migration notes for the Clio registry
 - [TERMUX.md](docs/TERMUX.md) - Android/Termux deployment guide
 - [ADMIN_SETUP.md](scripts/ADMIN_SETUP.md) - Admin user creation guide
 - [TESTING.md](TESTING.md) - Testing procedures
@@ -237,8 +237,8 @@ MIT License - see [LICENSE](LICENSE) for details.
 
 ---
 
-**Part of the CLIPilot ecosystem:**
-- [CLIPilot Registry](https://github.com/themobileprof/clipilot) (this repo) - Server
+**Related:**
+- [This registry server](https://github.com/themobileprof/clipilot)
 - [Clio](https://github.com/themobileprof/clio) - CLI Client
 
 Made with ❤️ for developers automating their workflows

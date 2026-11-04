@@ -1,5 +1,5 @@
 #!/bin/bash
-# CLIPilot Test Runner Script
+# Clio Test Runner Script
 # Provides quick commands for running different test scenarios
 
 set -e
@@ -12,7 +12,7 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 echo -e "${BLUE}================================================${NC}"
-echo -e "${BLUE}       CLIPilot Test Suite Runner${NC}"
+echo -e "${BLUE}       Clio Test Suite Runner${NC}"
 echo -e "${BLUE}================================================${NC}"
 echo ""
 
@@ -104,7 +104,7 @@ case "${1:-all}" in
         run_test "Unit Tests" "go test -v ./..."
         run_test "Race Detection" "go test -race ./..."
         run_test "Coverage" "go test -coverprofile=coverage.txt -covermode=atomic ./..."
-        run_test "Build Registry" "go build -o bin/clipilot-server ./cmd/registry"
+        run_test "Build Registry" "go build -o bin/clio-server ./cmd/registry"
         echo ""
         echo -e "${GREEN}✅ Full CI/CD test suite PASSED${NC}"
         ;;

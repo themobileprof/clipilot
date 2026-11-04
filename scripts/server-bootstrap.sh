@@ -28,8 +28,8 @@ echo "Enabling systemd linger for $DEPLOY_USER..."
 loginctl enable-linger "$DEPLOY_USER"
 
 echo "Creating home directories..."
-sudo -u "$DEPLOY_USER" mkdir -p "/home/$DEPLOY_USER/clipilot-registry/server"
-sudo -u "$DEPLOY_USER" mkdir -p "/home/$DEPLOY_USER/clipilot-data"
+sudo -u "$DEPLOY_USER" mkdir -p "/home/$DEPLOY_USER/clio-registry/server"
+sudo -u "$DEPLOY_USER" mkdir -p "/home/$DEPLOY_USER/clio-data"
 
 echo ""
 echo "Bootstrap complete for user: $DEPLOY_USER"

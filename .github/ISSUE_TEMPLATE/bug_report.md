@@ -24,7 +24,7 @@ What actually happened.
 
 **Environment:**
  - OS: [e.g. Ubuntu 22.04, Termux on Android 12, macOS 14]
- - CLIPilot Version: [e.g. 0.1.0]
+ - Clio Version: [e.g. 0.1.0]
  - Go Version (if building from source): [e.g. 1.21.5]
  - Architecture: [e.g. amd64, arm64, armv7]
 

@@ -1,21 +1,21 @@
-# Contributing to CLIPilot Registry
+# Contributing to Clio registry
 
-CLIPilot is the **server** (module registry + semantic search API). The **CLI client** is [Clio](https://github.com/themobileprof/clio) — do not add a second CLI to this repo.
+Clio is the **server** (module registry + semantic search API). The **CLI client** is [Clio](https://github.com/themobileprof/clio) — do not add a second CLI to this repo.
 
 ## Development Setup
 
 ```bash
 git clone https://github.com/themobileprof/clipilot.git
-cd clipilot
+cd clio
 go mod download
 go test ./...
-go build -o clipilot-server ./cmd/registry
+go build -o clio-server ./cmd/registry
 ```
 
 ## Architecture
 
 ```
-Clio (client)  ──HTTPS──▶  CLIPilot Registry (this repo)
+Clio (client)  ──HTTPS──▶  Clio registry (this repo)
                            ├── Web UI (modules, upload)
                            ├── /api/v1/modules/* (sync)
                            └── /api/commands/search (remote fallback)
@@ -45,7 +45,7 @@ YAML workflows live in `modules/`. Clio syncs them via `/api/v1/modules/changed`
 
 - **More command matches**: edit `server/catalog/common_commands.yaml` or `server/catalog/tokens.go` (Pidgin slang)
 - **API changes**: update `docs/CLIO_API_REQUIREMENTS.md` and [Clio](https://github.com/themobileprof/clio)
-- **Do not** add `cmd/clipilot` or client REPL code — use Clio instead
+- **Do not** add `cmd/clio (in the Clio repo)` or client REPL code — use Clio instead
 
 ## Tests
 

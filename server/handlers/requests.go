@@ -25,7 +25,7 @@ type ModuleRequest struct {
 }
 
 // APIModuleRequest handles POST /api/module-request
-// This is called by CLIPilot clients when no matching module is found
+// This is called by Clio clients when no matching module is found
 func (h *Handlers) APIModuleRequest(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -74,7 +74,7 @@ func (h *Handlers) APIModuleRequest(w http.ResponseWriter, r *http.Request) {
 		"message":    "Thank you! Your request has been received. Our community is working to expand the module library, and your feedback helps us prioritize what to build next.",
 		"request_id": requestID,
 		"status":     "pending",
-		"note":       "You can check https://clipilot.themobileprof.com for new modules, or contribute by logging in with GitHub.",
+		"note":       "You can check https://clio.themobileprof.com for new modules, or contribute by logging in with GitHub.",
 	}); err != nil {
 		log.Printf("Failed to encode response: %v", err)
 	}

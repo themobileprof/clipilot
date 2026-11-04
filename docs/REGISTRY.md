@@ -1,10 +1,10 @@
-# CLIPilot Registry
+# Clio registry
 
-Web-based module registry for CLIPilot community modules.
+Web-based module registry for Clio community modules.
 
 ## Overview
 
-The registry server allows authenticated users to upload and share YAML modules for CLIPilot. Users can browse available modules, download them directly, or install them via the CLI tool.
+The registry server allows authenticated users to upload and share YAML modules for Clio. Users can browse available modules, download them directly, or install them via the CLI tool.
 
 ## Quick Start
 
@@ -39,14 +39,14 @@ Open your browser to `http://localhost:8080`
 
 ```bash
 # Set registry URL (required for registry features)
-clipilot settings set registry_url http://your-registry.com
+clio settings set registry_url http://your-registry.com
 # Or use environment variable: export REGISTRY_URL=http://your-registry.com
 
 # Install a module by ID
-clipilot modules install 1
+clio modules install 1
 
 # List installed modules
-clipilot modules list
+clio modules list
 ```
 
 ## Features
@@ -108,7 +108,7 @@ data/
     "name": "git_setup",
     "version": "1.0.0",
     "description": "Install and configure Git",
-    "author": "CLIPilot Team",
+    "author": "Clio Team",
     "downloads": 42
   }
 ]
@@ -118,7 +118,7 @@ data/
 
 ### Requirements
 
-Modules must be valid YAML files following the CLIPilot module specification:
+Modules must be valid YAML files following the Clio module specification:
 
 ```yaml
 metadata:
@@ -157,7 +157,7 @@ The upload page includes a detailed prompt you can use with ChatGPT to generate 
 4. Upload the generated YAML
 
 Example prompt usage:
-> "Create a CLIPilot module YAML file for setting up a Python virtual environment with pip and installing common data science packages."
+> "Create a Clio module YAML file for setting up a Python virtual environment with pip and installing common data science packages."
 
 ## Deployment
 
@@ -186,10 +186,10 @@ Manual server deployment (SSH in as that user):
 ```
 
 Production defaults:
-- Binary: `~/clipilot-registry/registry`
-- Data: `~/clipilot-data/`
-- Environment: `~/clipilot-registry/env`
-- Service: `~/.config/systemd/user/clipilot-registry.service`
+- Binary: `~/clio-registry/registry`
+- Data: `~/clio-data/`
+- Environment: `~/clio-registry/env`
+- Service: `~/.config/systemd/user/clio-registry.service`
 
 ## Security Notes
 
@@ -284,4 +284,4 @@ rm -f data/registry.db-wal data/registry.db-shm
 
 ## License
 
-Same as CLIPilot main project (see LICENSE file).
+Same as Clio main project (see LICENSE file).

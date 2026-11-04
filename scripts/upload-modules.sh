@@ -4,13 +4,13 @@
 
 set -e
 
-REGISTRY_URL="${1:-https://clipilot.themobileprof.com}"
+REGISTRY_URL="${1:-https://clio.themobileprof.com}"
 USERNAME="${2:-admin}"
 PASSWORD="${3}"
 
 if [ -z "$PASSWORD" ]; then
     echo "Usage: $0 [registry-url] [username] [password]"
-    echo "Example: $0 https://clipilot.themobileprof.com admin mypassword"
+    echo "Example: $0 https://clio.themobileprof.com admin mypassword"
     exit 1
 fi
 

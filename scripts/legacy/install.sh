@@ -1,6 +1,6 @@
 #!/bin/bash
-# CLIPilot Installation Script
-# Installs CLIPilot and initializes the database with default modules
+# Clio Installation Script
+# Installs Clio and initializes the database with default modules
 
 set -e  # Exit on error
 
@@ -16,7 +16,7 @@ YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
 echo "========================================"
-echo "  CLIPilot Installation Script"
+echo "  Clio Installation Script"
 echo "========================================"
 echo ""
 
@@ -25,7 +25,7 @@ IS_TERMUX=false
 if [ -n "$TERMUX_VERSION" ] || [ -n "$PREFIX" ]; then
     IS_TERMUX=true
     echo -e "${YELLOW}📱 Termux environment detected${NC}"
-    echo -e "${GREEN}Termux is a first-class platform for CLIPilot!${NC}"
+    echo -e "${GREEN}Termux is a first-class platform for Clio!${NC}"
     echo ""
 fi
 
@@ -389,7 +389,7 @@ if [[ ":$PATH:" != *":${INSTALL_DIR}:"* ]]; then
     if [ -n "$SHELL_RC" ]; then
         if ! grep -q "export PATH.*${INSTALL_DIR}" "$SHELL_RC" 2>/dev/null; then
             echo "" >> "$SHELL_RC"
-            echo "# Added by CLIPilot installer" >> "$SHELL_RC"
+            echo "# Added by Clio installer" >> "$SHELL_RC"
             echo "export PATH=\"\$PATH:${INSTALL_DIR}\"" >> "$SHELL_RC"
         fi
         export PATH="$PATH:${INSTALL_DIR}"
@@ -397,7 +397,7 @@ if [[ ":$PATH:" != *":${INSTALL_DIR}:"* ]]; then
 fi
 
 echo ""
-echo -e "${GREEN}✓ CLIPilot installed successfully!${NC}"
+echo -e "${GREEN}✓ Clio installed successfully!${NC}"
 echo ""
 if [ "$IS_TERMUX" = true ]; then
     echo "Try: clipilot run termux_setup"
@@ -406,9 +406,9 @@ else
 fi
 echo ""
 
-# Offer to start CLIPilot interactively (with proper prompt handling)
+# Offer to start Clio interactively (with proper prompt handling)
 if [ -t 0 ]; then
-    echo -n "Start CLIPilot now? [Y/n]: "
+    echo -n "Start Clio now? [Y/n]: "
     read -r response
     response=${response,,}
     if [ -z "$response" ] || [ "$response" = "y" ] || [ "$response" = "yes" ]; then

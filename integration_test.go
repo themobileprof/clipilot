@@ -13,17 +13,17 @@ import (
 
 // TestServerBuild tests that the server binary builds successfully
 func TestServerBuild(t *testing.T) {
-	cmd := exec.Command("go", "build", "-o", "clipilot-server-test", "./cmd/registry")
+	cmd := exec.Command("go", "build", "-o", "clio-server-test", "./cmd/registry")
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		t.Fatalf("Build failed: %v\nOutput: %s", err, output)
 	}
 
 	// Clean up
-	defer os.Remove("clipilot-server-test")
+	defer os.Remove("clio-server-test")
 
 	// Verify binary exists
-	if _, err := os.Stat("clipilot-server-test"); os.IsNotExist(err) {
+	if _, err := os.Stat("clio-server-test"); os.IsNotExist(err) {
 		t.Fatal("Binary was not created")
 	}
 }
@@ -63,17 +63,17 @@ func TestModuleDependencies(t *testing.T) {
 // TestServerStartup tests that the server can start and respond to health checks
 func TestServerStartup(t *testing.T) {
 	// Build server first
-	buildCmd := exec.Command("go", "build", "-o", "clipilot-server-test", "./cmd/registry")
+	buildCmd := exec.Command("go", "build", "-o", "clio-server-test", "./cmd/registry")
 	if output, err := buildCmd.CombinedOutput(); err != nil {
 		t.Fatalf("Build failed: %v\nOutput: %s", err, output)
 	}
-	defer os.Remove("clipilot-server-test")
+	defer os.Remove("clio-server-test")
 
 	// Create temporary data directory
 	tmpDir := t.TempDir()
 
 	// Start server
-	cmd := exec.Command("./clipilot-server-test",
+	cmd := exec.Command("./clio-server-test",
 		"--port=8999",
 		"--data="+tmpDir,
 		"--admin=test",

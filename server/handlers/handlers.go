@@ -164,7 +164,7 @@ func (h *Handlers) Home(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
-	h.renderGuide(w, r, "home.html", "CLIPilot", "Install Clio, then use it to build and publish a site.")
+	h.renderGuide(w, r, "home.html", "Clio", "Install Clio, then use it to build and publish a site.")
 }
 
 // InstallGuide is the step-by-step Clio installation page.

@@ -2,7 +2,7 @@
 
 ## Overview
 
-The **common commands catalog** powers `POST /api/commands/search` on the CLIPilot registry. The **[Clio](https://github.com/themobileprof/clio)** client calls this endpoint when offline matching fails.
+The **common commands catalog** powers `POST /api/commands/search` on the Clio registry. The **[Clio](https://github.com/themobileprof/clio)** client calls this endpoint when offline matching fails.
 
 ## How It Works (server-side)
 
@@ -111,7 +111,7 @@ The catalog includes package names for **5 different package managers**:
 - **brew** (macOS): `brew install <package>`
 - **pacman** (Arch Linux): `sudo pacman -S <package>`
 
-CLIPilot automatically detects your OS and shows the correct installation command!
+Clio automatically detects your OS and shows the correct installation command!
 
 ### Termux Example
 ```bash
@@ -153,7 +153,7 @@ Higher priority commands appear first in search results.
 The catalog is automatically loaded when you run:
 
 ```bash
-clipilot update-commands
+clio update-commands
 ```
 
 Or during installation via `install.sh`.
@@ -210,7 +210,7 @@ To add a command to the catalog:
      homepage: https://example.com      # optional
      priority: 75                        # 0-100
    ```
-3. Test with `clipilot update-commands`
+3. Test with `clio update-commands`
 4. Submit a pull request
 
 ## Architecture
@@ -268,7 +268,7 @@ CREATE INDEX idx_common_commands_priority ON common_commands(priority DESC);
 ✅ **Discoverability**: Users find tools they didn't know existed  
 ✅ **No guesswork**: Exact installation command provided  
 ✅ **Cross-platform**: Works on Linux, macOS, and Android (Termux)  
-✅ **Offline-first**: Catalog embedded with CLIPilot  
+✅ **Offline-first**: Catalog embedded with Clio  
 ✅ **Smart fallback**: Only suggests when no strong match found  
 ✅ **Priority-based**: Most useful commands appear first  
 

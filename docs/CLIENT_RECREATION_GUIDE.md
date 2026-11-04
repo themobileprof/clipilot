@@ -1,6 +1,6 @@
-# CLIPilot Client Recreation Guide
+# Clio client Recreation Guide
 
-This document serves as a blueprint for recreating the functionalities of the CLIPilot client. It details the core logic, data structures, and algorithms required to build a compatible client from scratch.
+This document serves as a blueprint for recreating the functionalities of the Clio client. It details the core logic, data structures, and algorithms required to build a compatible client from scratch.
 
 ## 1. Core Architecture
 
@@ -32,7 +32,7 @@ To effectively search both the offline catalog and `man` pages, the client **mus
 
 ## 3. Intent Detection Algorithm (The "Brain")
 
-The heart of CLIPilot is the `Detect(input)` function. It uses the **isolated keywords** from Section 2 in a 4-layer fallback strategy.
+The heart of Clio is the `Detect(input)` function. It uses the **isolated keywords** from Section 2 in a 4-layer fallback strategy.
 
 ### Layer 1: Offline Basic Commands (Static)
 *   **Source:** Compiled Key-Value pair (in binary) or a simple text file. **NOT** a database.
@@ -67,7 +67,7 @@ The heart of CLIPilot is the `Detect(input)` function. It uses the **isolated ke
     2.  This allows custom workflows to override or augment system commands.
 
 ### Layer 4: Remote Fallback (Online)
-*   **Source:** Remote Registry API (`POST clipilot.themobileprof.com/api/commands/search`).
+*   **Source:** Remote Registry API (`POST clio.themobileprof.com/api/commands/search`).
 *   **Logic:**
     1.  If all local layers fail.
     2.  Send query to server.
