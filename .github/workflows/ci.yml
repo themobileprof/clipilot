@@ -134,8 +134,10 @@ jobs:
             ${{ secrets.ENV_FILE }}
             EOF
 
+            # Rewrite runtime paths. Default PORT=8082 (8080 is often taken by Apache).
             {
-              grep -v -E '^(DATA_DIR|STATIC_DIR|TEMPLATE_DIR)=' /tmp/clio-registry.env || true
+              grep -v -E '^(DATA_DIR|STATIC_DIR|TEMPLATE_DIR|PORT)=' /tmp/clio-registry.env || true
+              echo "PORT=${PORT_OVERRIDE:-8082}"
               echo "DATA_DIR=$HOME/clio-data"
               echo "STATIC_DIR=$HOME/clio-registry/server/static"
               echo "TEMPLATE_DIR=$HOME/clio-registry/server/templates"
