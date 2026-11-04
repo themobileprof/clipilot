@@ -85,9 +85,14 @@ write_env_file() {
     echo "TEMPLATE_DIR=$TEMPLATE_DIR"
   } > "$ENV_FILE"
 
-  # Normalize PORT: strip quotes/whitespace; default 8082 (8080 is often Apache).
+  # Normalize PORT: strip quotes/whitespace; default 8082.
+  # Remap 8080 → 8082 on this host (Apache already binds 8080).
   port_val=$(grep -E '^[[:space:]]*PORT=' "$DEPLOY_ENV_FILE" | tail -1 | sed 's/^[[:space:]]*PORT=//' | tr -d ' \t\r"'"'" || true)
   if ! [[ "$port_val" =~ ^[0-9]+$ ]]; then
+    port_val=8082
+  fi
+  if [ "$port_val" = "8080" ]; then
+    echo "PORT=8080 conflicts with Apache; using 8082"
     port_val=8082
   fi
   echo "PORT=$port_val" >> "$ENV_FILE"
