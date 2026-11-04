@@ -75,12 +75,15 @@ write_env_file() {
   fi
 
   mkdir -p "$(dirname "$ENV_FILE")"
-  grep -v -E '^(DATA_DIR|STATIC_DIR|TEMPLATE_DIR)=' "$DEPLOY_ENV_FILE" > "$ENV_FILE" || true
+  # Strip leading whitespace so systemd EnvironmentFile accepts every line.
+  # Drop a leftover .env in the install dir — it can override PORT after migration.
+  rm -f "$INSTALL_DIR/.env"
   {
+    grep -v -E '^[[:space:]]*(DATA_DIR|STATIC_DIR|TEMPLATE_DIR)=' "$DEPLOY_ENV_FILE" | sed 's/^[[:space:]]*//' || true
     echo "DATA_DIR=$DATA_DIR"
     echo "STATIC_DIR=$STATIC_DIR"
     echo "TEMPLATE_DIR=$TEMPLATE_DIR"
-  } >> "$ENV_FILE"
+  } > "$ENV_FILE"
   chmod 600 "$ENV_FILE"
 }
 

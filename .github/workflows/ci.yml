@@ -115,11 +115,14 @@ jobs:
 
       - name: Deploy on server
         uses: appleboy/ssh-action@v1.2.0
+        env:
+          ENV_FILE_SECRET: ${{ secrets.ENV_FILE }}
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USERNAME }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: ${{ secrets.SSH_PORT || 22 }}
+          envs: ENV_FILE_SECRET
           script: |
             set -euo pipefail
             export XDG_RUNTIME_DIR="/run/user/$(id -u)"
@@ -130,19 +133,21 @@ jobs:
             mkdir -p /tmp/clio-deploy
             tar xzf /tmp/clio-deploy.tar.gz -C /tmp/clio-deploy
 
-            cat > /tmp/clio-registry.env << 'EOF'
-            ${{ secrets.ENV_FILE }}
-            EOF
+            # Write ENV_FILE without YAML-indent pollution.
+            printf '%s\n' "$ENV_FILE_SECRET" > /tmp/clio-registry.env
+            sed -i 's/^[[:space:]]*//; s/\r$//' /tmp/clio-registry.env
 
-            # Rewrite runtime paths. Default PORT=8082 (8080 is often taken by Apache).
+            # Keep PORT from ENV_FILE; default only if missing. Rewrite data/asset paths.
             {
-              grep -v -E '^(DATA_DIR|STATIC_DIR|TEMPLATE_DIR|PORT)=' /tmp/clio-registry.env || true
-              echo "PORT=${PORT_OVERRIDE:-8082}"
+              grep -v -E '^(DATA_DIR|STATIC_DIR|TEMPLATE_DIR)=' /tmp/clio-registry.env || true
               echo "DATA_DIR=$HOME/clio-data"
               echo "STATIC_DIR=$HOME/clio-registry/server/static"
               echo "TEMPLATE_DIR=$HOME/clio-registry/server/templates"
             } > /tmp/clio-registry.env.new
             mv /tmp/clio-registry.env.new /tmp/clio-registry.env
+            grep -q '^PORT=' /tmp/clio-registry.env || echo 'PORT=8082' >> /tmp/clio-registry.env
+
+            echo "Deploy PORT=$(grep '^PORT=' /tmp/clio-registry.env | head -1)"
 
             DEPLOY_MODE=user \
               DEPLOY_STAGING_DIR=/tmp/clio-deploy \
