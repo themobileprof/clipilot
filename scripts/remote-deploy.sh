@@ -137,19 +137,25 @@ deploy_clio_install_script() {
 
   script_version=$(grep -m1 '^VERSION=' "$tmp_script" | cut -d'=' -f2 | tr -d '"' || echo "auto")
 
-  if curl -fsS -c "$cookie_jar" -b "$cookie_jar" \
-    -X POST "http://127.0.0.1:${port}/login" \
-    -d "username=${ADMIN_USER:-admin}&password=${ADMIN_PASSWORD}" \
-    -o /dev/null; then
-    if curl -fsS -b "$cookie_jar" \
-      -X POST "http://127.0.0.1:${port}/api/install-script/upload" \
-      -F "file=@${tmp_script};filename=install.sh" \
-      -F "version=${script_version}" >/dev/null; then
-      echo "Clio install script uploaded via API (v${script_version})"
-      rm -f "$tmp_script" "$cookie_jar"
-      return 0
+  # Startup seeding locks the database for a moment. Retry past that.
+  local attempt=0
+  while [ "$attempt" -lt 10 ]; do
+    if curl -fsS -c "$cookie_jar" -b "$cookie_jar" \
+      -X POST "http://127.0.0.1:${port}/login" \
+      -d "username=${ADMIN_USER:-admin}&password=${ADMIN_PASSWORD}" \
+      -o /dev/null; then
+      if curl -fsS -b "$cookie_jar" \
+        -X POST "http://127.0.0.1:${port}/api/install-script/upload" \
+        -F "file=@${tmp_script};filename=install.sh" \
+        -F "version=${script_version}" >/dev/null; then
+        echo "Clio install script uploaded via API (v${script_version})"
+        rm -f "$tmp_script" "$cookie_jar"
+        return 0
+      fi
     fi
-  fi
+    attempt=$((attempt + 1))
+    sleep 2
+  done
 
   echo "Warning: API upload failed; server will bootstrap /clio on startup"
   rm -f "$tmp_script" "$cookie_jar"
@@ -177,17 +183,38 @@ verify_health() {
 
 verify_clio_endpoint() {
   local port="${PORT:-8080}"
-  if curl -fsS "http://127.0.0.1:${port}/clio" | head -1 | grep -q '#!/'; then
-    echo "Clio install endpoint ready"
-    return 0
-  fi
+  local attempt=0
+  while [ "$attempt" -lt 10 ]; do
+    if curl -fsS "http://127.0.0.1:${port}/clio" | head -1 | grep -q '#!/'; then
+      echo "Clio install endpoint ready"
+      return 0
+    fi
+    attempt=$((attempt + 1))
+    sleep 2
+  done
   echo "Warning: /clio not serving install script yet"
   return 0
 }
 
+load_existing_env() {
+  if [ ! -f "$ENV_FILE" ]; then
+    echo "Error: $ENV_FILE is missing. Pass DEPLOY_ENV_FILE to create it."
+    exit 1
+  fi
+  set -a
+  # shellcheck disable=SC1090
+  source "$ENV_FILE"
+  set +a
+  echo "Using existing env file (PORT=${PORT:-unset})"
+}
+
 ensure_user_systemd
 migrate_legacy_paths
-write_env_file
+if [ -n "${DEPLOY_ENV_FILE:-}" ]; then
+  write_env_file
+else
+  load_existing_env
+fi
 install_files
 
 "${SYSTEMCTL[@]}" daemon-reload

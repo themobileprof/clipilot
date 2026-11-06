@@ -75,7 +75,7 @@ The registry will be available at `http://localhost:8080` (or the port set in `P
 
 ### Production
 
-Production deploys run automatically on push to `main` via GitHub Actions (`.github/workflows/ci.yml`).
+Production deploys run from this machine with `./scripts/ship.sh`. That builds the registry, copies it to the server, and restarts `clio-registry`. The server keeps its existing env file. GitHub Actions is not used: the account is locked for a billing issue, so those jobs never start.
 
 Required GitHub secrets:
 - `SSH_HOST`, `SSH_USERNAME`, `SSH_PRIVATE_KEY`

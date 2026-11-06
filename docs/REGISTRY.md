@@ -171,7 +171,7 @@ Example prompt usage:
 
 ### Production Deployment
 
-Pushes to `main` deploy automatically via `.github/workflows/ci.yml` (no sudo; user systemd).
+Deploy from a checkout with `./scripts/ship.sh` (no sudo; user systemd). GitHub Actions does not deploy: the account is locked for a billing issue, so those jobs never start.
 
 One-time root setup on the server (use your actual SSH username):
 

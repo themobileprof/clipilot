@@ -28,15 +28,13 @@ Implementation: [scripts/remote-deploy.sh](../scripts/remote-deploy.sh), invoked
 
 ## Deploying to Production
 
-Push to `main` to deploy automatically:
+Deploy from a checkout:
 
 ```bash
-git add server/templates/home.html
-git commit -m "Update home page messaging"
-git push origin main
+./scripts/ship.sh
 ```
 
-The CI/CD workflow builds the binary, copies it to the server, and restarts the `clio-registry` systemd service.
+That builds the binary, copies it to the server, and restarts the `clio-registry` user service. GitHub Actions does not deploy while the account is locked for a billing issue.
 
 ---
 
@@ -65,9 +63,9 @@ sudo journalctl -u clio-registry -n 50
 curl http://127.0.0.1:8080/health
 ```
 
-### "Deployment workflow failed"
+### "Deploy failed"
 
-Check GitHub Actions logs for the **Deploy** job in `.github/workflows/ci.yml`.
+Run `./scripts/ship.sh` again and read the health-check output. The service log on the server is `journalctl --user -u clio-registry -n 50`.
 
 ---
 
