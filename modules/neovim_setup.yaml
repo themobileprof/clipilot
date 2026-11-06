@@ -1,6 +1,6 @@
 name: neovim_setup
 id: neovim_setup
-version: 1.3.2
+version: 1.3.3
 description: Neovim with a small plugin set for generating code, rewriting it, and editing
 tags:
   - neovim
@@ -254,7 +254,7 @@ flows:
                   providers = {
                     openai = {
                       endpoint = "https://api.deepseek.com/chat/completions",
-                      secret = { "cat", vim.fn.expand("~/.config/gp/deepseek.key") },
+                      secret = { "bash", "-c", "key=$(llm keys get deepseek 2>/dev/null | tr -d '[:space:]'); if [ -z \"$key\" ] && [ -f \"$HOME/.config/gp/deepseek.key\" ]; then key=$(tr -d '[:space:]' < \"$HOME/.config/gp/deepseek.key\"); fi; if [ -n \"$key\" ]; then printf '%s' \"$key\"; else exit 1; fi" },
                     },
                   },
                   agents = {
@@ -331,8 +331,17 @@ flows:
             command: |
               KEY_FILE="$HOME/.config/gp/deepseek.key"
               mkdir -p "$(dirname "$KEY_FILE")"
-              REPLACE=y
-              if [ -s "$KEY_FILE" ]; then
+              SAVED=$(llm keys get deepseek 2>/dev/null | tr -d '[:space:]' || true)
+              if [ -n "$SAVED" ]; then
+                umask 077
+                printf '%s' "$SAVED" > "$KEY_FILE"
+                chmod 600 "$KEY_FILE"
+                echo "Neovim will use the DeepSeek key already saved for clio ask."
+                REPLACE=n
+              else
+                REPLACE=y
+              fi
+              if [ "$REPLACE" = "y" ] && [ -s "$KEY_FILE" ]; then
                 echo "A DeepSeek key is already at $KEY_FILE"
                 read -r -p "Replace it? [y/N]: " REPLACE || REPLACE=n
                 REPLACE=$(printf '%s' "$REPLACE" | tr '[:upper:]' '[:lower:]')
