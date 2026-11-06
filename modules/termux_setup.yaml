@@ -1,6 +1,6 @@
 name: Termux Complete Setup
 id: termux_setup
-version: 1.2.8
+version: 1.2.9
 description: Complete development environment setup for Termux including Zsh, Git, LLM, and dev languages
 tags:
   - termux
@@ -176,7 +176,7 @@ flows:
             content: "Installing llm via pip..."
           
           - type: command
-            command: "python -m pip install --upgrade-strategy only-if-needed --only-binary=jiter,pydantic-core --extra-index-url https://pypi.flet.dev/ --extra-index-url https://eutalix.github.io/android-pydantic-core/ 'jiter==0.15.0' 'pydantic-core==2.50.0' 'pydantic==2.14.0' 'llm==0.32.1'"
+            command: "python -m pip install --upgrade-strategy only-if-needed --only-binary=jiter,pydantic-core --extra-index-url https://pypi.flet.dev/ --extra-index-url https://eutalix.github.io/android-pydantic-core/ 'jiter==0.15.0' 'pydantic-core==2.50.0' 'pydantic==2.14.0' 'llm==0.32.1' llm-deepseek llm-gemini"
             description: Installing the model program
             show_output: true
             continue_on_error: true
