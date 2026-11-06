@@ -1,6 +1,6 @@
 name: Termux Complete Setup
 id: termux_setup
-version: 1.2.6
+version: 1.2.7
 description: Complete development environment setup for Termux including Zsh, Git, LLM, and dev languages
 tags:
   - termux
@@ -176,7 +176,8 @@ flows:
             content: "Installing llm via pip..."
           
           - type: command
-            command: python -m pip install -U llm
+            command: "python -m pip install --upgrade-strategy only-if-needed --only-binary=jiter,pydantic-core --extra-index-url https://pypi.flet.dev/ --extra-index-url https://eutalix.github.io/android-pydantic-core/ 'jiter==0.15.0' 'pydantic-core==2.50.0' 'pydantic==2.14.0' 'llm==0.32.1'"
+            description: Installing the model program
             show_output: true
             continue_on_error: true
           
@@ -202,12 +203,9 @@ flows:
           
           - type: command
             command: "printf '%s\n' \"$DEEPSEEK_API_KEY\" | clio key deepseek"
+            description: Checking and saving the DeepSeek key
             condition: "{{ .DEEPSEEK_API_KEY }}"
-            continue_on_error: true
-          
-          - type: command
-            command: llm install llm-deepseek
-            description: Installing DeepSeek plugin
+            show_output: true
             continue_on_error: true
           
           - type: message
@@ -257,12 +255,9 @@ flows:
           
           - type: command
             command: "printf '%s\n' \"$GEMINI_API_KEY\" | clio key gemini"
+            description: Checking and saving the Gemini key
             condition: "{{ .GEMINI_API_KEY }}"
-            continue_on_error: true
-          
-          - type: command
-            command: llm install llm-gemini
-            description: Installing Gemini plugin
+            show_output: true
             continue_on_error: true
           
           - type: message
