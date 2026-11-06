@@ -30,7 +30,7 @@
             <div class="step-no">1</div>
             <div>
                 <h2>Start the site</h2>
-                <p>Pico CSS draws the navigation bar, the hero row, the card sections, and the footer. The model writes the HTML. You type only the sentence that describes the page. Put photos in <code>images/</code> first and name them for what they show, such as <code>images/hero.jpg</code>. Neovim gives the model those file names. It does not download pictures.</p>
+                <p>Pico CSS draws the navigation bar, the cards, and the footer. On a phone the links stack in a vertical list. The home page can have a hero. An about page stays prose, and a contact page can be a form. The model writes the HTML. You type only the sentence that describes the page. Put photos in <code>images/</code> first and name them for what they show, such as <code>images/hero.jpg</code>. Neovim gives the model those file names. It does not download pictures.</p>
                 <p class="where">Terminal, before Neovim</p>
                 <div class="cmd">
                     <div class="cmd-bar"><span>Terminal</span><button type="button" data-copy>Copy</button></div>
@@ -45,6 +45,15 @@ nvim index.html</pre>
                     <pre>mkdir -p ~/.clio/share
 curl -fsSL -o ~/.clio/share/pico.min.css \
   https://cdn.jsdelivr.net/npm/@picocss/pico@2.1.1/css/pico.min.css
+grep -q clio-nav ~/.clio/share/pico.min.css || cat >> ~/.clio/share/pico.min.css << 'EOF'
+
+/* clio-nav: stack the bar on a phone */
+@media (max-width: 767px) {
+  nav, nav ul, nav ol { flex-direction: column; align-items: stretch; }
+  nav li { display: block; }
+  nav li :where(a, [role=link]) { display: block; }
+}
+EOF
 cp ~/.clio/share/pico.min.css css/</pre>
                 </div>
             </div>

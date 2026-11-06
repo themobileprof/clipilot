@@ -1,6 +1,6 @@
 name: Termux Complete Setup
 id: termux_setup
-version: 1.2.10
+version: 1.2.11
 description: Complete development environment setup for Termux including Zsh, Git, LLM, and dev languages
 tags:
   - termux
@@ -325,6 +325,9 @@ flows:
                 if curl -fsSL -o "$HOME/.clio/share/pico.min.css" \
                     https://cdn.jsdelivr.net/npm/@picocss/pico@2.1.1/css/pico.min.css \
                   && [ -s "$HOME/.clio/share/pico.min.css" ]; then
+                  if ! grep -q 'clio-nav' "$HOME/.clio/share/pico.min.css"; then
+                    printf '\n/* clio-nav: stack the bar on a phone */\n@media (max-width: 767px) {\n  nav, nav ul, nav ol { flex-direction: column; align-items: stretch; }\n  nav li { display: block; }\n  nav li :where(a, [role=link]) { display: block; }\n}\n' >> "$HOME/.clio/share/pico.min.css"
+                  fi
                   echo "Saved Pico CSS to ~/.clio/share/pico.min.css"
                 else
                   rm -f "$HOME/.clio/share/pico.min.css"

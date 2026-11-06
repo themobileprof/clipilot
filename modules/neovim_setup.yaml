@@ -1,6 +1,6 @@
 name: neovim_setup
 id: neovim_setup
-version: 1.3.4
+version: 1.3.5
 description: Neovim with a small plugin set for generating code, rewriting it, and editing
 tags:
   - neovim
@@ -278,12 +278,12 @@ flows:
                       chat = false,
                       command = true,
                       model = { model = "deepseek-flash", temperature = 0.2, top_p = 1, max_completion_tokens = 16384 },
-                      system_prompt = "You are an AI working as a code editor.\n\nWhen the user asks for a web page, write the complete HTML document in one reply. Follow the Pico layout in the user message: a navigation bar, a hero, card sections in a responsive grid, and a footer. Do not add a style element. Do not shorten the page or use placeholders.\n\nPlease AVOID COMMENTARY OUTSIDE OF THE SNIPPET RESPONSE.\nSTART AND END YOUR ANSWER WITH:\n\n```",
+                      system_prompt = "You are an AI working as a code editor.\n\nWhen the user asks for a web page, write the complete HTML document in one reply. Share the navigation bar and the footer across pages. Shape the main content for this page. A hero belongs on the home page only. Do not add a style element. Do not shorten the page or use placeholders.\n\nPlease AVOID COMMENTARY OUTSIDE OF THE SNIPPET RESPONSE.\nSTART AND END YOUR ANSWER WITH:\n\n```",
                     },
                   },
                 })
 
-                local site_rules = " This site uses Pico CSS 2.1.1 at css/pico.min.css. Link it with <link rel=\"stylesheet\" href=\"css/pico.min.css\">. Do not add a style element. Do not create or edit a CSS file. Write one complete HTML document. The html element has lang and data-theme=\"light\". header class=\"container\" holds a nav. Nav links are relative, and the current page link has aria-current=\"page\". main class=\"container\" starts with a hero section: an hgroup with an h1 and one p, a short paragraph, a link with role=\"button\", and a second link with role=\"button\" and class=\"secondary\". If an image is listed, put that figure beside the hero text inside class=\"grid\". After the hero, add a section class=\"grid\" with at least two article cards. Each article has an h2 and a paragraph. footer class=\"container\" comes after main and contains a small line plus a nav of the same links. The grid is one column on a phone and several columns on a wider screen. Do not write layout CSS. Link pages with relative hrefs such as index.html and about.html."
+                local site_rules = " This site uses Pico CSS 2.1.1 at css/pico.min.css. Link it with <link rel=\"stylesheet\" href=\"css/pico.min.css\">. Do not add a style element. Do not create or edit a CSS file. Write one complete HTML document. The html element has lang and data-theme=\"light\". header class=\"container\" holds one nav, with a short list of relative links. The current page link has aria-current=\"page\". On a phone the nav stacks into a vertical list; do not write CSS for that. footer class=\"container\" comes after main and holds a small line plus the same links. Choose the main content for this page. Use a hero only on the home page (index.html, or a page the user called a homepage or landing page): an hgroup with an h1 and one p, a short paragraph, one link with role=\"button\", and a second link with role=\"button\" and class=\"secondary\". A listed photo may sit beside that text in class=\"grid\". Do not put a hero on an about page, a contact page, or any other page. An about page is a heading and paragraphs. A contact page is a form. A set of items may be a section class=\"grid\" of articles, each with an h2 and a paragraph. Link pages with relative hrefs such as index.html and about.html."
 
                 local function image_list()
                   local dir = vim.fn.fnamemodify(vim.api.nvim_buf_get_name(0), ":h")
@@ -305,7 +305,7 @@ flows:
                   if #found == 0 then
                     return " No files are in images/ or assets/. Do not invent image addresses and do not download images."
                   end
-                  return " Use only these image files, each with an alt sentence: " .. table.concat(found, ", ") .. ". The first photo belongs in the hero. Do not invent other image addresses."
+                  return " Use only these image files, each with an alt sentence, and only where this page needs a picture: " .. table.concat(found, ", ") .. ". Do not invent other image addresses."
                 end
 
                 local function ask(label, cmd, range)
