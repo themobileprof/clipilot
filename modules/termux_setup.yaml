@@ -1,6 +1,6 @@
 name: Termux Complete Setup
 id: termux_setup
-version: 1.2.7
+version: 1.2.8
 description: Complete development environment setup for Termux including Zsh, Git, LLM, and dev languages
 tags:
   - termux
@@ -196,25 +196,34 @@ flows:
             default: no
             on_no: skip_deepseek
           
-          - type: input
-            prompt: "Enter your DeepSeek API key"
-            variable: DEEPSEEK_API_KEY
-            required: false
-          
           - type: command
-            command: "printf '%s\n' \"$DEEPSEEK_API_KEY\" | clio key deepseek"
             description: Checking and saving the DeepSeek key
-            condition: "{{ .DEEPSEEK_API_KEY }}"
+            interactive: true
             show_output: true
-            continue_on_error: true
-          
-          - type: message
-            content: |
-              
-              ✅ DeepSeek is ready.
-              Ask:  clio ask 'your question'
-              The key is checked when you save it. Later questions use the saved key.
-              Key:  clio key deepseek
+            command: |
+              while true; do
+                if clio key deepseek; then
+                  echo "DeepSeek is ready."
+                  echo "Ask:  clio ask 'your question'"
+                  break
+                fi
+                printf 'Try another DeepSeek key? [y/N] '
+                ans=
+                if ! IFS= read -r ans; then
+                  echo "Skipping the DeepSeek key."
+                  echo "You can save it later with: clio key deepseek"
+                  break
+                fi
+                ans=$(printf '%s' "$ans" | tr '[:upper:]' '[:lower:]' | tr -d '[:space:]')
+                case "$ans" in
+                  y|yes) ;;
+                  *)
+                    echo "Skipping the DeepSeek key."
+                    echo "You can save it later with: clio key deepseek"
+                    break
+                    ;;
+                esac
+              done
           
           - type: goto
             label: after_deepseek
@@ -248,25 +257,34 @@ flows:
             default: no
             on_no: skip_gemini
           
-          - type: input
-            prompt: "Enter your Gemini API key"
-            variable: GEMINI_API_KEY
-            required: false
-          
           - type: command
-            command: "printf '%s\n' \"$GEMINI_API_KEY\" | clio key gemini"
             description: Checking and saving the Gemini key
-            condition: "{{ .GEMINI_API_KEY }}"
+            interactive: true
             show_output: true
-            continue_on_error: true
-          
-          - type: message
-            content: |
-              
-              ✅ Gemini is ready.
-              Clio asks DeepSeek when that key exists.
-              To ask Gemini instead, run:
-                clio model gemini
+            command: |
+              while true; do
+                if clio key gemini; then
+                  echo "Gemini is ready."
+                  echo "To ask Gemini instead of DeepSeek, run: clio model gemini"
+                  break
+                fi
+                printf 'Try another Gemini key? [y/N] '
+                ans=
+                if ! IFS= read -r ans; then
+                  echo "Skipping the Gemini key."
+                  echo "You can save it later with: clio key gemini"
+                  break
+                fi
+                ans=$(printf '%s' "$ans" | tr '[:upper:]' '[:lower:]' | tr -d '[:space:]')
+                case "$ans" in
+                  y|yes) ;;
+                  *)
+                    echo "Skipping the Gemini key."
+                    echo "You can save it later with: clio key gemini"
+                    break
+                    ;;
+                esac
+              done
           
           - type: goto
             label: after_gemini
